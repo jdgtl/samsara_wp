@@ -5,6 +5,7 @@
   "private": true,
   "scripts": {
     "start": "npx webpack serve --mode development --config webpack.config.js",
+    "prebuild": "find src/components src/pages -name '*.js' -type f ! -name 'utils.js' -exec sh -c 'base=\"${1%.js}\"; if [ -f \"${base}.jsx\" ]; then echo \"Removing duplicate: $1\"; rm \"$1\"; fi' _ {} \\;",
     "build": "npx webpack --mode production --config webpack.config.js",
     "build:css": "npx tailwindcss -i ./src/styles/input.css -o ./build/css/my-account.css",
     "build:all": "npm run build && npm run build:css"

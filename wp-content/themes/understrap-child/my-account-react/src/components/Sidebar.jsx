@@ -23,16 +23,16 @@ const Sidebar = ({ isOpen, onClose }) => {
   });
 
   const navItems = [
-    { icon: LayoutDashboard, label: 'Dashboard', path: '/account' },
-    { icon: ShoppingBag, label: 'Orders', path: '/account/orders' },
-    { icon: Repeat, label: 'Subscriptions', path: '/account/subscriptions' },
-    { icon: CreditCard, label: 'Payments', path: '/account/payments' },
-    { icon: User, label: 'Account', path: '/account/details' },
+    { icon: LayoutDashboard, label: 'Dashboard', path: '/' },
+    { icon: ShoppingBag, label: 'Orders', path: '/orders' },
+    { icon: Repeat, label: 'Subscriptions', path: '/subscriptions' },
+    { icon: CreditCard, label: 'Payments', path: '/payments' },
+    { icon: User, label: 'Account', path: '/details' },
   ];
 
   const isActive = (path) => {
-    if (path === '/account') {
-      return location.pathname === '/account';
+    if (path === '/') {
+      return location.pathname === '/';
     }
     return location.pathname.startsWith(path);
   };
@@ -125,8 +125,8 @@ const Sidebar = ({ isOpen, onClose }) => {
         {/* Logout Button */}
         <div className="p-4">
           <Button
-            variant="destructive"
-            className="w-full justify-start gap-3 bg-red-600 hover:bg-red-700"
+            variant="outline"
+            className="w-full justify-start gap-3 border-stone-300 text-stone-700 hover:bg-red-50 hover:text-red-700 hover:border-red-300"
             onClick={handleLogout}
             data-testid="logout-btn"
           >

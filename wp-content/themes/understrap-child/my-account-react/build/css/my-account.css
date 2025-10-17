@@ -588,6 +588,8 @@ body {
   --tw-text-opacity: 1;
   color: hsl(30 10% 15% / var(--tw-text-opacity, 1));
   font-feature-settings: "rlig" 1, "calt" 1;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
 }
 
 .container {
@@ -1346,10 +1348,6 @@ body {
   grid-template-columns: repeat(1, minmax(0, 1fr));
 }
 
-.grid-cols-2 {
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-}
-
 .grid-cols-6 {
   grid-template-columns: repeat(6, minmax(0, 1fr));
 }
@@ -1928,10 +1926,6 @@ body {
   padding: 0.25rem;
 }
 
-.p-12 {
-  padding: 3rem;
-}
-
 .p-2 {
   padding: 0.5rem;
 }
@@ -1946,10 +1940,6 @@ body {
 
 .p-6 {
   padding: 1.5rem;
-}
-
-.p-8 {
-  padding: 2rem;
 }
 
 .p-\[1px\] {
@@ -2630,6 +2620,11 @@ body {
   border-color: hsl(160 84% 39% / var(--tw-border-opacity, 1));
 }
 
+.hover\:border-red-300:hover {
+  --tw-border-opacity: 1;
+  border-color: rgb(252 165 165 / var(--tw-border-opacity, 1));
+}
+
 .hover\:bg-accent:hover {
   --tw-bg-opacity: 1;
   background-color: hsl(30 10% 90% / var(--tw-bg-opacity, 1));
@@ -2719,11 +2714,6 @@ body {
   background-color: hsl(30 10% 90% / 0.8);
 }
 
-.hover\:bg-stone-100:hover {
-  --tw-bg-opacity: 1;
-  background-color: hsl(40 10% 95% / var(--tw-bg-opacity, 1));
-}
-
 .hover\:bg-stone-200:hover {
   --tw-bg-opacity: 1;
   background-color: hsl(30 15% 88% / var(--tw-bg-opacity, 1));
@@ -2770,6 +2760,11 @@ body {
 .hover\:text-primary-foreground:hover {
   --tw-text-opacity: 1;
   color: hsl(0 0% 100% / var(--tw-text-opacity, 1));
+}
+
+.hover\:text-red-700:hover {
+  --tw-text-opacity: 1;
+  color: rgb(185 28 28 / var(--tw-text-opacity, 1));
 }
 
 .hover\:text-stone-900:hover {

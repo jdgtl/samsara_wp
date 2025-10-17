@@ -25,7 +25,7 @@ module.exports = {
     ],
   },
   resolve: {
-    extensions: ['.js', '.jsx'],
+    extensions: ['.jsx', '.js'], // Prioritize .jsx over .js
   },
   externals: {
     // External WordPress dependencies (already loaded by WordPress)
