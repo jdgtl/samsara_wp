@@ -1,0 +1,41 @@
+# Ignore everything by default
+*
+
+# Allow git metadata
+!.gitignore
+
+# Allow wp-content, but ignore almost all inside
+!wp-content/
+wp-content/*
+!wp-content/themes/
+!wp-content/plugins/
+
+# Track only our theme (and optional custom plugin)
+wp-content/themes/*
+!wp-content/themes/understrap-child/
+!wp-content/themes/understrap-child/**
+
+# If you have a custom plugin, unignore it too:
+# wp-content/plugins/*
+# !wp-content/plugins/your-custom-plugin/**
+
+# Typical build + editor noise
+node_modules/
+**/node_modules/
+**/dist/
+**/build/
+**/*.map
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/
+.env
+.env.*
+
+# Build artifacts within theme
+wp-content/themes/understrap-child/assets/my-account/js/
+wp-content/themes/understrap-child/assets/my-account/css/
+
+# Dependencies
+package-lock.json
+yarn.lock

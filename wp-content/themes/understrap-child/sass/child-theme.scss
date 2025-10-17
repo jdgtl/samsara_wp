@@ -1,0 +1,6 @@
+@import "theme/child_theme_variables";                   // <------- Add your variables into this file. Also add variables to overwrite Bootstrap variables here
+@import "theme/child_theme_mixins";
+@import "assets/bootstrap4";                               // <------- Loads Bootstrap4
+@import "../src/sass/understrap/understrap/understrap";  // <------- Loads the UnderStrap defaults. Just a few classes to incorporate BS in WP
+@import "assets/underscores";                            // <------- Underscores media styles
+@import "theme/child_theme";                              // <------- Add your styles into this file
