@@ -42,4 +42,9 @@
   .text-balance {
     text-wrap: balance;
   }
+
+  /* Force emerald-600 to override any conflicting WordPress styles */
+  .bg-emerald-600 {
+    background-color: rgb(5 150 105) !important;
+  }
 }
