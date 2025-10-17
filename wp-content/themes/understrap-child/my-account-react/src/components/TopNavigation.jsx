@@ -79,7 +79,7 @@ const TopNavigation = () => {
                 {item.label}
                 <ChevronDown className="h-3 w-3" />
               </button>
-              <div className="absolute left-0 top-full opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200 z-[9999]">
+              <div className="absolute left-0 top-full opacity-0 pointer-events-none group-hover:opacity-100 group-hover:pointer-events-auto transition-all duration-200 z-[9999]">
                 <div className="bg-white border border-stone-200 rounded-lg shadow-lg py-2 min-w-[240px]">
                   {item.items.map((subItem) => (
                     <a
