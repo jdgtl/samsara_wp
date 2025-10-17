@@ -3,24 +3,34 @@ import { Link, useLocation } from 'react-router-dom';
 import { Avatar, AvatarFallback, AvatarImage } from './ui/avatar';
 import { Button } from './ui/button';
 import { Separator } from './ui/separator';
-import { 
-  LayoutDashboard, 
-  ShoppingBag, 
-  CreditCard, 
-  Repeat, 
-  User, 
+import {
+  LayoutDashboard,
+  ShoppingBag,
+  CreditCard,
+  Repeat,
+  User,
   LogOut,
-  X 
+  X
 } from 'lucide-react';
-import { userData } from '../data/mockData';
 
 const Sidebar = ({ isOpen, onClose }) => {
   const location = useLocation();
-  
-  const memberSinceFormatted = new Date(userData.memberSince).toLocaleDateString('en-US', {
-    month: 'short',
-    year: 'numeric'
-  });
+
+  // Get user data from WordPress global
+  const userData = window.samsaraMyAccount?.userData || {
+    firstName: 'User',
+    lastName: '',
+    displayName: 'User',
+    email: '',
+    memberSince: null
+  };
+
+  const memberSinceFormatted = userData.memberSince
+    ? new Date(userData.memberSince).toLocaleDateString('en-US', {
+        month: 'short',
+        year: 'numeric'
+      })
+    : 'Recently';
 
   const navItems = [
     { icon: LayoutDashboard, label: 'Dashboard', path: '/' },
@@ -38,24 +48,26 @@ const Sidebar = ({ isOpen, onClose }) => {
   };
 
   const handleLogout = () => {
-    alert('Logout clicked - would redirect to login');
+    // Use WordPress logout URL from global config
+    const logoutUrl = window.samsaraMyAccount?.logoutUrl || '/wp-login.php?action=logout';
+    window.location.href = logoutUrl;
   };
 
   return (
     <>
       {/* Mobile overlay */}
       {isOpen && (
-        <div 
+        <div
           className="fixed inset-0 bg-black/50 z-40 lg:hidden"
           onClick={onClose}
           data-testid="sidebar-overlay"
         />
       )}
-      
+
       {/* Sidebar */}
-      <aside 
+      <aside
         className={`
-          fixed lg:sticky top-0 left-0 h-screen w-72 bg-stone-50 border-r border-stone-200 
+          fixed lg:sticky top-0 left-0 h-screen w-72 bg-stone-50 border-r border-stone-200
           flex flex-col z-50 transition-transform duration-300
           ${isOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'}
         `}
@@ -74,14 +86,14 @@ const Sidebar = ({ isOpen, onClose }) => {
         {/* User Profile Section */}
         <div className="p-6 space-y-3 flex flex-col items-center text-center" data-testid="user-profile-section">
           <Avatar className="h-20 w-20" data-testid="user-avatar">
-            <AvatarImage src={userData.avatarUrl} alt={userData.name} />
+            <AvatarImage src={userData.avatarUrl} alt={userData.displayName} />
             <AvatarFallback className="bg-emerald-600 text-white text-xl">
               {userData.firstName?.[0]}{userData.lastName?.[0]}
             </AvatarFallback>
           </Avatar>
           <div>
             <h2 className="font-semibold text-lg text-stone-900" data-testid="user-name">
-              {userData.name}
+              {userData.displayName}
             </h2>
             <p className="text-sm text-stone-600" data-testid="member-since">
               Member since {memberSinceFormatted}
