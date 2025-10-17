@@ -3,8 +3,9 @@ import { Card, CardContent, CardHeader, CardTitle } from '../components/ui/card'
 import { Badge } from '../components/ui/badge';
 import { Button } from '../components/ui/button';
 import { Input } from '../components/ui/input';
+import { Alert, AlertDescription } from '../components/ui/alert';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '../components/ui/table';
-import { 
+import {
   Pagination,
   PaginationContent,
   PaginationItem,
@@ -12,8 +13,8 @@ import {
   PaginationNext,
   PaginationPrevious,
 } from '../components/ui/pagination';
-import { ArrowUpDown, Search } from 'lucide-react';
-import { orders as mockOrders } from '../data/mockData';
+import { ArrowUpDown, Search, Loader2, AlertTriangle } from 'lucide-react';
+import { useOrders } from '../hooks/useOrders';
 import { useNavigate } from 'react-router-dom';
 
 const ITEMS_PER_PAGE = 10;
@@ -24,6 +25,9 @@ const Orders = () => {
   const [searchQuery, setSearchQuery] = useState('');
   const [sortOrder, setSortOrder] = useState('desc');
   const [currentPage, setCurrentPage] = useState(1);
+
+  // Fetch live orders data
+  const { orders, loading, error } = useOrders();
 
   const getStatusBadge = (status) => {
     const variants = {
@@ -43,7 +47,9 @@ const Orders = () => {
 
   // Filter and search logic
   const filteredOrders = useMemo(() => {
-    let filtered = mockOrders;
+    if (!orders || orders.length === 0) return [];
+
+    let filtered = orders;
 
     // Apply status filter
     if (statusFilter !== 'all') {
@@ -53,9 +59,9 @@ const Orders = () => {
     // Apply search
     if (searchQuery) {
       const query = searchQuery.toLowerCase();
-      filtered = filtered.filter(order => 
-        order.id.toLowerCase().includes(query) ||
-        order.items.some(item => item.toLowerCase().includes(query))
+      filtered = filtered.filter(order =>
+        order.id.toString().toLowerCase().includes(query) ||
+        (order.items && order.items.some(item => item.toLowerCase().includes(query)))
       );
     }
 
@@ -67,7 +73,7 @@ const Orders = () => {
     });
 
     return filtered;
-  }, [statusFilter, searchQuery, sortOrder]);
+  }, [orders, statusFilter, searchQuery, sortOrder]);
 
   // Pagination
   const totalPages = Math.ceil(filteredOrders.length / ITEMS_PER_PAGE);
@@ -87,6 +93,47 @@ const Orders = () => {
     { value: 'refunded', label: 'Refunded' },
     { value: 'canceled', label: 'Canceled' },
   ];
+
+  // Loading state
+  if (loading) {
+    return (
+      <div className="max-w-7xl mx-auto space-y-6" data-testid="orders-loading">
+        <div className="space-y-2">
+          <h1 className="text-3xl font-bold text-stone-900">Orders</h1>
+          <p className="text-stone-600">View and manage your order history</p>
+        </div>
+        <Card>
+          <CardContent className="p-12">
+            <div className="flex flex-col items-center justify-center">
+              <Loader2 className="h-8 w-8 animate-spin text-emerald-600 mb-4" />
+              <p className="text-stone-600">Loading your orders...</p>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
+
+  // Error state
+  if (error) {
+    return (
+      <div className="max-w-7xl mx-auto space-y-6" data-testid="orders-error">
+        <div className="space-y-2">
+          <h1 className="text-3xl font-bold text-stone-900">Orders</h1>
+          <p className="text-stone-600">View and manage your order history</p>
+        </div>
+        <Alert className="border-red-500 bg-red-50">
+          <AlertTriangle className="h-4 w-4 text-red-600" />
+          <AlertDescription className="ml-2">
+            <div className="text-red-900">
+              <p className="font-medium">Failed to load orders</p>
+              <p className="text-sm">{error}</p>
+            </div>
+          </AlertDescription>
+        </Alert>
+      </div>
+    );
+  }
 
   return (
     <div className="max-w-7xl mx-auto space-y-6" data-testid="orders-page">

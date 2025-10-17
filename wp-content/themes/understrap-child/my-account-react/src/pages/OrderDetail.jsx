@@ -4,26 +4,76 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '../co
 import { Badge } from '../components/ui/badge';
 import { Button } from '../components/ui/button';
 import { Separator } from '../components/ui/separator';
+import { Alert, AlertDescription } from '../components/ui/alert';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '../components/ui/dialog';
-import { ArrowLeft, Download, Mail } from 'lucide-react';
-import { orders } from '../data/mockData';
+import { ArrowLeft, Download, Mail, Loader2, AlertTriangle } from 'lucide-react';
+import { useOrder } from '../hooks/useOrders';
 
 const OrderDetail = () => {
   const { orderId } = useParams();
   const navigate = useNavigate();
-  const order = orders.find(o => o.id === orderId);
 
-  if (!order) {
+  // Fetch live order data
+  const { order, loading, error } = useOrder(orderId);
+
+  // Loading state
+  if (loading) {
     return (
-      <div className="max-w-4xl mx-auto" data-testid="order-not-found">
+      <div className="max-w-4xl mx-auto space-y-6" data-testid="order-detail-loading">
+        <Button
+          variant="ghost"
+          onClick={() => navigate('/orders')}
+          className="gap-2"
+          data-testid="back-btn"
+        >
+          <ArrowLeft className="h-4 w-4" />
+          Back to Orders
+        </Button>
         <Card>
-          <CardContent className="text-center py-12">
-            <p className="text-stone-600 mb-4">Order not found</p>
-            <Button onClick={() => navigate('/orders')} data-testid="back-to-orders-btn">
-              Back to Orders
-            </Button>
+          <CardContent className="p-12">
+            <div className="flex flex-col items-center justify-center">
+              <Loader2 className="h-8 w-8 animate-spin text-emerald-600 mb-4" />
+              <p className="text-stone-600">Loading order details...</p>
+            </div>
           </CardContent>
         </Card>
+      </div>
+    );
+  }
+
+  // Error state
+  if (error || !order) {
+    return (
+      <div className="max-w-4xl mx-auto space-y-6" data-testid="order-not-found">
+        <Button
+          variant="ghost"
+          onClick={() => navigate('/orders')}
+          className="gap-2"
+          data-testid="back-btn"
+        >
+          <ArrowLeft className="h-4 w-4" />
+          Back to Orders
+        </Button>
+        {error ? (
+          <Alert className="border-red-500 bg-red-50">
+            <AlertTriangle className="h-4 w-4 text-red-600" />
+            <AlertDescription className="ml-2">
+              <div className="text-red-900">
+                <p className="font-medium">Failed to load order</p>
+                <p className="text-sm">{error}</p>
+              </div>
+            </AlertDescription>
+          </Alert>
+        ) : (
+          <Card>
+            <CardContent className="text-center py-12">
+              <p className="text-stone-600 mb-4">Order not found</p>
+              <Button onClick={() => navigate('/orders')} data-testid="back-to-orders-btn">
+                Back to Orders
+              </Button>
+            </CardContent>
+          </Card>
+        )}
       </div>
     );
   }
