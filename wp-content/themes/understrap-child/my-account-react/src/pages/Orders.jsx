@@ -33,14 +33,24 @@ const Orders = () => {
     const variants = {
       completed: { variant: 'default', className: 'bg-emerald-100 text-emerald-800 hover:bg-emerald-100' },
       processing: { variant: 'secondary', className: 'bg-blue-100 text-blue-800 hover:bg-blue-100' },
-      refunded: { variant: 'outline', className: 'bg-amber-100 text-amber-800 hover:bg-amber-100' },
+      'on-hold': { variant: 'outline', className: 'bg-amber-100 text-amber-800 hover:bg-amber-100' },
+      pending: { variant: 'outline', className: 'bg-stone-200 text-stone-700 hover:bg-stone-200' },
+      refunded: { variant: 'outline', className: 'bg-purple-100 text-purple-800 hover:bg-purple-100' },
+      cancelled: { variant: 'destructive', className: 'bg-red-100 text-red-800 hover:bg-red-100' },
       canceled: { variant: 'destructive', className: 'bg-red-100 text-red-800 hover:bg-red-100' },
+      failed: { variant: 'destructive', className: 'bg-red-100 text-red-800 hover:bg-red-100' },
     };
 
-    const config = variants[status] || variants.completed;
+    const config = variants[status] || { variant: 'outline', className: 'bg-stone-100 text-stone-800 hover:bg-stone-100' };
+
+    // Format display name (handle both cancelled and canceled)
+    const displayName = status === 'cancelled' ? 'Canceled' :
+                       status === 'on-hold' ? 'On Hold' :
+                       status.charAt(0).toUpperCase() + status.slice(1);
+
     return (
       <Badge variant={config.variant} className={config.className} data-testid={`order-status-${status}`}>
-        {status.charAt(0).toUpperCase() + status.slice(1)}
+        {displayName}
       </Badge>
     );
   };
@@ -53,7 +63,13 @@ const Orders = () => {
 
     // Apply status filter
     if (statusFilter !== 'all') {
-      filtered = filtered.filter(order => order.status === statusFilter);
+      filtered = filtered.filter(order => {
+        // Handle both 'canceled' and 'cancelled' spellings
+        if (statusFilter === 'cancelled' || statusFilter === 'canceled') {
+          return order.status === 'cancelled' || order.status === 'canceled';
+        }
+        return order.status === statusFilter;
+      });
     }
 
     // Apply search
@@ -90,8 +106,11 @@ const Orders = () => {
     { value: 'all', label: 'All' },
     { value: 'completed', label: 'Completed' },
     { value: 'processing', label: 'Processing' },
+    { value: 'on-hold', label: 'On Hold' },
+    { value: 'pending', label: 'Pending' },
+    { value: 'cancelled', label: 'Canceled' },
     { value: 'refunded', label: 'Refunded' },
-    { value: 'canceled', label: 'Canceled' },
+    { value: 'failed', label: 'Failed' },
   ];
 
   // Loading state

@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../components/ui/card';
 import { Button } from '../components/ui/button';
 import { Badge } from '../components/ui/badge';
@@ -9,21 +9,50 @@ import { Label } from '../components/ui/label';
 import { CreditCard, Plus, Trash2, LayoutGrid, List, Loader2, AlertTriangle } from 'lucide-react';
 import { usePaymentMethods, usePaymentMethodActions } from '../hooks/usePaymentMethods';
 import { useCustomer } from '../hooks/useCustomer';
+import AddPaymentMethodModal from '../components/AddPaymentMethodModal';
+import EditAddressModal from '../components/EditAddressModal';
 
 const Payments = () => {
   const [useBillingAsShipping, setUseBillingAsShipping] = useState(true);
   const [viewMode, setViewMode] = useState('card'); // 'card' or 'list'
+  const [showAddModal, setShowAddModal] = useState(false);
+  const [showEditBillingModal, setShowEditBillingModal] = useState(false);
+  const [showEditShippingModal, setShowEditShippingModal] = useState(false);
+  const [updatingShipping, setUpdatingShipping] = useState(false);
 
   // Fetch live data
   const { paymentMethods, loading: paymentLoading, error: paymentError, refetch: refetchPayments } = usePaymentMethods();
   const { deletePaymentMethod, setDefaultPaymentMethod, actionLoading } = usePaymentMethodActions();
-  const { customer, loading: customerLoading, error: customerError } = useCustomer();
+  const { customer, loading: customerLoading, error: customerError, refetch: refetchCustomer } = useCustomer();
 
   const loading = paymentLoading || customerLoading;
   const error = paymentError || customerError;
 
+  // Initialize checkbox state based on whether addresses match
+  useEffect(() => {
+    if (customer && customer.billing && customer.shipping) {
+      const billing = customer.billing;
+      const shipping = customer.shipping;
+
+      // Check if shipping address matches billing address
+      const addressesMatch =
+        billing.address_1 === shipping.address_1 &&
+        billing.address_2 === shipping.address_2 &&
+        billing.city === shipping.city &&
+        billing.state === shipping.state &&
+        billing.postcode === shipping.postcode &&
+        billing.country === shipping.country;
+
+      setUseBillingAsShipping(addressesMatch);
+    }
+  }, [customer]);
+
   const handleAddPaymentMethod = () => {
-    alert('Add payment method interface would open here');
+    setShowAddModal(true);
+  };
+
+  const handleModalSuccess = () => {
+    refetchPayments(); // Refresh payment methods list
   };
 
   const handleRemovePaymentMethod = async (methodId) => {
@@ -47,11 +76,75 @@ const Payments = () => {
   };
 
   const handleEditBillingAddress = () => {
-    alert('Edit billing address interface would open here');
+    setShowEditBillingModal(true);
   };
 
   const handleEditShippingAddress = () => {
-    alert('Edit shipping address interface would open here');
+    setShowEditShippingModal(true);
+  };
+
+  const handleAddressUpdateSuccess = () => {
+    refetchCustomer(); // Refresh customer data to show updated address
+  };
+
+  const handleUseBillingAsShippingChange = async (checked) => {
+    setUseBillingAsShipping(checked);
+
+    if (checked) {
+      // Copy billing address to shipping address
+      setUpdatingShipping(true);
+
+      try {
+        const userId = window.samsaraMyAccount?.userId;
+        const apiUrl = window.samsaraMyAccount?.apiUrl;
+        const nonce = window.samsaraMyAccount?.nonce;
+
+        if (!userId || !apiUrl || !nonce) {
+          throw new Error('Missing WordPress configuration');
+        }
+
+        const billingAddress = customer?.billing || {};
+
+        // Update shipping address to match billing
+        const response = await fetch(`${apiUrl}wc/v3/customers/${userId}`, {
+          method: 'PUT',
+          headers: {
+            'Content-Type': 'application/json',
+            'X-WP-Nonce': nonce,
+          },
+          credentials: 'include',
+          body: JSON.stringify({
+            shipping: {
+              first_name: billingAddress.first_name || '',
+              last_name: billingAddress.last_name || '',
+              company: billingAddress.company || '',
+              address_1: billingAddress.address_1 || '',
+              address_2: billingAddress.address_2 || '',
+              city: billingAddress.city || '',
+              state: billingAddress.state || '',
+              postcode: billingAddress.postcode || '',
+              country: billingAddress.country || 'US',
+            }
+          }),
+        });
+
+        if (!response.ok) {
+          const errorData = await response.json();
+          throw new Error(errorData.message || 'Failed to update shipping address');
+        }
+
+        // Refresh customer data
+        await refetchCustomer();
+      } catch (err) {
+        console.error('Error updating shipping address:', err);
+        alert(`Failed to update shipping address: ${err.message}`);
+        // Revert checkbox on error
+        setUseBillingAsShipping(false);
+      } finally {
+        setUpdatingShipping(false);
+      }
+    }
+    // If unchecked, just update state - shipping address remains as separate address
   };
 
   // Loading state
@@ -383,14 +476,16 @@ const Payments = () => {
                 <Checkbox
                   id="use-billing-as-shipping"
                   checked={useBillingAsShipping}
-                  onCheckedChange={setUseBillingAsShipping}
+                  onCheckedChange={handleUseBillingAsShippingChange}
+                  disabled={updatingShipping}
                   data-testid="use-billing-as-shipping-checkbox"
                 />
                 <Label
                   htmlFor="use-billing-as-shipping"
-                  className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70 cursor-pointer"
+                  className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70 cursor-pointer flex items-center gap-2"
                 >
                   Use billing address as shipping address
+                  {updatingShipping && <Loader2 className="h-3 w-3 animate-spin text-emerald-600" />}
                 </Label>
               </div>
 
@@ -445,6 +540,31 @@ const Payments = () => {
           </CardContent>
         </Card>
       </div>
+
+      {/* Add Payment Method Modal */}
+      <AddPaymentMethodModal
+        isOpen={showAddModal}
+        onClose={() => setShowAddModal(false)}
+        onSuccess={handleModalSuccess}
+      />
+
+      {/* Edit Billing Address Modal */}
+      <EditAddressModal
+        isOpen={showEditBillingModal}
+        onClose={() => setShowEditBillingModal(false)}
+        onSuccess={handleAddressUpdateSuccess}
+        addressType="billing"
+        initialAddress={billingAddress}
+      />
+
+      {/* Edit Shipping Address Modal */}
+      <EditAddressModal
+        isOpen={showEditShippingModal}
+        onClose={() => setShowEditShippingModal(false)}
+        onSuccess={handleAddressUpdateSuccess}
+        addressType="shipping"
+        initialAddress={shippingAddress}
+      />
     </div>
   );
 };

@@ -1044,7 +1044,16 @@ function samsara_enqueue_react_my_account() {
         return;
     }
     
-    // Enqueue React and ReactDOM from CDN FIRST (in header)
+    // Enqueue Stripe.js FIRST for payment methods
+    wp_enqueue_script(
+        'stripe-js',
+        'https://js.stripe.com/v3/',
+        array(),
+        '3.0',
+        false // Load in header
+    );
+
+    // Enqueue React and ReactDOM from CDN (in header)
     wp_enqueue_script(
         'react',
         'https://unpkg.com/react@18/umd/react.production.min.js',
@@ -1078,6 +1087,30 @@ function samsara_enqueue_react_my_account() {
         filemtime(get_stylesheet_directory() . '/my-account-react/build/css/my-account.css')
     );
     
+    // Check if User Switching plugin is active and user is switched
+    $is_switched = false;
+    $original_user = null;
+    $switch_back_url = null;
+
+    if (function_exists('current_user_switched')) {
+        $old_user = current_user_switched();
+        if ($old_user) {
+            $is_switched = true;
+            $original_user = array(
+                'id' => $old_user->ID,
+                'displayName' => $old_user->display_name,
+                'email' => $old_user->user_email,
+                'firstName' => $old_user->first_name,
+                'lastName' => $old_user->last_name,
+            );
+
+            // Get switch back URL if available (using method_exists for better compatibility)
+            if (class_exists('user_switching') && method_exists('user_switching', 'switch_back_url')) {
+                $switch_back_url = user_switching::switch_back_url($old_user);
+            }
+        }
+    }
+
     // Localize script with WordPress and WooCommerce data
     wp_localize_script('samsara-my-account-react', 'samsaraMyAccount', array(
         'apiUrl' => esc_url_raw(rest_url()),
@@ -1096,6 +1129,11 @@ function samsara_enqueue_react_my_account() {
         'siteUrl' => get_site_url(),
         'basecampUrl' => 'https://videos.samsaraexperience.com',
         'logoutUrl' => wp_logout_url(home_url()),
+        'userSwitching' => array(
+            'isSwitched' => $is_switched,
+            'originalUser' => $original_user,
+            'switchBackUrl' => $switch_back_url,
+        ),
     ));
 }
 add_action('wp_enqueue_scripts', 'samsara_enqueue_react_my_account');
@@ -1133,6 +1171,19 @@ function samsara_dequeue_wc_styles_on_react_template() {
         // But we already hide admin bar, so we could remove jQuery too
         // wp_dequeue_script('jquery');
 
+        // Check if user is switched (need admin bar for session management)
+        $is_switched = false;
+        if (function_exists('current_user_switched')) {
+            $old_user = current_user_switched();
+            if ($old_user) {
+                $is_switched = true;
+            }
+        }
+
+        // Build CSS - hide admin bar only if NOT switched
+        $admin_bar_css = $is_switched ? '' : 'body.samsara-react-account #wpadminbar { display: none !important; }';
+        $padding_top = $is_switched ? 'padding-top: 32px !important;' : ''; // Account for admin bar height
+
         // Add custom styles for React template to reset any remaining WordPress styles
         wp_add_inline_style('samsara-my-account-styles', '
             /* Reset WordPress defaults */
@@ -1140,10 +1191,9 @@ function samsara_dequeue_wc_styles_on_react_template() {
                 margin: 0 !important;
                 padding: 0 !important;
                 background: #faf9f7 !important;
+                ' . $padding_top . '
             }
-            body.samsara-react-account #wpadminbar {
-                display: none !important;
-            }
+            ' . $admin_bar_css . '
             body.samsara-react-account #samsara-my-account-root {
                 min-height: 100vh;
                 display: block;
@@ -1155,10 +1205,23 @@ add_action('wp_enqueue_scripts', 'samsara_dequeue_wc_styles_on_react_template', 
 
 /**
  * Hide admin bar on React My Account template
+ * EXCEPT when user is switched (User Switching plugin needs the admin bar for session management)
  */
 function samsara_hide_admin_bar_on_react_template() {
     if (is_page_template('template-my-account.php')) {
-        show_admin_bar(false);
+        // Check if user is switched via User Switching plugin
+        $is_switched = false;
+        if (function_exists('current_user_switched')) {
+            $old_user = current_user_switched();
+            if ($old_user) {
+                $is_switched = true;
+            }
+        }
+
+        // Only hide admin bar if NOT switched
+        if (!$is_switched) {
+            show_admin_bar(false);
+        }
     }
 }
 add_action('wp', 'samsara_hide_admin_bar_on_react_template');
@@ -1187,6 +1250,12 @@ function samsara_register_custom_api_routes() {
         'permission_callback' => 'samsara_check_authentication',
     ));
 
+    register_rest_route('samsara/v1', '/payment-methods/confirm', array(
+        'methods' => 'POST',
+        'callback' => 'samsara_confirm_payment_method',
+        'permission_callback' => 'samsara_check_authentication',
+    ));
+
     register_rest_route('samsara/v1', '/payment-methods/(?P<id>[a-zA-Z0-9_-]+)', array(
         'methods' => 'PUT',
         'callback' => 'samsara_update_payment_method',
@@ -1212,8 +1281,160 @@ function samsara_register_custom_api_routes() {
         'callback' => 'samsara_get_dashboard_stats',
         'permission_callback' => 'samsara_check_authentication',
     ));
+
+    // Subscription orders endpoint
+    register_rest_route('samsara/v1', '/subscriptions/(?P<id>\d+)/orders', array(
+        'methods' => 'GET',
+        'callback' => 'samsara_get_subscription_orders',
+        'permission_callback' => 'samsara_check_authentication',
+        'args' => array(
+            'id' => array(
+                'required' => true,
+                'validate_callback' => function($param) {
+                    return is_numeric($param);
+                }
+            ),
+        ),
+    ));
+
+    // Custom subscriptions endpoint that uses native WooCommerce Subscriptions functions
+    // Bypasses REST API quirks and works reliably with User Switching
+    register_rest_route('samsara/v1', '/user-subscriptions', array(
+        'methods' => 'GET',
+        'callback' => 'samsara_get_user_subscriptions',
+        'permission_callback' => 'samsara_check_authentication',
+    ));
+
+    // Get subscription for a specific order
+    register_rest_route('samsara/v1', '/orders/(?P<id>\d+)/subscription', array(
+        'methods' => 'GET',
+        'callback' => 'samsara_get_order_subscription',
+        'permission_callback' => 'samsara_check_authentication',
+        'args' => array(
+            'id' => array(
+                'required' => true,
+                'validate_callback' => function($param) {
+                    return is_numeric($param);
+                }
+            ),
+        ),
+    ));
 }
 add_action('rest_api_init', 'samsara_register_custom_api_routes');
+
+/**
+ * Ensure REST API cookie authentication works with User Switching
+ * User Switching can interfere with REST API auth, this fixes it
+ */
+add_filter('rest_authentication_errors', 'samsara_rest_auth_for_user_switching', 99);
+function samsara_rest_auth_for_user_switching($result) {
+    // If already authenticated or errored, return as is
+    if (true === $result || is_wp_error($result)) {
+        return $result;
+    }
+
+    // Check if user is logged in (including switched users)
+    if (is_user_logged_in()) {
+        return true;
+    }
+
+    return $result;
+}
+
+/**
+ * Grant customers temporary capabilities to access their own data via REST API
+ * This is critical for the React dashboard - customers need read access to their own resources
+ */
+add_filter('user_has_cap', 'samsara_grant_customer_rest_api_caps', 10, 4);
+function samsara_grant_customer_rest_api_caps($allcaps, $caps, $args, $user) {
+    // Only apply when checking REST API permissions
+    if (!defined('REST_REQUEST') || !REST_REQUEST) {
+        return $allcaps;
+    }
+
+    // Only for logged in users
+    if (!$user || !isset($user->ID)) {
+        return $allcaps;
+    }
+
+    $user_id = $user->ID;
+
+    // Grant read capabilities for own data
+    // These are checked by WooCommerce REST API controllers
+    $allcaps['read_private_shop_orders'] = true;
+    $allcaps['read_private_shop_subscriptions'] = true;
+    $allcaps['read_shop_subscriptions'] = true;
+    $allcaps['read_shop_subscription'] = true;
+    $allcaps['edit_shop_customer'] = true;
+    $allcaps['read_customer'] = true;
+    $allcaps['edit_customer'] = true;
+
+    return $allcaps;
+}
+
+/**
+ * Allow users to access their own data via WooCommerce REST API
+ * Additional layer of security - verify they're accessing THEIR OWN data only
+ */
+add_filter('woocommerce_rest_check_permissions', 'samsara_verify_own_data_access', 10, 4);
+function samsara_verify_own_data_access($permission, $context, $object_id, $post_type) {
+    // If permission already granted by capabilities, verify it's their own data
+    if ($permission === true) {
+        return $permission;
+    }
+
+    // Only modify permissions for logged in users
+    if (!is_user_logged_in()) {
+        return $permission;
+    }
+
+    $user_id = get_current_user_id();
+
+    // Allow users to view/edit their own customer data
+    if ($context === 'read' || $context === 'edit') {
+        // Customer endpoint - allow access to own customer data
+        if ($object_id == $user_id) {
+            return true;
+        }
+    }
+
+    // Allow users to view their own subscriptions
+    if ($post_type === 'shop_subscription' && $context === 'read') {
+        // If no object_id, it's a list request - check if customer param matches current user
+        if (!$object_id) {
+            $customer_param = isset($_GET['customer']) ? intval($_GET['customer']) : null;
+            if ($customer_param === $user_id) {
+                return true;
+            }
+        } else {
+            // Check if subscription belongs to current user
+            if (function_exists('wcs_get_subscription')) {
+                $subscription = wcs_get_subscription($object_id);
+                if ($subscription && $subscription->get_user_id() == $user_id) {
+                    return true;
+                }
+            }
+        }
+    }
+
+    // Allow users to view their own orders
+    if ($post_type === 'shop_order' && $context === 'read') {
+        if ($object_id) {
+            $order = wc_get_order($object_id);
+            if ($order && $order->get_customer_id() == $user_id) {
+                return true;
+            }
+        } else {
+            // List request - check if customer param matches
+            $customer_param = isset($_GET['customer']) ? intval($_GET['customer']) : null;
+            if ($customer_param === $user_id) {
+                return true;
+            }
+        }
+    }
+
+    return $permission;
+}
 
 /**
  * Permission callback - check if user is authenticated
@@ -1250,21 +1471,185 @@ function samsara_get_payment_methods($request) {
 }
 
 /**
- * Add a new payment method
- * Note: This is a simplified implementation
- * Real payment method addition requires payment gateway integration
+ * Get Stripe Setup Intent for adding payment method
+ * Returns client_secret and publishable_key for Stripe.js
  */
 function samsara_add_payment_method($request) {
     $user_id = get_current_user_id();
+
+    // Check if Stripe gateway is available
+    if (!class_exists('WC_Stripe')) {
+        return new WP_Error(
+            'stripe_not_available',
+            'Stripe payment gateway is not active',
+            array('status' => 503)
+        );
+    }
+
+    try {
+        // Get Stripe gateway instance
+        $gateways = WC()->payment_gateways->get_available_payment_gateways();
+        $stripe_gateway = isset($gateways['stripe']) ? $gateways['stripe'] : null;
+
+        if (!$stripe_gateway || $stripe_gateway->enabled !== 'yes') {
+            return new WP_Error(
+                'stripe_not_enabled',
+                'Stripe gateway is not enabled',
+                array('status' => 503)
+            );
+        }
+
+        // Get or create Stripe customer
+        $customer_id = get_user_meta($user_id, '_stripe_customer_id', true);
+
+        if (!$customer_id) {
+            // Create Stripe customer if doesn't exist
+            $user = get_userdata($user_id);
+            $customer = WC_Stripe_API::request(array(
+                'email' => $user->user_email,
+                'description' => $user->display_name,
+            ), 'customers');
+
+            if (is_wp_error($customer)) {
+                return $customer;
+            }
+
+            $customer_id = $customer->id;
+            update_user_meta($user_id, '_stripe_customer_id', $customer_id);
+        }
+
+        // Create Setup Intent
+        $setup_intent = WC_Stripe_API::request(array(
+            'customer' => $customer_id,
+            'payment_method_types' => array('card'),
+            'usage' => 'off_session', // For future subscription payments
+        ), 'setup_intents');
+
+        if (is_wp_error($setup_intent)) {
+            return $setup_intent;
+        }
+
+        return rest_ensure_response(array(
+            'clientSecret' => $setup_intent->client_secret,
+            'publishableKey' => $stripe_gateway->publishable_key,
+        ));
+
+    } catch (Exception $e) {
+        error_log('Error creating Setup Intent: ' . $e->getMessage());
+        return new WP_Error(
+            'setup_intent_error',
+            'Failed to initialize payment method setup: ' . $e->getMessage(),
+            array('status' => 500)
+        );
+    }
+}
+
+/**
+ * Confirm and save Stripe payment method after Setup Intent succeeds
+ * Called by React after Stripe.js confirms the setup
+ */
+function samsara_confirm_payment_method($request) {
+    $user_id = get_current_user_id();
     $params = $request->get_json_params();
 
-    // This would typically interact with your payment gateway (Stripe, etc.)
-    // For now, return error indicating this requires gateway integration
-    return new WP_Error(
-        'payment_gateway_required',
-        'Adding payment methods requires payment gateway integration',
-        array('status' => 501)
-    );
+    // Required: setup_intent_id from Stripe
+    $setup_intent_id = isset($params['setup_intent_id']) ? $params['setup_intent_id'] : null;
+    $set_as_default = isset($params['set_as_default']) ? (bool)$params['set_as_default'] : false;
+
+    if (!$setup_intent_id) {
+        return new WP_Error(
+            'missing_setup_intent',
+            'Setup Intent ID is required',
+            array('status' => 400)
+        );
+    }
+
+    try {
+        // Get Setup Intent from Stripe to retrieve the payment method
+        $setup_intent = WC_Stripe_API::request(array(), 'setup_intents/' . $setup_intent_id);
+
+        if (is_wp_error($setup_intent)) {
+            return $setup_intent;
+        }
+
+        // Verify setup intent succeeded
+        if ($setup_intent->status !== 'succeeded') {
+            return new WP_Error(
+                'setup_intent_not_succeeded',
+                'Setup Intent has not succeeded yet',
+                array('status' => 400)
+            );
+        }
+
+        // Get the payment method ID
+        $payment_method_id = $setup_intent->payment_method;
+
+        if (!$payment_method_id) {
+            return new WP_Error(
+                'no_payment_method',
+                'No payment method found in Setup Intent',
+                array('status' => 400)
+            );
+        }
+
+        // Retrieve payment method details from Stripe
+        $payment_method = WC_Stripe_API::request(array(), 'payment_methods/' . $payment_method_id);
+
+        if (is_wp_error($payment_method)) {
+            return $payment_method;
+        }
+
+        // Create WooCommerce payment token
+        $token = new WC_Payment_Token_CC();
+        $token->set_token($payment_method_id);
+        $token->set_gateway_id('stripe');
+        $token->set_user_id($user_id);
+
+        // Set card details
+        if (isset($payment_method->card)) {
+            $token->set_card_type(strtolower($payment_method->card->brand));
+            $token->set_last4($payment_method->card->last4);
+            $token->set_expiry_month($payment_method->card->exp_month);
+            $token->set_expiry_year($payment_method->card->exp_year);
+        }
+
+        // Set as default if no other payment methods exist or if requested
+        $existing_tokens = WC_Payment_Tokens::get_customer_tokens($user_id);
+        if (empty($existing_tokens) || $set_as_default) {
+            $token->set_default(true);
+        }
+
+        // Save token
+        $token_id = $token->save();
+
+        if (!$token_id) {
+            return new WP_Error(
+                'token_save_failed',
+                'Failed to save payment method',
+                array('status' => 500)
+            );
+        }
+
+        // Store Stripe customer ID in token meta
+        $customer_id = $setup_intent->customer;
+        if ($customer_id) {
+            update_metadata('payment_token', $token_id, 'customer_id', $customer_id);
+        }
+
+        return rest_ensure_response(array(
+            'success' => true,
+            'token_id' => $token_id,
+            'message' => 'Payment method added successfully',
+        ));
+
+    } catch (Exception $e) {
+        error_log('Error confirming payment method: ' . $e->getMessage());
+        return new WP_Error(
+            'confirm_error',
+            'Failed to confirm payment method: ' . $e->getMessage(),
+            array('status' => 500)
+        );
+    }
 }
 
 /**
@@ -1325,17 +1710,21 @@ function samsara_delete_payment_method($request) {
 function samsara_get_memberships($request) {
     try {
         $user_id = get_current_user_id();
+        error_log('MEMBERSHIPS DEBUG - User ID: ' . $user_id);
 
         if (!$user_id) {
+            error_log('MEMBERSHIPS DEBUG - No user ID, returning empty');
             return rest_ensure_response(array());
         }
 
         $memberships = array();
 
         // Check if WooCommerce Memberships plugin is active
+        error_log('MEMBERSHIPS DEBUG - Checking for wc_memberships_get_user_memberships function: ' . (function_exists('wc_memberships_get_user_memberships') ? 'YES' : 'NO'));
         if (function_exists('wc_memberships_get_user_memberships')) {
             try {
                 $user_memberships = wc_memberships_get_user_memberships($user_id);
+                error_log('MEMBERSHIPS DEBUG - wc_memberships_get_user_memberships returned: ' . print_r($user_memberships, true));
 
                 if (is_wp_error($user_memberships)) {
                     error_log('WP Error in get_user_memberships: ' . $user_memberships->get_error_message());
@@ -1343,27 +1732,101 @@ function samsara_get_memberships($request) {
                 }
 
                 if (!empty($user_memberships) && is_array($user_memberships)) {
+                    error_log('MEMBERSHIPS DEBUG - Processing ' . count($user_memberships) . ' memberships');
                     foreach ($user_memberships as $membership) {
                         try {
                             if (!is_object($membership) || !method_exists($membership, 'get_plan')) {
+                                error_log('MEMBERSHIPS DEBUG - Skipping invalid membership object');
                                 continue;
                             }
 
                             $plan = $membership->get_plan();
 
                             if (!$plan) {
+                                error_log('MEMBERSHIPS DEBUG - No plan found for membership');
                                 continue;
                             }
 
-                            $memberships[] = array(
+                            // Get restricted content pages for this membership plan
+                            $restricted_pages = array();
+                            $plan_id = $plan->get_id();
+
+                            // Query for pages that are restricted to this membership plan
+                            $args = array(
+                                'post_type' => 'page',
+                                'post_status' => 'publish',
+                                'posts_per_page' => -1,
+                                'meta_query' => array(
+                                    array(
+                                        'key' => '_wc_memberships_force_public',
+                                        'compare' => 'NOT EXISTS',
+                                    ),
+                                ),
+                            );
+
+                            $pages = get_posts($args);
+                            foreach ($pages as $page) {
+                                // Skip "My account" page - we don't want to show this
+                                if (strtolower($page->post_title) === 'my account' || $page->post_name === 'my-account') {
+                                    continue;
+                                }
+
+                                // Check if this page is restricted to this membership plan
+                                $rules = get_post_meta($page->ID, '_wc_memberships_content_restriction_rules', true);
+                                if (!empty($rules)) {
+                                    foreach ($rules as $rule) {
+                                        if (isset($rule['membership_plan_id']) && $rule['membership_plan_id'] == $plan_id) {
+                                            $restricted_pages[] = array(
+                                                'id' => $page->ID,
+                                                'title' => $page->post_title,
+                                                'url' => get_permalink($page->ID),
+                                            );
+                                            break;
+                                        }
+                                    }
+                                }
+                            }
+
+                            // If no restricted pages found via meta, try the membership plan's content restriction rules
+                            if (empty($restricted_pages) && method_exists($plan, 'get_content_restriction_rules')) {
+                                $rules = $plan->get_content_restriction_rules();
+                                error_log('MEMBERSHIPS DEBUG - Content restriction rules: ' . print_r($rules, true));
+
+                                if (!empty($rules)) {
+                                    foreach ($rules as $rule) {
+                                        if (method_exists($rule, 'get_content_type') && $rule->get_content_type() === 'post_type') {
+                                            $object_ids = method_exists($rule, 'get_object_ids') ? $rule->get_object_ids() : array();
+                                            foreach ($object_ids as $page_id) {
+                                                $page = get_post($page_id);
+                                                if ($page && $page->post_status === 'publish') {
+                                                    // Skip "My account" page
+                                                    if (strtolower($page->post_title) === 'my account' || $page->post_name === 'my-account') {
+                                                        continue;
+                                                    }
+
+                                                    $restricted_pages[] = array(
+                                                        'id' => $page_id,
+                                                        'title' => $page->post_title,
+                                                        'url' => get_permalink($page_id),
+                                                    );
+                                                }
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+
+                            $membership_data = array(
                                 'id' => (string) $membership->get_id(),
                                 'name' => $plan->get_name() ?: '',
                                 'slug' => $plan->get_slug() ?: '',
                                 'status' => $membership->get_status() ?: 'unknown',
-                                'startDate' => $membership->get_start_date('Y-m-d') ?: '',
-                                'endDate' => $membership->get_end_date('Y-m-d') ?: '',
-                                'description' => $plan->get_description() ?: '',
+                                'startedAt' => $membership->get_start_date('Y-m-d') ?: '',
+                                'expiresAt' => $membership->get_end_date('Y-m-d') ?: '',
+                                'restrictedPages' => $restricted_pages,
                             );
+                            error_log('MEMBERSHIPS DEBUG - Adding membership: ' . print_r($membership_data, true));
+                            $memberships[] = $membership_data;
                         } catch (Exception $e) {
                             error_log('Error processing individual membership: ' . $e->getMessage());
                             continue;
@@ -1380,8 +1843,11 @@ function samsara_get_memberships($request) {
                 error_log('Fatal error in membership retrieval: ' . $e->getMessage());
                 return rest_ensure_response(array());
             }
+        } else {
+            error_log('MEMBERSHIPS DEBUG - WooCommerce Memberships plugin not active or function not found');
         }
 
+        error_log('MEMBERSHIPS DEBUG - Returning ' . count($memberships) . ' memberships');
         return rest_ensure_response($memberships);
     } catch (Exception $e) {
         error_log('Error in samsara_get_memberships: ' . $e->getMessage());
@@ -1440,4 +1906,246 @@ function samsara_get_dashboard_stats($request) {
     }
 
     return rest_ensure_response($stats);
+}
+
+/**
+ * Get user subscriptions using native WooCommerce Subscriptions functions
+ * This bypasses the WooCommerce REST API which can be unreliable
+ */
+function samsara_get_user_subscriptions($request) {
+    $user_id = get_current_user_id();
+
+    // Check if WooCommerce Subscriptions is active
+    if (!function_exists('wcs_get_users_subscriptions')) {
+        return new WP_Error(
+            'subscriptions_not_available',
+            'WooCommerce Subscriptions plugin is not active',
+            array('status' => 503)
+        );
+    }
+
+    try {
+        // Get filter parameters
+        $status = $request->get_param('status');
+
+        // Get all user subscriptions using native function
+        $subscriptions = wcs_get_users_subscriptions($user_id);
+
+        $formatted_subscriptions = array();
+
+        foreach ($subscriptions as $subscription) {
+            // Filter by status if provided
+            if ($status && !$subscription->has_status($status)) {
+                continue;
+            }
+
+            // Get line items
+            $line_items = array();
+            foreach ($subscription->get_items() as $item) {
+                $line_items[] = array(
+                    'id' => $item->get_id(),
+                    'name' => $item->get_name(),
+                    'quantity' => $item->get_quantity(),
+                    'total' => $item->get_total(),
+                );
+            }
+
+            // Format subscription data to match WooCommerce REST API structure
+            $formatted_subscriptions[] = array(
+                'id' => $subscription->get_id(),
+                'parent_id' => $subscription->get_parent_id(),
+                'status' => $subscription->get_status(),
+                'currency' => $subscription->get_currency(),
+                'date_created' => $subscription->get_date_created() ? $subscription->get_date_created()->date('Y-m-d\TH:i:s') : null,
+                'date_modified' => $subscription->get_date_modified() ? $subscription->get_date_modified()->date('Y-m-d\TH:i:s') : null,
+                'discount_total' => $subscription->get_total_discount(),
+                'discount_tax' => '0.00',
+                'shipping_total' => $subscription->get_shipping_total(),
+                'shipping_tax' => $subscription->get_shipping_tax(),
+                'cart_tax' => $subscription->get_cart_tax(),
+                'total' => $subscription->get_total(),
+                'total_tax' => $subscription->get_total_tax(),
+                'customer_id' => $subscription->get_user_id(),
+                'billing_period' => $subscription->get_billing_period(),
+                'billing_interval' => $subscription->get_billing_interval(),
+                'start_date' => $subscription->get_date('start'),
+                'trial_end_date' => $subscription->get_date('trial_end'),
+                'next_payment_date' => $subscription->get_date('next_payment'),
+                'last_payment_date' => $subscription->get_date('last_order_date_created'),
+                'end_date' => $subscription->get_date('end'),
+                'line_items' => $line_items,
+                'payment_method' => $subscription->get_payment_method(),
+                'payment_method_title' => $subscription->get_payment_method_title(),
+            );
+        }
+
+        return rest_ensure_response($formatted_subscriptions);
+
+    } catch (Exception $e) {
+        error_log('Error in samsara_get_user_subscriptions: ' . $e->getMessage());
+        return new WP_Error(
+            'subscription_error',
+            'Failed to fetch subscriptions: ' . $e->getMessage(),
+            array('status' => 500)
+        );
+    }
+}
+
+/**
+ * Get subscription related to a specific order
+ * Returns subscription info if the order is linked to a subscription
+ */
+function samsara_get_order_subscription($request) {
+    $order_id = $request->get_param('id');
+    $user_id = get_current_user_id();
+
+    // Check if WooCommerce Subscriptions is active
+    if (!function_exists('wcs_get_subscriptions_for_order')) {
+        return rest_ensure_response(null);
+    }
+
+    try {
+        // Get the order
+        $order = wc_get_order($order_id);
+
+        // Verify order exists and belongs to current user
+        if (!$order || $order->get_customer_id() != $user_id) {
+            return new WP_Error(
+                'order_not_found',
+                'Order not found or does not belong to current user',
+                array('status' => 404)
+            );
+        }
+
+        // Get subscriptions related to this order
+        $subscriptions = wcs_get_subscriptions_for_order($order_id, array('order_type' => 'any'));
+
+        if (empty($subscriptions)) {
+            return rest_ensure_response(null);
+        }
+
+        // Get the first subscription (typically there's only one)
+        $subscription = reset($subscriptions);
+
+        // Check relationship type
+        $is_renewal = false;
+        $is_switch = false;
+        $is_parent = false;
+
+        // Check if this order is the parent order (initial subscription order)
+        if ($subscription->get_parent_id() == $order_id) {
+            $is_parent = true;
+        }
+
+        // Check renewal orders
+        $renewal_orders = $subscription->get_related_orders('ids', 'renewal');
+        if (in_array($order_id, $renewal_orders)) {
+            $is_renewal = true;
+        }
+
+        // Check switch orders
+        $switch_orders = $subscription->get_related_orders('ids', 'switch');
+        if (in_array($order_id, $switch_orders)) {
+            $is_switch = true;
+        }
+
+        return rest_ensure_response(array(
+            'subscriptionId' => $subscription->get_id(),
+            'isParent' => $is_parent,
+            'isRenewal' => $is_renewal,
+            'isSwitch' => $is_switch,
+            'subscriptionStatus' => $subscription->get_status(),
+        ));
+
+    } catch (Exception $e) {
+        error_log('Error in samsara_get_order_subscription: ' . $e->getMessage());
+        return rest_ensure_response(null);
+    }
+}
+
+/**
+ * Get orders related to a specific subscription
+ * Uses WooCommerce Subscriptions internal functions to get correct orders
+ */
+function samsara_get_subscription_orders($request) {
+    $subscription_id = $request->get_param('id');
+    $user_id = get_current_user_id();
+
+    // Check if WooCommerce Subscriptions is active
+    if (!function_exists('wcs_get_subscription')) {
+        return new WP_Error(
+            'subscriptions_not_available',
+            'WooCommerce Subscriptions plugin is not active',
+            array('status' => 503)
+        );
+    }
+
+    try {
+        // Get the subscription object
+        $subscription = wcs_get_subscription($subscription_id);
+
+        // Verify subscription exists and belongs to current user
+        if (!$subscription || $subscription->get_user_id() != $user_id) {
+            return new WP_Error(
+                'subscription_not_found',
+                'Subscription not found or does not belong to current user',
+                array('status' => 404)
+            );
+        }
+
+        // Get related orders using WooCommerce Subscriptions method
+        $related_order_ids = $subscription->get_related_orders('ids', 'any');
+
+        if (empty($related_order_ids)) {
+            return rest_ensure_response(array());
+        }
+
+        // Fetch each order using WooCommerce
+        $orders = array();
+        foreach ($related_order_ids as $order_id) {
+            $order = wc_get_order($order_id);
+
+            if ($order) {
+                // Get line items and ensure it's an array
+                $line_items = $order->get_items();
+                $line_items_array = array();
+
+                if (!empty($line_items) && is_iterable($line_items)) {
+                    foreach ($line_items as $item) {
+                        $line_items_array[] = array(
+                            'id' => $item->get_id(),
+                            'name' => $item->get_name(),
+                            'quantity' => $item->get_quantity(),
+                            'total' => $item->get_total(),
+                        );
+                    }
+                }
+
+                // Transform to match WC REST API format
+                $orders[] = array(
+                    'id' => $order->get_id(),
+                    'status' => $order->get_status(),
+                    'date_created' => $order->get_date_created()->date('Y-m-d\TH:i:s'),
+                    'total' => $order->get_total(),
+                    'currency' => $order->get_currency(),
+                    'payment_method_title' => $order->get_payment_method_title(),
+                    'line_items' => $line_items_array,
+                    'subtotal' => $order->get_subtotal(),
+                    'shipping_total' => $order->get_shipping_total(),
+                    'total_tax' => $order->get_total_tax(),
+                    'discount_total' => $order->get_discount_total(),
+                );
+            }
+        }
+
+        return rest_ensure_response($orders);
+
+    } catch (Exception $e) {
+        error_log('Error in samsara_get_subscription_orders: ' . $e->getMessage());
+        return new WP_Error(
+            'subscription_orders_error',
+            'Failed to fetch subscription orders: ' . $e->getMessage(),
+            array('status' => 500)
+        );
+    }
 }

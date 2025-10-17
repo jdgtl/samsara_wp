@@ -204,24 +204,14 @@ const Subscriptions = () => {
                         }
                       </TableCell>
                       <TableCell className="text-right">
-                        <div className="flex justify-end gap-2">
-                          <Button
-                            size="sm"
-                            variant="ghost"
-                            onClick={() => handleViewSubscription(subscription.id)}
-                            data-testid={`view-subscription-${subscription.id}`}
-                          >
-                            View
-                          </Button>
-                          <Button
-                            size="sm"
-                            variant="outline"
-                            onClick={() => handleViewSubscription(subscription.id)}
-                            data-testid={`manage-subscription-${subscription.id}`}
-                          >
-                            Manage
-                          </Button>
-                        </div>
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          onClick={() => handleViewSubscription(subscription.id)}
+                          data-testid={`manage-subscription-${subscription.id}`}
+                        >
+                          Manage
+                        </Button>
                       </TableCell>
                     </TableRow>
                   ))}

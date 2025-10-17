@@ -252,7 +252,7 @@ const SubscriptionDetail = () => {
           <div className="flex flex-wrap gap-3">
             {subscription.status === 'active' && (
               <>
-                <Button 
+                <Button
                   variant="outline"
                   onClick={() => setShowPauseDialog(true)}
                   className="gap-2"
@@ -261,7 +261,8 @@ const SubscriptionDetail = () => {
                   <Pause className="h-4 w-4" />
                   Pause Subscription
                 </Button>
-                <Button 
+                {/* TODO: Re-enable when subscription switching is configured in WooCommerce
+                <Button
                   variant="outline"
                   onClick={handleChangePlan}
                   className="gap-2"
@@ -270,6 +271,7 @@ const SubscriptionDetail = () => {
                   <CreditCard className="h-4 w-4" />
                   Change Plan
                 </Button>
+                */}
               </>
             )}
             
@@ -318,9 +320,10 @@ const SubscriptionDetail = () => {
           <CardContent>
             <div className="space-y-3">
               {relatedOrders.map((order) => (
-                <div 
-                  key={order.id} 
-                  className="flex justify-between items-center p-3 border border-stone-200 rounded-lg hover:bg-stone-50"
+                <div
+                  key={order.id}
+                  className="flex justify-between items-center p-3 border border-stone-200 rounded-lg hover:bg-stone-50 cursor-pointer transition-colors"
+                  onClick={() => navigate(`/orders/${order.id}`)}
                   data-testid={`related-order-${order.id}`}
                 >
                   <div>
@@ -333,10 +336,9 @@ const SubscriptionDetail = () => {
                       })}
                     </p>
                   </div>
-                  <Button 
-                    variant="ghost" 
+                  <Button
+                    variant="ghost"
                     size="sm"
-                    onClick={() => navigate(`/orders/${order.id}`)}
                     className="gap-2"
                     data-testid={`view-related-order-${order.id}`}
                   >

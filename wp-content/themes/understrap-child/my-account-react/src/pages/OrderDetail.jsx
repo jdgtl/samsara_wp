@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '../components/ui/card';
 import { Badge } from '../components/ui/badge';
@@ -6,8 +6,9 @@ import { Button } from '../components/ui/button';
 import { Separator } from '../components/ui/separator';
 import { Alert, AlertDescription } from '../components/ui/alert';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '../components/ui/dialog';
-import { ArrowLeft, Download, Mail, Loader2, AlertTriangle } from 'lucide-react';
+import { ArrowLeft, Download, Mail, Loader2, AlertTriangle, Repeat } from 'lucide-react';
 import { useOrder } from '../hooks/useOrders';
+import { get } from '../services/api';
 
 const OrderDetail = () => {
   const { orderId } = useParams();
@@ -15,6 +16,29 @@ const OrderDetail = () => {
 
   // Fetch live order data
   const { order, loading, error } = useOrder(orderId);
+
+  // Fetch subscription info for this order
+  const [subscriptionInfo, setSubscriptionInfo] = useState(null);
+  const [subscriptionLoading, setSubscriptionLoading] = useState(false);
+
+  useEffect(() => {
+    const fetchSubscriptionInfo = async () => {
+      if (!orderId) return;
+
+      try {
+        setSubscriptionLoading(true);
+        const data = await get(`samsara/v1/orders/${orderId}/subscription`);
+        setSubscriptionInfo(data);
+      } catch (err) {
+        console.error('Error fetching subscription info:', err);
+        setSubscriptionInfo(null);
+      } finally {
+        setSubscriptionLoading(false);
+      }
+    };
+
+    fetchSubscriptionInfo();
+  }, [orderId]);
 
   // Loading state
   if (loading) {
@@ -82,14 +106,24 @@ const OrderDetail = () => {
     const variants = {
       completed: { variant: 'default', className: 'bg-emerald-100 text-emerald-800 hover:bg-emerald-100' },
       processing: { variant: 'secondary', className: 'bg-blue-100 text-blue-800 hover:bg-blue-100' },
-      refunded: { variant: 'outline', className: 'bg-amber-100 text-amber-800 hover:bg-amber-100' },
+      'on-hold': { variant: 'outline', className: 'bg-amber-100 text-amber-800 hover:bg-amber-100' },
+      pending: { variant: 'outline', className: 'bg-stone-200 text-stone-700 hover:bg-stone-200' },
+      refunded: { variant: 'outline', className: 'bg-purple-100 text-purple-800 hover:bg-purple-100' },
+      cancelled: { variant: 'destructive', className: 'bg-red-100 text-red-800 hover:bg-red-100' },
       canceled: { variant: 'destructive', className: 'bg-red-100 text-red-800 hover:bg-red-100' },
+      failed: { variant: 'destructive', className: 'bg-red-100 text-red-800 hover:bg-red-100' },
     };
 
-    const config = variants[status] || variants.completed;
+    const config = variants[status] || { variant: 'outline', className: 'bg-stone-100 text-stone-800 hover:bg-stone-100' };
+
+    // Format display name (handle both cancelled and canceled)
+    const displayName = status === 'cancelled' ? 'Canceled' :
+                       status === 'on-hold' ? 'On Hold' :
+                       status.charAt(0).toUpperCase() + status.slice(1);
+
     return (
       <Badge variant={config.variant} className={config.className}>
-        {status.charAt(0).toUpperCase() + status.slice(1)}
+        {displayName}
       </Badge>
     );
   };
@@ -200,6 +234,45 @@ const OrderDetail = () => {
           <p className="text-stone-900" data-testid="payment-method">{order.paymentMethod}</p>
         </CardContent>
       </Card>
+
+      {/* Related Subscription */}
+      {subscriptionInfo && subscriptionInfo.subscriptionId && (
+        <Card data-testid="subscription-section">
+          <CardHeader>
+            <CardTitle>Related Subscription</CardTitle>
+            <CardDescription>
+              {subscriptionInfo.isParent && 'This order created this subscription'}
+              {subscriptionInfo.isRenewal && 'This is a renewal payment for this subscription'}
+              {subscriptionInfo.isSwitch && 'This order modified this subscription'}
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <div
+              className="flex justify-between items-center p-4 border border-stone-200 rounded-lg hover:bg-stone-50 cursor-pointer transition-colors"
+              onClick={() => navigate(`/subscriptions/${subscriptionInfo.subscriptionId}`)}
+              data-testid="related-subscription"
+            >
+              <div className="flex items-center gap-3">
+                <Repeat className="h-5 w-5 text-emerald-600" />
+                <div>
+                  <p className="font-medium text-stone-900">Subscription #{subscriptionInfo.subscriptionId}</p>
+                  <p className="text-sm text-stone-600 capitalize">
+                    Status: {subscriptionInfo.subscriptionStatus}
+                  </p>
+                </div>
+              </div>
+              <Button
+                variant="ghost"
+                size="sm"
+                className="gap-2"
+                data-testid="view-subscription-btn"
+              >
+                View
+              </Button>
+            </div>
+          </CardContent>
+        </Card>
+      )}
 
       {/* Actions */}
       <div className="flex flex-wrap gap-3">

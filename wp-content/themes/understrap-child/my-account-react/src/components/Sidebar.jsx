@@ -3,6 +3,7 @@ import { Link, useLocation } from 'react-router-dom';
 import { Avatar, AvatarFallback, AvatarImage } from './ui/avatar';
 import { Button } from './ui/button';
 import { Separator } from './ui/separator';
+import { Alert, AlertDescription } from './ui/alert';
 import {
   LayoutDashboard,
   ShoppingBag,
@@ -10,7 +11,9 @@ import {
   Repeat,
   User,
   LogOut,
-  X
+  X,
+  UserCog,
+  ArrowLeft
 } from 'lucide-react';
 
 const Sidebar = ({ isOpen, onClose }) => {
@@ -25,12 +28,29 @@ const Sidebar = ({ isOpen, onClose }) => {
     memberSince: null
   };
 
+  // Get user switching data
+  const userSwitching = window.samsaraMyAccount?.userSwitching || {
+    isSwitched: false,
+    originalUser: null,
+    switchBackUrl: null
+  };
+
   const memberSinceFormatted = userData.memberSince
     ? new Date(userData.memberSince).toLocaleDateString('en-US', {
         month: 'short',
         year: 'numeric'
       })
     : 'Recently';
+
+  const handleSwitchBack = () => {
+    if (userSwitching.switchBackUrl) {
+      // Decode HTML entities (&amp; -> &) that WordPress escapes in esc_url()
+      const textarea = document.createElement('textarea');
+      textarea.innerHTML = userSwitching.switchBackUrl;
+      const decodedUrl = textarea.value;
+      window.location.href = decodedUrl;
+    }
+  };
 
   const navItems = [
     { icon: LayoutDashboard, label: 'Dashboard', path: '/' },
@@ -102,6 +122,39 @@ const Sidebar = ({ isOpen, onClose }) => {
         </div>
 
         <Separator className="bg-stone-200" />
+
+        {/* User Switching Banner */}
+        {userSwitching.isSwitched && userSwitching.originalUser && (
+          <>
+            <div className="p-4">
+              <Alert className="border-amber-500 bg-amber-50">
+                <UserCog className="h-4 w-4 text-amber-600" />
+                <AlertDescription className="ml-2">
+                  <div className="space-y-2">
+                    <p className="text-sm font-medium text-amber-900">
+                      Switched to {userData.displayName}
+                    </p>
+                    <p className="text-xs text-amber-700">
+                      Original user: {userSwitching.originalUser.displayName}
+                    </p>
+                    {userSwitching.switchBackUrl && (
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        onClick={handleSwitchBack}
+                        className="w-full mt-2 border-amber-600 text-amber-900 hover:bg-amber-100 hover:text-amber-900"
+                      >
+                        <ArrowLeft className="h-3 w-3 mr-2" />
+                        Switch Back
+                      </Button>
+                    )}
+                  </div>
+                </AlertDescription>
+              </Alert>
+            </div>
+            <Separator className="bg-stone-200" />
+          </>
+        )}
 
         {/* Navigation Items */}
         <nav className="flex-1 p-4 space-y-1" data-testid="sidebar-nav">

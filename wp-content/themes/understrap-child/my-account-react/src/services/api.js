@@ -5,6 +5,15 @@
 
 import axios from 'axios';
 
+// Simple debug logger - only logs to console in development
+const debugLog = (message, data = null) => {
+  // Only log in development (can be controlled via environment variable if needed)
+  if (process.env.NODE_ENV === 'development') {
+    const timestamp = new Date().toISOString();
+    console.log(`[API ${timestamp}]`, message, data);
+  }
+};
+
 // Get configuration from WordPress localized script
 const getConfig = () => {
   if (typeof window !== 'undefined' && window.samsaraMyAccount) {
@@ -23,15 +32,24 @@ const createApiInstance = () => {
       'Content-Type': 'application/json',
       'X-WP-Nonce': config.nonce,
     },
+    withCredentials: true, // Required for WordPress REST API cookie authentication
     timeout: 30000, // 30 seconds
   });
 
   // Request interceptor
   instance.interceptors.request.use(
     (config) => {
+      debugLog('API Request', {
+        url: config.url,
+        method: config.method,
+        hasNonce: !!config.headers['X-WP-Nonce'],
+        withCredentials: config.withCredentials,
+        userId: getConfig().userId,
+      });
       return config;
     },
     (error) => {
+      debugLog('Request Error', error);
       return Promise.reject(error);
     }
   );
@@ -48,11 +66,19 @@ const createApiInstance = () => {
 
         // Unauthorized - session expired
         if (status === 401 || status === 403) {
-          console.error('Authentication failed. Redirecting to login...');
-          // Redirect to login page
-          if (typeof window !== 'undefined') {
-            window.location.href = getConfig().siteUrl + '/wp-login.php';
-          }
+          debugLog('Authentication failed', {
+            status,
+            url: error.config?.url,
+            method: error.config?.method,
+          });
+
+          console.error('API Authentication failed. Please log in again.');
+
+          // Redirect to login if genuinely logged out
+          // (Uncomment if auto-redirect to login is desired)
+          // if (typeof window !== 'undefined') {
+          //   window.location.href = getConfig().siteUrl + '/wp-login.php';
+          // }
         }
 
         // Return formatted error

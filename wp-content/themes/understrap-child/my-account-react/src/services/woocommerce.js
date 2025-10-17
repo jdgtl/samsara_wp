@@ -63,20 +63,16 @@ export const ordersApi = {
 export const subscriptionsApi = {
   /**
    * Get all subscriptions for current user
+   * Uses custom endpoint that directly calls wcs_get_users_subscriptions()
+   * This bypasses WooCommerce REST API issues
    */
   async getSubscriptions(params = {}) {
-    const userId = getCurrentUserId();
-    const defaultParams = {
-      customer: userId,
-      per_page: 100,
-      ...params,
-    };
-
-    return await get(`${WCS_API_BASE}/subscriptions`, defaultParams);
+    return await get('samsara/v1/user-subscriptions', params);
   },
 
   /**
    * Get single subscription by ID
+   * Still uses WC REST API as it works for single subscriptions
    */
   async getSubscription(subscriptionId) {
     return await get(`${WCS_API_BASE}/subscriptions/${subscriptionId}`);
@@ -84,22 +80,28 @@ export const subscriptionsApi = {
 
   /**
    * Get active subscriptions only
+   * Uses custom endpoint with status filter
    */
   async getActiveSubscriptions() {
-    const userId = getCurrentUserId();
-    return await get(`${WCS_API_BASE}/subscriptions`, {
-      customer: userId,
+    return await get('samsara/v1/user-subscriptions', {
       status: 'active',
     });
   },
 
   /**
    * Get orders related to a subscription
+   * Uses custom endpoint that leverages WooCommerce Subscriptions internal methods
    */
   async getSubscriptionOrders(subscriptionId) {
-    return await get(`${WC_API_BASE}/orders`, {
-      subscription: subscriptionId,
-    });
+    try {
+      // Use custom Samsara endpoint that properly fetches related orders
+      const orders = await get(`samsara/v1/subscriptions/${subscriptionId}/orders`);
+
+      return Array.isArray(orders) ? orders : [];
+    } catch (err) {
+      console.error('Error fetching subscription orders:', err);
+      return [];
+    }
   },
 
   /**
@@ -191,11 +193,22 @@ export const paymentMethodsApi = {
   },
 
   /**
-   * Add payment method
-   * This typically requires payment gateway integration (Stripe, etc.)
+   * Initialize adding payment method - returns Stripe Setup Intent
+   * This creates a Setup Intent on the backend and returns client_secret and publishable_key
    */
-  async addPaymentMethod(data) {
-    return await post('samsara/v1/payment-methods', data);
+  async initializeAddPaymentMethod() {
+    return await post('samsara/v1/payment-methods');
+  },
+
+  /**
+   * Confirm payment method after Stripe setup succeeds
+   * Called after Stripe.js confirms the card setup
+   */
+  async confirmPaymentMethod(setupIntentId, setAsDefault = false) {
+    return await post('samsara/v1/payment-methods/confirm', {
+      setup_intent_id: setupIntentId,
+      set_as_default: setAsDefault,
+    });
   },
 
   /**
@@ -272,11 +285,13 @@ export const transformers = {
     return {
       id: wcSub.id.toString(),
       startDate: wcSub.date_created,
-      status: wcSub.status,
+      status: wcSub.status === 'on-hold' ? 'paused' : (wcSub.status === 'cancelled' ? 'canceled' : wcSub.status),
       nextPaymentDate: wcSub.next_payment_date || null,
       nextPaymentAmount: parseFloat(wcSub.total || 0),
       planName: wcSub.line_items?.[0]?.name || 'Subscription',
       billingInterval: wcSub.billing_period || 'monthly',
+      canceledAt: wcSub.date_cancelled || wcSub.end_date || null,
+      relatedOrders: wcSub.related_orders || [],
     };
   },
 

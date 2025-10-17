@@ -4,15 +4,16 @@ import { Button } from '../components/ui/button';
 import { Input } from '../components/ui/input';
 import { Label } from '../components/ui/label';
 import { Alert, AlertDescription } from '../components/ui/alert';
-import { Separator } from '../components/ui/separator';
-import { Avatar, AvatarFallback, AvatarImage } from '../components/ui/avatar';
-import { Upload, Mountain, TreePine, Tent, Compass, Flag, Target, Zap, Wind, Sun, Waves, Snowflake, Loader2, AlertTriangle } from 'lucide-react';
+// import { Separator } from '../components/ui/separator';
+// import { Avatar, AvatarFallback, AvatarImage } from '../components/ui/avatar';
+// import { Upload, Mountain, TreePine, Tent, Compass, Flag, Target, Zap, Wind, Sun, Waves, Snowflake, Loader2, AlertTriangle } from 'lucide-react';
+import { Loader2, AlertTriangle } from 'lucide-react';
 import { useCustomer, useCustomerActions } from '../hooks/useCustomer';
 
 const AccountDetails = () => {
   const [isEditing, setIsEditing] = useState(false);
-  const [avatarType, setAvatarType] = useState('initials');
-  const [selectedEmoji, setSelectedEmoji] = useState(null);
+  // const [avatarType, setAvatarType] = useState('initials');
+  // const [selectedEmoji, setSelectedEmoji] = useState(null);
 
   // Fetch live customer data
   const { customer, loading, error, refetch } = useCustomer();
@@ -42,20 +43,20 @@ const AccountDetails = () => {
     }
   }, [customer, userData.displayName, userData.email]);
 
-  // Outdoor-themed avatar options
-  const avatarOptions = [
-    { icon: Mountain, label: 'Mountain', color: 'bg-stone-600' },
-    { icon: TreePine, label: 'Pine Tree', color: 'bg-emerald-700' },
-    { icon: Tent, label: 'Tent', color: 'bg-amber-600' },
-    { icon: Compass, label: 'Compass', color: 'bg-blue-600' },
-    { icon: Flag, label: 'Flag', color: 'bg-red-600' },
-    { icon: Target, label: 'Target', color: 'bg-orange-600' },
-    { icon: Zap, label: 'Lightning', color: 'bg-yellow-600' },
-    { icon: Wind, label: 'Wind', color: 'bg-cyan-600' },
-    { icon: Sun, label: 'Sun', color: 'bg-yellow-500' },
-    { icon: Waves, label: 'Waves', color: 'bg-blue-500' },
-    { icon: Snowflake, label: 'Snowflake', color: 'bg-sky-400' },
-  ];
+  // Outdoor-themed avatar options - commented out for now
+  // const avatarOptions = [
+  //   { icon: Mountain, label: 'Mountain', color: 'bg-stone-600' },
+  //   { icon: TreePine, label: 'Pine Tree', color: 'bg-emerald-700' },
+  //   { icon: Tent, label: 'Tent', color: 'bg-amber-600' },
+  //   { icon: Compass, label: 'Compass', color: 'bg-blue-600' },
+  //   { icon: Flag, label: 'Flag', color: 'bg-red-600' },
+  //   { icon: Target, label: 'Target', color: 'bg-orange-600' },
+  //   { icon: Zap, label: 'Lightning', color: 'bg-yellow-600' },
+  //   { icon: Wind, label: 'Wind', color: 'bg-cyan-600' },
+  //   { icon: Sun, label: 'Sun', color: 'bg-yellow-500' },
+  //   { icon: Waves, label: 'Waves', color: 'bg-blue-500' },
+  //   { icon: Snowflake, label: 'Snowflake', color: 'bg-sky-400' },
+  // ];
 
   const handleSave = async () => {
     const updateData = {
@@ -92,39 +93,40 @@ const AccountDetails = () => {
     setIsEditing(false);
   };
 
-  const handleChangePassword = () => {
-    alert('Password change interface would open here');
-  };
+  // Commented out - will implement later
+  // const handleChangePassword = () => {
+  //   alert('Password change interface would open here');
+  // };
 
-  const handleUploadAvatar = () => {
-    alert('Avatar upload interface would open here');
-    setAvatarType('upload');
-  };
+  // const handleUploadAvatar = () => {
+  //   alert('Avatar upload interface would open here');
+  //   setAvatarType('upload');
+  // };
 
-  const handleSelectEmoji = (option) => {
-    setSelectedEmoji(option);
-    setAvatarType('emoji');
-  };
+  // const handleSelectEmoji = (option) => {
+  //   setSelectedEmoji(option);
+  //   setAvatarType('emoji');
+  // };
 
-  const getCurrentAvatar = () => {
-    if (avatarType === 'emoji' && selectedEmoji) {
-      const Icon = selectedEmoji.icon;
-      return (
-        <div className={`h-24 w-24 rounded-full flex items-center justify-center ${selectedEmoji.color}`}>
-          <Icon className="h-12 w-12 text-white" />
-        </div>
-      );
-    }
+  // const getCurrentAvatar = () => {
+  //   if (avatarType === 'emoji' && selectedEmoji) {
+  //     const Icon = selectedEmoji.icon;
+  //     return (
+  //       <div className={`h-24 w-24 rounded-full flex items-center justify-center ${selectedEmoji.color}`}>
+  //         <Icon className="h-12 w-12 text-white" />
+  //       </div>
+  //     );
+  //   }
 
-    return (
-      <Avatar className="h-24 w-24" data-testid="profile-avatar">
-        <AvatarImage src={userData.avatarUrl} alt={`${formData.firstName} ${formData.lastName}`} />
-        <AvatarFallback className="bg-emerald-600 text-white text-2xl">
-          {formData.firstName?.[0]}{formData.lastName?.[0]}
-        </AvatarFallback>
-      </Avatar>
-    );
-  };
+  //   return (
+  //     <Avatar className="h-24 w-24" data-testid="profile-avatar">
+  //       <AvatarImage src={userData.avatarUrl} alt={`${formData.firstName} ${formData.lastName}`} />
+  //       <AvatarFallback className="bg-emerald-600 text-white text-2xl">
+  //         {formData.firstName?.[0]}{formData.lastName?.[0]}
+  //       </AvatarFallback>
+  //     </Avatar>
+  //   );
+  // };
 
   // Loading state
   if (loading) {
@@ -175,8 +177,8 @@ const AccountDetails = () => {
         <p className="text-stone-600">Manage your personal information and account settings</p>
       </div>
 
-      {/* Profile Picture */}
-      <Card data-testid="profile-picture-section">
+      {/* Profile Picture - HIDDEN FOR NOW */}
+      {/* <Card data-testid="profile-picture-section">
         <CardHeader>
           <CardTitle>Profile Picture</CardTitle>
           <CardDescription>Choose an avatar or upload your own image</CardDescription>
@@ -186,7 +188,7 @@ const AccountDetails = () => {
             {getCurrentAvatar()}
             <div className="space-y-2">
               <p className="text-sm text-stone-600">Current avatar type: {avatarType === 'initials' ? 'Initials' : avatarType === 'emoji' ? 'Icon' : 'Custom upload'}</p>
-              <Button 
+              <Button
                 onClick={handleUploadAvatar}
                 variant="outline"
                 className="gap-2"
@@ -200,7 +202,6 @@ const AccountDetails = () => {
 
           <Separator />
 
-          {/* Outdoor-themed avatar options */}
           <div className="space-y-3">
             <Label>Or choose a custom style</Label>
             <div className="grid grid-cols-6 gap-3">
@@ -225,7 +226,7 @@ const AccountDetails = () => {
             </div>
           </div>
         </CardContent>
-      </Card>
+      </Card> */}
 
       {/* Personal Information */}
       <Card data-testid="personal-info-section">
@@ -346,8 +347,8 @@ const AccountDetails = () => {
         </CardContent>
       </Card>
 
-      {/* Security */}
-      <Card data-testid="security-section">
+      {/* Security - HIDDEN FOR NOW */}
+      {/* <Card data-testid="security-section">
         <CardHeader>
           <CardTitle>Security</CardTitle>
           <CardDescription>Manage your password and security settings</CardDescription>
@@ -357,8 +358,8 @@ const AccountDetails = () => {
             <div>
               <Label>Password</Label>
               <p className="text-sm text-stone-600 mb-2">Last changed 3 months ago</p>
-              <Button 
-                variant="outline" 
+              <Button
+                variant="outline"
                 onClick={handleChangePassword}
                 data-testid="change-password-btn"
               >
@@ -367,7 +368,7 @@ const AccountDetails = () => {
             </div>
           </div>
         </CardContent>
-      </Card>
+      </Card> */}
     </div>
   );
 };

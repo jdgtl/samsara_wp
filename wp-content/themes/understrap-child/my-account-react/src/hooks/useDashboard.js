@@ -14,17 +14,102 @@ import { usePaymentMethods, getExpiringPaymentMethods } from './usePaymentMethod
  */
 export const useDashboard = () => {
   // Fetch individual data sources
-  const { subscriptions, loading: subsLoading, error: subsError } = useActiveSubscriptions();
-  const { memberships, loading: membershipsLoading, error: membershipsError } = useMemberships();
-  const { paymentMethods, loading: paymentsLoading, error: paymentsError } = usePaymentMethods();
+  const { subscriptions, loading: subsLoading, error: subsError, refetch: refetchSubs } = useActiveSubscriptions();
+  const { memberships, loading: membershipsLoading, error: membershipsError, refetch: refetchMemberships } = useMemberships();
+  const { paymentMethods, loading: paymentsLoading, error: paymentsError, refetch: refetchPayments } = usePaymentMethods();
 
   // Calculate derived data
-  const primarySubscription = subscriptions.length > 0 ? subscriptions[0] : null;
+  // Prioritize Athlete Team FIRST, then Basecamp as primary subscription/membership
+  // Check both subscriptions AND manually-added memberships
+  // Only show Athlete Team or Basecamp at the top - nothing else
+  const primarySubscription = (() => {
+    // DEBUG: Log what data we're working with
+    console.log('DEBUG - All Subscriptions:', subscriptions);
+    console.log('DEBUG - All Memberships:', memberships);
+
+    // First priority: Active Athlete Team subscription
+    const athleteTeamSub = subscriptions.find(sub => {
+      const planName = sub.planName?.toLowerCase() || '';
+      return sub.status === 'active' && planName.includes('athlete team');
+    });
+    if (athleteTeamSub) {
+      console.log('DEBUG - Found Athlete Team subscription:', athleteTeamSub);
+      return athleteTeamSub;
+    }
+
+    // Second priority: Active Athlete Team membership (manually added, no subscription)
+    const athleteTeamMembership = memberships.find(m => {
+      const slug = m.slug?.toLowerCase() || '';
+      const name = m.name?.toLowerCase() || '';
+      console.log('DEBUG - Checking membership:', { name: m.name, slug: m.slug, status: m.status });
+      return m.status === 'active' && (
+        slug.includes('athlete-team') ||
+        name.includes('athlete team')
+      );
+    });
+    if (athleteTeamMembership) {
+      console.log('DEBUG - Found Athlete Team membership:', athleteTeamMembership);
+      // Convert membership to subscription-like format for display
+      return {
+        id: `membership-${athleteTeamMembership.id}`,
+        planName: athleteTeamMembership.name,
+        status: athleteTeamMembership.status,
+        startDate: athleteTeamMembership.startedAt,
+        nextPaymentDate: null,
+        nextPaymentAmount: null,
+        billingInterval: null,
+        isMembership: true, // Flag to indicate this is a membership, not subscription
+      };
+    }
+
+    // Third priority: Active Basecamp subscription
+    const basecampSub = subscriptions.find(sub => {
+      const planName = sub.planName?.toLowerCase() || '';
+      return sub.status === 'active' && planName.includes('basecamp');
+    });
+    if (basecampSub) return basecampSub;
+
+    // Fourth priority: Active Basecamp membership (manually added, no subscription)
+    const basecampMembership = memberships.find(m => {
+      const slug = m.slug?.toLowerCase() || '';
+      const name = m.name?.toLowerCase() || '';
+      return m.status === 'active' && (
+        slug.includes('basecamp') ||
+        name.includes('basecamp')
+      );
+    });
+    if (basecampMembership) {
+      // Convert membership to subscription-like format for display
+      return {
+        id: `membership-${basecampMembership.id}`,
+        planName: basecampMembership.name,
+        status: basecampMembership.status,
+        startDate: basecampMembership.startedAt,
+        nextPaymentDate: null,
+        nextPaymentAmount: null,
+        billingInterval: null,
+        isMembership: true, // Flag to indicate this is a membership, not subscription
+      };
+    }
+
+    // If no Athlete Team or Basecamp, don't show anything as primary
+    return null;
+  })();
+
   const expiringCards = getExpiringPaymentMethods(paymentMethods);
 
   // Aggregate loading and error states
   const loading = subsLoading || membershipsLoading || paymentsLoading;
   const error = subsError || membershipsError || paymentsError;
+
+  // Combined refetch function
+  const refetch = useCallback(async () => {
+    await Promise.all([
+      refetchSubs(),
+      refetchMemberships(),
+      refetchPayments()
+    ]);
+  }, [refetchSubs, refetchMemberships, refetchPayments]);
 
   return {
     primarySubscription,
@@ -34,6 +119,7 @@ export const useDashboard = () => {
     expiringCards,
     loading,
     error,
+    refetch,
   };
 };
 
