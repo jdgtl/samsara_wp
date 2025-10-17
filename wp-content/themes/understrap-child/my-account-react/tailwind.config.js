@@ -41,19 +41,7 @@ module.exports = {
           DEFAULT: "hsl(0, 0%, 100%)",
           foreground: "hsl(30, 10%, 15%)",
         },
-        // Additional Samsara colors
-        emerald: {
-          50: "hsl(152, 76%, 96%)",
-          100: "hsl(149, 80%, 90%)",
-          200: "hsl(152, 76%, 80%)",
-          300: "hsl(156, 72%, 67%)",
-          400: "hsl(158, 64%, 52%)",
-          500: "hsl(160, 84%, 39%)",
-          600: "hsl(150, 70%, 45%)", // Primary brand color #059669
-          700: "hsl(162, 93%, 30%)",
-          800: "hsl(163, 94%, 24%)",
-          900: "hsl(164, 86%, 20%)",
-        },
+        // Use Tailwind's default emerald colors (emerald-600 = #059669)
         stone: {
           50: "hsl(40, 10%, 97%)",
           100: "hsl(40, 10%, 95%)",
