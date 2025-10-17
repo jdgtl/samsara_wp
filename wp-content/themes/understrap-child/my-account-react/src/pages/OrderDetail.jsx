@@ -19,7 +19,7 @@ const OrderDetail = () => {
         <Card>
           <CardContent className="text-center py-12">
             <p className="text-stone-600 mb-4">Order not found</p>
-            <Button onClick={() => navigate('/account/orders')} data-testid="back-to-orders-btn">
+            <Button onClick={() => navigate('/orders')} data-testid="back-to-orders-btn">
               Back to Orders
             </Button>
           </CardContent>
@@ -57,7 +57,7 @@ const OrderDetail = () => {
       {/* Back button */}
       <Button 
         variant="ghost" 
-        onClick={() => navigate('/account/orders')}
+        onClick={() => navigate('/orders')}
         className="gap-2"
         data-testid="back-btn"
       >

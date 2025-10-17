@@ -77,7 +77,7 @@ const Orders = () => {
   );
 
   const handleViewOrder = (orderId) => {
-    navigate(`/account/orders/${orderId}`);
+    navigate(`/orders/${orderId}`);
   };
 
   const statusOptions = [

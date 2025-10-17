@@ -52,7 +52,7 @@ const Subscriptions = () => {
   }, [statusFilter, sortOrder]);
 
   const handleViewSubscription = (subId) => {
-    navigate(`/account/subscriptions/${subId}`);
+    navigate(`/subscriptions/${subId}`);
   };
 
   const statusOptions = [

@@ -66,7 +66,7 @@ const Dashboard = () => {
   };
 
   const handleManageSubscription = () => {
-    navigate(`/account/subscriptions/${primarySubscription.id}`);
+    navigate(`/subscriptions/${primarySubscription.id}`);
   };
 
   const handlePauseResume = () => {

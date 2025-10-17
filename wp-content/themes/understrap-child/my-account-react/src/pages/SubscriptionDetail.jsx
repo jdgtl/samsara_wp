@@ -43,7 +43,7 @@ const SubscriptionDetail = () => {
         <Card>
           <CardContent className="text-center py-12">
             <p className="text-stone-600 mb-4">Subscription not found</p>
-            <Button onClick={() => navigate('/account/subscriptions')} data-testid="back-to-subscriptions-btn">
+            <Button onClick={() => navigate('/subscriptions')} data-testid="back-to-subscriptions-btn">
               Back to Subscriptions
             </Button>
           </CardContent>
@@ -95,7 +95,7 @@ const SubscriptionDetail = () => {
       {/* Back button */}
       <Button 
         variant="ghost" 
-        onClick={() => navigate('/account/subscriptions')}
+        onClick={() => navigate('/subscriptions')}
         className="gap-2"
         data-testid="back-btn"
       >
@@ -273,7 +273,7 @@ const SubscriptionDetail = () => {
                   <Button 
                     variant="ghost" 
                     size="sm"
-                    onClick={() => navigate(`/account/orders/${order.id}`)}
+                    onClick={() => navigate(`/orders/${order.id}`)}
                     className="gap-2"
                     data-testid={`view-related-order-${order.id}`}
                   >
