@@ -120,7 +120,7 @@ const AccountDetails = () => {
 
           {/* Outdoor-themed avatar options */}
           <div className="space-y-3">
-            <Label>Or choose an outdoor icon</Label>
+            <Label>Or choose a custom style</Label>
             <div className="grid grid-cols-6 gap-3">
               {avatarOptions.map((option) => {
                 const Icon = option.icon;

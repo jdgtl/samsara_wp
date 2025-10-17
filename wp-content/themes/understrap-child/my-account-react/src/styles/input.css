@@ -48,3 +48,48 @@
     background-color: rgb(5 150 105) !important;
   }
 }
+
+  /* Force all avatar icon colors to override WordPress styles */
+  .bg-stone-600 {
+    background-color: rgb(87 83 78) !important;
+  }
+  
+  .bg-emerald-700 {
+    background-color: rgb(4 120 87) !important;
+  }
+  
+  .bg-amber-600 {
+    background-color: rgb(217 119 6) !important;
+  }
+  
+  .bg-blue-600 {
+    background-color: rgb(37 99 235) !important;
+  }
+  
+  .bg-red-600 {
+    background-color: rgb(220 38 38) !important;
+  }
+  
+  .bg-orange-600 {
+    background-color: rgb(234 88 12) !important;
+  }
+  
+  .bg-yellow-600 {
+    background-color: rgb(202 138 4) !important;
+  }
+  
+  .bg-cyan-600 {
+    background-color: rgb(8 145 178) !important;
+  }
+  
+  .bg-yellow-500 {
+    background-color: rgb(234 179 8) !important;
+  }
+  
+  .bg-blue-500 {
+    background-color: rgb(59 130 246) !important;
+  }
+  
+  .bg-sky-400 {
+    background-color: rgb(56 189 248) !important;
+  }
