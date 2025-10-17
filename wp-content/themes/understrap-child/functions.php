@@ -990,3 +990,87 @@ function samsara_ensure_woocommerce_endpoints() {
 add_action('init', 'samsara_ensure_woocommerce_endpoints', 25);
 
 add_action( 'woocommerce_account_payment-methods_endpoint', 'woocommerce_account_edit_address' );
+/**
+ * =====================================================
+ * REACT MY ACCOUNT DASHBOARD
+ * =====================================================
+ * Enqueue React-based My Account dashboard
+ */
+
+/**
+ * Enqueue React My Account App
+ * Only loads on the React My Account template
+ */
+function samsara_enqueue_react_my_account() {
+    // Only enqueue on the React My Account template
+    if (!is_page_template('template-my-account.php')) {
+        return;
+    }
+    
+    // Enqueue React app JS
+    wp_enqueue_script(
+        'samsara-my-account-react',
+        get_stylesheet_directory_uri() . '/my-account-react/build/js/index.js',
+        array(), // React and ReactDOM are externalized in webpack config
+        filemtime(get_stylesheet_directory() . '/my-account-react/build/js/index.js'),
+        true
+    );
+    
+    // Enqueue Tailwind CSS
+    wp_enqueue_style(
+        'samsara-my-account-styles',
+        get_stylesheet_directory_uri() . '/my-account-react/build/css/my-account.css',
+        array(),
+        filemtime(get_stylesheet_directory() . '/my-account-react/build/css/my-account.css')
+    );
+    
+    // Enqueue React and ReactDOM from CDN (needed for production)
+    wp_enqueue_script(
+        'react',
+        'https://unpkg.com/react@18/umd/react.production.min.js',
+        array(),
+        '18.3.1',
+        false
+    );
+    
+    wp_enqueue_script(
+        'react-dom',
+        'https://unpkg.com/react-dom@18/umd/react-dom.production.min.js',
+        array('react'),
+        '18.3.1',
+        false
+    );
+    
+    // Localize script with WordPress and WooCommerce data
+    wp_localize_script('samsara-my-account-react', 'samsaraMyAccount', array(
+        'apiUrl' => esc_url_raw(rest_url()),
+        'nonce' => wp_create_nonce('wp_rest'),
+        'userId' => get_current_user_id(),
+        'wcApiUrl' => esc_url_raw(rest_url('wc/v3/')),
+        'wcsApiUrl' => esc_url_raw(rest_url('wc/v1/')),
+        'userData' => array(
+            'id' => get_current_user_id(),
+            'firstName' => wp_get_current_user()->first_name,
+            'lastName' => wp_get_current_user()->last_name,
+            'displayName' => wp_get_current_user()->display_name,
+            'email' => wp_get_current_user()->user_email,
+            'memberSince' => wp_get_current_user()->user_registered,
+        ),
+        'siteUrl' => get_site_url(),
+        'basecampUrl' => 'https://videos.samsaraexperience.com',
+        'logoutUrl' => wp_logout_url(home_url()),
+    ));
+}
+add_action('wp_enqueue_scripts', 'samsara_enqueue_react_my_account');
+
+/**
+ * Remove default WooCommerce My Account styles on React template
+ */
+function samsara_dequeue_wc_styles_on_react_template() {
+    if (is_page_template('template-my-account.php')) {
+        wp_dequeue_style('woocommerce-general');
+        wp_dequeue_style('woocommerce-layout');
+        wp_dequeue_style('woocommerce-smallscreen');
+    }
+}
+add_action('wp_enqueue_scripts', 'samsara_dequeue_wc_styles_on_react_template', 99);
