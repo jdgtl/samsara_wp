@@ -1007,38 +1007,38 @@ function samsara_enqueue_react_my_account() {
         return;
     }
     
-    // Enqueue React app JS
+    // Enqueue React and ReactDOM from CDN FIRST (in header)
+    wp_enqueue_script(
+        'react',
+        'https://unpkg.com/react@18/umd/react.production.min.js',
+        array(),
+        '18.3.1',
+        false // Load in header
+    );
+
+    wp_enqueue_script(
+        'react-dom',
+        'https://unpkg.com/react-dom@18/umd/react-dom.production.min.js',
+        array('react'),
+        '18.3.1',
+        false // Load in header
+    );
+
+    // Enqueue React app JS (depends on React and ReactDOM)
     wp_enqueue_script(
         'samsara-my-account-react',
         get_stylesheet_directory_uri() . '/my-account-react/build/js/index.js',
-        array(), // React and ReactDOM are externalized in webpack config
+        array('react', 'react-dom'), // Depend on React and ReactDOM
         filemtime(get_stylesheet_directory() . '/my-account-react/build/js/index.js'),
-        true
+        true // Load in footer, but after React/ReactDOM in header
     );
-    
+
     // Enqueue Tailwind CSS
     wp_enqueue_style(
         'samsara-my-account-styles',
         get_stylesheet_directory_uri() . '/my-account-react/build/css/my-account.css',
         array(),
         filemtime(get_stylesheet_directory() . '/my-account-react/build/css/my-account.css')
-    );
-    
-    // Enqueue React and ReactDOM from CDN (needed for production)
-    wp_enqueue_script(
-        'react',
-        'https://unpkg.com/react@18/umd/react.production.min.js',
-        array(),
-        '18.3.1',
-        false
-    );
-    
-    wp_enqueue_script(
-        'react-dom',
-        'https://unpkg.com/react-dom@18/umd/react-dom.production.min.js',
-        array('react'),
-        '18.3.1',
-        false
     );
     
     // Localize script with WordPress and WooCommerce data
