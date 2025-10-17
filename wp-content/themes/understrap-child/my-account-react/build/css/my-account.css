@@ -798,6 +798,10 @@ body {
   z-index: 1;
 }
 
+.z-\[9999\] {
+  z-index: 9999;
+}
+
 .-mx-1 {
   margin-left: -0.25rem;
   margin-right: -0.25rem;
