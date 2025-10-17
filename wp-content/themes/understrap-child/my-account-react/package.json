@@ -4,12 +4,14 @@
   "description": "Samsara My Account - React Dashboard for WooCommerce",
   "private": true,
   "scripts": {
-    "start": "wp-scripts start src/index.js --output-path=build/js",
-    "build": "wp-scripts build src/index.js --output-path=build/js",
-    "build:css": "tailwindcss -i ./src/styles/input.css -o ./build/css/my-account.css --minify",
+    "start": "npx webpack serve --mode development --config webpack.config.js",
+    "build": "npx webpack --mode production --config webpack.config.js",
+    "build:css": "npx tailwindcss -i ./src/styles/input.css -o ./build/css/my-account.css --minify",
     "build:all": "npm run build && npm run build:css"
   },
   "dependencies": {
+    "@babel/core": "^7.28.4",
+    "@babel/preset-react": "^7.27.1",
     "@hookform/resolvers": "^5.0.1",
     "@radix-ui/react-accordion": "^1.2.2",
     "@radix-ui/react-alert-dialog": "^1.1.4",
@@ -29,23 +31,30 @@
     "@wordpress/data": "^10.0.0",
     "@wordpress/element": "^6.0.0",
     "axios": "^1.7.9",
+    "babel-loader": "^10.0.0",
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
+    "css-loader": "^7.1.2",
     "date-fns": "^4.1.0",
     "lucide-react": "^0.468.0",
+    "postcss-loader": "^8.2.0",
     "react": "^18.3.1",
     "react-dom": "^18.3.1",
     "react-hook-form": "^7.56.2",
     "react-router-dom": "^7.5.1",
     "sonner": "^1.7.1",
+    "style-loader": "^4.0.0",
     "tailwind-merge": "^2.6.0",
+    "tailwindcss": "^3.4.18",
+    "tailwindcss-animate": "^1.0.7",
+    "autoprefixer": "^10.4.20",
+    "postcss": "^8.4.49",
+    "webpack": "^5.102.1",
+    "webpack-cli": "^6.0.1",
+    "webpack-dev-server": "^5.2.2",
     "zod": "^3.24.4"
   },
   "devDependencies": {
-    "@wordpress/scripts": "^27.0.0",
-    "autoprefixer": "^10.4.20",
-    "postcss": "^8.4.49",
-    "tailwindcss": "^3.4.17",
-    "tailwindcss-animate": "^1.0.7"
+    "@wordpress/scripts": "^27.9.0"
   }
 }
