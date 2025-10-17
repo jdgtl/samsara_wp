@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { Link, useLocation } from 'react-router-dom';
-import { Button } from '../components/ui/button';
+import { Button } from './ui/button';
 import {
   NavigationMenu,
   NavigationMenuContent,
@@ -8,8 +8,8 @@ import {
   NavigationMenuLink,
   NavigationMenuList,
   NavigationMenuTrigger,
-} from '../components/ui/navigation-menu';
-import { Sheet, SheetContent, SheetTrigger } from '../components/ui/sheet';
+} from './ui/navigation-menu';
+import { Sheet, SheetContent, SheetTrigger } from './ui/sheet';
 import { ShoppingCart, Menu, ChevronDown } from 'lucide-react';
 
 const TopNavigation = () => {
