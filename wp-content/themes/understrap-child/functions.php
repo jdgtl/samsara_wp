@@ -1325,37 +1325,69 @@ function samsara_delete_payment_method($request) {
 function samsara_get_memberships($request) {
     try {
         $user_id = get_current_user_id();
+
+        if (!$user_id) {
+            return rest_ensure_response(array());
+        }
+
         $memberships = array();
 
         // Check if WooCommerce Memberships plugin is active
         if (function_exists('wc_memberships_get_user_memberships')) {
-            $user_memberships = wc_memberships_get_user_memberships($user_id);
+            try {
+                $user_memberships = wc_memberships_get_user_memberships($user_id);
 
-            if (!empty($user_memberships) && is_array($user_memberships)) {
-                foreach ($user_memberships as $membership) {
-                    try {
-                        $plan = $membership->get_plan();
+                if (is_wp_error($user_memberships)) {
+                    error_log('WP Error in get_user_memberships: ' . $user_memberships->get_error_message());
+                    return rest_ensure_response(array());
+                }
 
-                        $memberships[] = array(
-                            'id' => $membership->get_id(),
-                            'name' => $plan->get_name(),
-                            'slug' => $plan->get_slug(),
-                            'status' => $membership->get_status(),
-                            'startDate' => $membership->get_start_date('Y-m-d'),
-                            'endDate' => $membership->get_end_date('Y-m-d'),
-                            'description' => $plan->get_description(),
-                        );
-                    } catch (Exception $e) {
-                        error_log('Error processing membership: ' . $e->getMessage());
-                        continue;
+                if (!empty($user_memberships) && is_array($user_memberships)) {
+                    foreach ($user_memberships as $membership) {
+                        try {
+                            if (!is_object($membership) || !method_exists($membership, 'get_plan')) {
+                                continue;
+                            }
+
+                            $plan = $membership->get_plan();
+
+                            if (!$plan) {
+                                continue;
+                            }
+
+                            $memberships[] = array(
+                                'id' => (string) $membership->get_id(),
+                                'name' => $plan->get_name() ?: '',
+                                'slug' => $plan->get_slug() ?: '',
+                                'status' => $membership->get_status() ?: 'unknown',
+                                'startDate' => $membership->get_start_date('Y-m-d') ?: '',
+                                'endDate' => $membership->get_end_date('Y-m-d') ?: '',
+                                'description' => $plan->get_description() ?: '',
+                            );
+                        } catch (Exception $e) {
+                            error_log('Error processing individual membership: ' . $e->getMessage());
+                            continue;
+                        } catch (Throwable $e) {
+                            error_log('Fatal error processing membership: ' . $e->getMessage());
+                            continue;
+                        }
                     }
                 }
+            } catch (Exception $e) {
+                error_log('Error calling wc_memberships_get_user_memberships: ' . $e->getMessage());
+                return rest_ensure_response(array());
+            } catch (Throwable $e) {
+                error_log('Fatal error in membership retrieval: ' . $e->getMessage());
+                return rest_ensure_response(array());
             }
         }
 
         return rest_ensure_response($memberships);
     } catch (Exception $e) {
         error_log('Error in samsara_get_memberships: ' . $e->getMessage());
+        return rest_ensure_response(array());
+    } catch (Throwable $e) {
+        error_log('Fatal error in samsara_get_memberships: ' . $e->getMessage());
         return rest_ensure_response(array());
     }
 }
