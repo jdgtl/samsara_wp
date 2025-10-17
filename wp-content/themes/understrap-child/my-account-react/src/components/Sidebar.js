@@ -6,16 +6,16 @@ export default function Sidebar() {
   const userData = window.samsaraMyAccount?.userData || {};
 
   const navItems = [
-    { path: '/account-dashboard', label: 'Dashboard', icon: LayoutDashboard },
-    { path: '/account-dashboard/orders', label: 'Orders', icon: ShoppingBag },
-    { path: '/account-dashboard/subscriptions', label: 'Subscriptions', icon: Repeat },
-    { path: '/account-dashboard/payments', label: 'Payments', icon: CreditCard },
-    { path: '/account-dashboard/details', label: 'Account', icon: User },
+    { path: '/', label: 'Dashboard', icon: LayoutDashboard },
+    { path: '/orders', label: 'Orders', icon: ShoppingBag },
+    { path: '/subscriptions', label: 'Subscriptions', icon: Repeat },
+    { path: '/payments', label: 'Payments', icon: CreditCard },
+    { path: '/details', label: 'Account', icon: User },
   ];
 
   const isActive = (path) => {
-    if (path === '/account-dashboard') {
-      return location.pathname === path || location.pathname === '/account-dashboard/';
+    if (path === '/') {
+      return location.pathname === '/';
     }
     return location.pathname.startsWith(path);
   };
