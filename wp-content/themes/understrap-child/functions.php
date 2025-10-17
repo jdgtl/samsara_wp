@@ -1069,6 +1069,8 @@ add_action('wp_enqueue_scripts', 'samsara_enqueue_react_my_account');
  */
 function samsara_dequeue_wc_styles_on_react_template() {
     if (is_page_template('template-my-account.php')) {
+        global $wp_styles;
+
         // Remove WooCommerce styles
         wp_dequeue_style('woocommerce-general');
         wp_dequeue_style('woocommerce-layout');
@@ -1084,26 +1086,35 @@ function samsara_dequeue_wc_styles_on_react_template() {
         wp_dequeue_style('understrap-styles');
         wp_dequeue_script('understrap-scripts');
 
+        // Remove WordPress core styles that might interfere
+        wp_dequeue_style('wp-block-library'); // Gutenberg blocks
+        wp_dequeue_style('wp-block-library-theme'); // Gutenberg theme
+        wp_dequeue_style('global-styles'); // Global styles
+        wp_dequeue_style('classic-theme-styles'); // Classic theme styles
+
         // Keep jQuery for WordPress admin bar (if needed)
         // But we already hide admin bar, so we could remove jQuery too
         // wp_dequeue_script('jquery');
 
-        // Add custom styles for React template
+        // Add custom styles for React template to reset any remaining WordPress styles
         wp_add_inline_style('samsara-my-account-styles', '
+            /* Reset WordPress defaults */
             body.samsara-react-account {
                 margin: 0 !important;
                 padding: 0 !important;
+                background: #faf9f7 !important;
             }
             body.samsara-react-account #wpadminbar {
                 display: none !important;
             }
             body.samsara-react-account #samsara-my-account-root {
                 min-height: 100vh;
+                display: block;
             }
         ');
     }
 }
-add_action('wp_enqueue_scripts', 'samsara_dequeue_wc_styles_on_react_template', 99);
+add_action('wp_enqueue_scripts', 'samsara_dequeue_wc_styles_on_react_template', 999);
 
 /**
  * Hide admin bar on React My Account template
