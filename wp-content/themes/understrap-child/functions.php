@@ -998,6 +998,43 @@ add_action( 'woocommerce_account_payment-methods_endpoint', 'woocommerce_account
  */
 
 /**
+ * Add rewrite rules for React SPA routing
+ * Ensures all /account-dashboard/* routes serve the React template
+ */
+function samsara_react_dashboard_rewrite_rules() {
+    // Add rewrite rule to catch all account-dashboard sub-routes
+    add_rewrite_rule(
+        '^account-dashboard/?(.*)$',
+        'index.php?pagename=account-dashboard&react_route=$matches[1]',
+        'top'
+    );
+}
+add_action('init', 'samsara_react_dashboard_rewrite_rules', 10);
+
+/**
+ * Add custom query var for React routing
+ */
+function samsara_react_query_vars($vars) {
+    $vars[] = 'react_route';
+    return $vars;
+}
+add_filter('query_vars', 'samsara_react_query_vars');
+
+/**
+ * Flush rewrite rules on theme switch or admin init (one-time)
+ * This ensures the React dashboard routes are properly registered
+ */
+function samsara_flush_rewrite_rules_once() {
+    if (get_option('samsara_react_routes_flushed') !== 'yes') {
+        samsara_react_dashboard_rewrite_rules();
+        flush_rewrite_rules();
+        update_option('samsara_react_routes_flushed', 'yes');
+    }
+}
+add_action('after_switch_theme', 'samsara_flush_rewrite_rules_once');
+add_action('admin_init', 'samsara_flush_rewrite_rules_once');
+
+/**
  * Enqueue React My Account App
  * Only loads on the React My Account template
  */
