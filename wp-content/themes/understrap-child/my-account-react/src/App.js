@@ -10,7 +10,7 @@ import AccountDetails from './pages/AccountDetails';
 
 function App() {
   return (
-    <Router basename="/my-account">
+    <Router basename="/account-dashboard">
       <Routes>
         <Route path="/" element={<Layout />}>
           <Route index element={<Dashboard />} />
