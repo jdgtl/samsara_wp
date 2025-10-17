@@ -2,15 +2,19 @@ import React, { useState, useMemo } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '../components/ui/card';
 import { Badge } from '../components/ui/badge';
 import { Button } from '../components/ui/button';
+import { Alert, AlertDescription } from '../components/ui/alert';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '../components/ui/table';
-import { ArrowUpDown } from 'lucide-react';
-import { subscriptions as mockSubscriptions } from '../data/mockData';
+import { ArrowUpDown, Loader2, AlertTriangle } from 'lucide-react';
+import { useSubscriptions } from '../hooks/useSubscriptions';
 import { useNavigate } from 'react-router-dom';
 
 const Subscriptions = () => {
   const navigate = useNavigate();
   const [statusFilter, setStatusFilter] = useState('all');
   const [sortOrder, setSortOrder] = useState('asc');
+
+  // Fetch live subscriptions data
+  const { subscriptions, loading, error } = useSubscriptions();
 
   const getStatusBadge = (status) => {
     const variants = {
@@ -30,7 +34,9 @@ const Subscriptions = () => {
 
   // Filter and sort logic
   const filteredSubscriptions = useMemo(() => {
-    let filtered = mockSubscriptions;
+    if (!subscriptions || subscriptions.length === 0) return [];
+
+    let filtered = subscriptions;
 
     // Apply status filter
     if (statusFilter !== 'all') {
@@ -42,14 +48,14 @@ const Subscriptions = () => {
       // Put subscriptions without next payment date at the end
       if (!a.nextPaymentDate) return 1;
       if (!b.nextPaymentDate) return -1;
-      
+
       const dateA = new Date(a.nextPaymentDate);
       const dateB = new Date(b.nextPaymentDate);
       return sortOrder === 'asc' ? dateA - dateB : dateB - dateA;
     });
 
     return filtered;
-  }, [statusFilter, sortOrder]);
+  }, [subscriptions, statusFilter, sortOrder]);
 
   const handleViewSubscription = (subId) => {
     navigate(`/subscriptions/${subId}`);
@@ -62,6 +68,47 @@ const Subscriptions = () => {
     { value: 'paused', label: 'Paused' },
     { value: 'canceled', label: 'Canceled' },
   ];
+
+  // Loading state
+  if (loading) {
+    return (
+      <div className="max-w-7xl mx-auto space-y-6" data-testid="subscriptions-loading">
+        <div className="space-y-2">
+          <h1 className="text-3xl font-bold text-stone-900">Subscriptions</h1>
+          <p className="text-stone-600">Manage your recurring memberships and plans</p>
+        </div>
+        <Card>
+          <CardContent className="p-12">
+            <div className="flex flex-col items-center justify-center">
+              <Loader2 className="h-8 w-8 animate-spin text-emerald-600 mb-4" />
+              <p className="text-stone-600">Loading your subscriptions...</p>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
+
+  // Error state
+  if (error) {
+    return (
+      <div className="max-w-7xl mx-auto space-y-6" data-testid="subscriptions-error">
+        <div className="space-y-2">
+          <h1 className="text-3xl font-bold text-stone-900">Subscriptions</h1>
+          <p className="text-stone-600">Manage your recurring memberships and plans</p>
+        </div>
+        <Alert className="border-red-500 bg-red-50">
+          <AlertTriangle className="h-4 w-4 text-red-600" />
+          <AlertDescription className="ml-2">
+            <div className="text-red-900">
+              <p className="font-medium">Failed to load subscriptions</p>
+              <p className="text-sm">{error}</p>
+            </div>
+          </AlertDescription>
+        </Alert>
+      </div>
+    );
+  }
 
   return (
     <div className="max-w-7xl mx-auto space-y-6" data-testid="subscriptions-page">

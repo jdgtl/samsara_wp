@@ -4,17 +4,22 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '../co
 import { Badge } from '../components/ui/badge';
 import { Button } from '../components/ui/button';
 import { Separator } from '../components/ui/separator';
+import { Alert, AlertDescription } from '../components/ui/alert';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '../components/ui/alert-dialog';
-import { ArrowLeft, Pause, Play, XCircle, CreditCard, FileText } from 'lucide-react';
-import { subscriptions, orders } from '../data/mockData';
+import { ArrowLeft, Pause, Play, XCircle, CreditCard, FileText, Loader2, AlertTriangle } from 'lucide-react';
+import { useSubscription, useSubscriptionActions, useSubscriptionOrders } from '../hooks/useSubscriptions';
 
 const SubscriptionDetail = () => {
   const { subId } = useParams();
   const navigate = useNavigate();
-  const subscription = subscriptions.find(s => s.id === subId);
   const [countdown, setCountdown] = useState({ days: 0, hours: 0 });
   const [showCancelDialog, setShowCancelDialog] = useState(false);
   const [showPauseDialog, setShowPauseDialog] = useState(false);
+
+  // Fetch live subscription data
+  const { subscription, loading, error } = useSubscription(subId);
+  const { cancelSubscription, pauseSubscription, resumeSubscription, actionLoading } = useSubscriptionActions();
+  const { orders: relatedOrders, loading: ordersLoading } = useSubscriptionOrders(subId);
 
   // Calculate countdown for next payment
   useEffect(() => {
@@ -37,17 +42,64 @@ const SubscriptionDetail = () => {
     return () => clearInterval(interval);
   }, [subscription]);
 
-  if (!subscription) {
+  // Loading state
+  if (loading) {
     return (
-      <div className="max-w-4xl mx-auto" data-testid="subscription-not-found">
+      <div className="max-w-4xl mx-auto space-y-6" data-testid="subscription-detail-loading">
+        <Button
+          variant="ghost"
+          onClick={() => navigate('/subscriptions')}
+          className="gap-2"
+          data-testid="back-btn"
+        >
+          <ArrowLeft className="h-4 w-4" />
+          Back to Subscriptions
+        </Button>
         <Card>
-          <CardContent className="text-center py-12">
-            <p className="text-stone-600 mb-4">Subscription not found</p>
-            <Button onClick={() => navigate('/subscriptions')} data-testid="back-to-subscriptions-btn">
-              Back to Subscriptions
-            </Button>
+          <CardContent className="p-12">
+            <div className="flex flex-col items-center justify-center">
+              <Loader2 className="h-8 w-8 animate-spin text-emerald-600 mb-4" />
+              <p className="text-stone-600">Loading subscription details...</p>
+            </div>
           </CardContent>
         </Card>
+      </div>
+    );
+  }
+
+  // Error state
+  if (error || !subscription) {
+    return (
+      <div className="max-w-4xl mx-auto space-y-6" data-testid="subscription-not-found">
+        <Button
+          variant="ghost"
+          onClick={() => navigate('/subscriptions')}
+          className="gap-2"
+          data-testid="back-btn"
+        >
+          <ArrowLeft className="h-4 w-4" />
+          Back to Subscriptions
+        </Button>
+        {error ? (
+          <Alert className="border-red-500 bg-red-50">
+            <AlertTriangle className="h-4 w-4 text-red-600" />
+            <AlertDescription className="ml-2">
+              <div className="text-red-900">
+                <p className="font-medium">Failed to load subscription</p>
+                <p className="text-sm">{error}</p>
+              </div>
+            </AlertDescription>
+          </Alert>
+        ) : (
+          <Card>
+            <CardContent className="text-center py-12">
+              <p className="text-stone-600 mb-4">Subscription not found</p>
+              <Button onClick={() => navigate('/subscriptions')} data-testid="back-to-subscriptions-btn">
+                Back to Subscriptions
+              </Button>
+            </CardContent>
+          </Card>
+        )}
       </div>
     );
   }
@@ -68,27 +120,38 @@ const SubscriptionDetail = () => {
     );
   };
 
-  const handlePause = () => {
+  const handlePause = async () => {
     setShowPauseDialog(false);
-    alert('Subscription would be paused here');
+    const result = await pauseSubscription(subId);
+    if (result.success) {
+      window.location.reload(); // Reload to fetch updated data
+    } else {
+      alert(`Failed to pause subscription: ${result.error}`);
+    }
   };
 
-  const handleResume = () => {
-    alert('Subscription would be resumed here');
+  const handleResume = async () => {
+    const result = await resumeSubscription(subId);
+    if (result.success) {
+      window.location.reload(); // Reload to fetch updated data
+    } else {
+      alert(`Failed to resume subscription: ${result.error}`);
+    }
   };
 
-  const handleCancel = () => {
+  const handleCancel = async () => {
     setShowCancelDialog(false);
-    alert('Subscription would be canceled here');
+    const result = await cancelSubscription(subId);
+    if (result.success) {
+      window.location.reload(); // Reload to fetch updated data
+    } else {
+      alert(`Failed to cancel subscription: ${result.error}`);
+    }
   };
 
   const handleChangePlan = () => {
     alert('Plan change interface would open here');
   };
-
-  const relatedOrders = orders.filter(order => 
-    order.items.some(item => item.toLowerCase().includes(subscription.planName.toLowerCase()))
-  );
 
   return (
     <div className="max-w-4xl mx-auto space-y-6" data-testid="subscription-detail-page">
