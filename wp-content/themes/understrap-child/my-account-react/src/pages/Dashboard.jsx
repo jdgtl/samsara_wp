@@ -4,42 +4,53 @@ import { Badge } from '../components/ui/badge';
 import { Button } from '../components/ui/button';
 import { Alert, AlertDescription } from '../components/ui/alert';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '../components/ui/table';
-import { 
-  ExternalLink, 
-  Pause, 
-  Play, 
-  XCircle, 
+import {
+  ExternalLink,
+  Pause,
+  Play,
+  XCircle,
   AlertTriangle,
-  Filter
+  Filter,
+  Loader2
 } from 'lucide-react';
-import { 
-  userData, 
-  primarySubscription, 
-  memberships, 
-  getExpiringPaymentMethods,
-  getDaysUntilExpiration 
-} from '../data/mockData';
+import { getDaysUntilExpiration } from '../data/mockData';
+import { useDashboard } from '../hooks/useDashboard';
 import { useNavigate } from 'react-router-dom';
 
 const Dashboard = () => {
   const navigate = useNavigate();
   const [countdown, setCountdown] = useState({ days: 0, hours: 0 });
   const [membershipFilter, setMembershipFilter] = useState('all');
-  
-  const expiringCards = getExpiringPaymentMethods();
+
+  // Fetch live data
+  const {
+    primarySubscription,
+    memberships,
+    expiringCards,
+    loading,
+    error
+  } = useDashboard();
+
+  // Get user data from WordPress global
+  const userData = window.samsaraMyAccount?.userData || {
+    firstName: 'User',
+    lastName: '',
+    displayName: 'User',
+    email: ''
+  };
 
   // Calculate countdown for next payment
   useEffect(() => {
     const calculateCountdown = () => {
-      if (!primarySubscription.nextPaymentDate) return;
-      
+      if (!primarySubscription || !primarySubscription.nextPaymentDate) return;
+
       const now = new Date();
       const nextPayment = new Date(primarySubscription.nextPaymentDate);
       const diff = nextPayment - now;
-      
+
       const days = Math.floor(diff / (1000 * 60 * 60 * 24));
       const hours = Math.floor((diff % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
-      
+
       setCountdown({ days, hours });
     };
 
@@ -47,7 +58,7 @@ const Dashboard = () => {
     const interval = setInterval(calculateCountdown, 60000); // Update every minute
 
     return () => clearInterval(interval);
-  }, []);
+  }, [primarySubscription]);
 
   const getStatusBadge = (status) => {
     const variants = {
@@ -83,9 +94,38 @@ const Dashboard = () => {
     window.open('https://basecamp.samsara.com', '_blank');
   };
 
-  const filteredMemberships = memberships.filter(m => 
+  const filteredMemberships = (memberships || []).filter(m =>
     membershipFilter === 'all' ? true : m.status === membershipFilter
   );
+
+  // Loading state
+  if (loading) {
+    return (
+      <div className="max-w-7xl mx-auto space-y-6" data-testid="dashboard-loading">
+        <div className="flex flex-col items-center justify-center min-h-[400px]">
+          <Loader2 className="h-8 w-8 animate-spin text-emerald-600 mb-4" />
+          <p className="text-stone-600">Loading your dashboard...</p>
+        </div>
+      </div>
+    );
+  }
+
+  // Error state
+  if (error) {
+    return (
+      <div className="max-w-7xl mx-auto space-y-6" data-testid="dashboard-error">
+        <Alert className="border-red-500 bg-red-50">
+          <AlertTriangle className="h-4 w-4 text-red-600" />
+          <AlertDescription className="ml-2">
+            <div className="text-red-900">
+              <p className="font-medium">Failed to load dashboard</p>
+              <p className="text-sm">{error}</p>
+            </div>
+          </AlertDescription>
+        </Alert>
+      </div>
+    );
+  }
 
   return (
     <div className="max-w-7xl mx-auto space-y-6" data-testid="dashboard-page">
@@ -100,7 +140,7 @@ const Dashboard = () => {
       </div>
 
       {/* Expiring Payment Methods Alert */}
-      {expiringCards.length > 0 && (
+      {expiringCards && expiringCards.length > 0 && (
         <Alert className="border-amber-500 bg-amber-50" data-testid="expiring-card-alert">
           <AlertTriangle className="h-4 w-4 text-amber-600" />
           <AlertDescription className="ml-2">
@@ -117,16 +157,17 @@ const Dashboard = () => {
                 })}
               </div>
               <div className="flex gap-2">
-                <Button 
-                  size="sm" 
-                  variant="outline" 
+                <Button
+                  size="sm"
+                  variant="outline"
                   className="border-amber-600 text-amber-900 hover:bg-amber-100"
                   data-testid="update-card-btn"
+                  onClick={() => navigate('/payments')}
                 >
                   Update Card
                 </Button>
-                <Button 
-                  size="sm" 
+                <Button
+                  size="sm"
                   variant="ghost"
                   className="text-amber-900 hover:bg-amber-100"
                   data-testid="dismiss-alert-btn"
@@ -140,7 +181,8 @@ const Dashboard = () => {
       )}
 
       {/* Primary Subscription Card */}
-      <Card className="border-2 border-emerald-200" data-testid="primary-subscription-card">
+      {primarySubscription ? (
+        <Card className="border-2 border-emerald-200" data-testid="primary-subscription-card">
         <CardHeader>
           <div className="flex items-start justify-between">
             <div>
@@ -204,6 +246,19 @@ const Dashboard = () => {
           </div>
         </CardContent>
       </Card>
+      ) : (
+        <Card className="border-2 border-stone-200" data-testid="no-subscription-card">
+          <CardContent className="p-12 text-center">
+            <p className="text-stone-600 mb-4">You don't have an active subscription</p>
+            <Button
+              className="bg-emerald-600 hover:bg-emerald-700"
+              onClick={() => window.location.href = '/shop'}
+            >
+              Browse Plans
+            </Button>
+          </CardContent>
+        </Card>
+      )}
 
       {/* Training Hub / Basecamp CTA */}
       <Card className="bg-gradient-to-br from-emerald-50 to-teal-50 border-emerald-300" data-testid="basecamp-cta-card">

@@ -1162,3 +1162,239 @@ function samsara_hide_admin_bar_on_react_template() {
     }
 }
 add_action('wp', 'samsara_hide_admin_bar_on_react_template');
+
+/**
+ * =====================================================
+ * CUSTOM REST API ENDPOINTS FOR REACT DASHBOARD
+ * =====================================================
+ * Endpoints for payment methods, memberships, and dashboard stats
+ */
+
+/**
+ * Register custom REST API routes
+ */
+function samsara_register_custom_api_routes() {
+    // Payment Methods endpoints
+    register_rest_route('samsara/v1', '/payment-methods', array(
+        'methods' => 'GET',
+        'callback' => 'samsara_get_payment_methods',
+        'permission_callback' => 'samsara_check_authentication',
+    ));
+
+    register_rest_route('samsara/v1', '/payment-methods', array(
+        'methods' => 'POST',
+        'callback' => 'samsara_add_payment_method',
+        'permission_callback' => 'samsara_check_authentication',
+    ));
+
+    register_rest_route('samsara/v1', '/payment-methods/(?P<id>[a-zA-Z0-9_-]+)', array(
+        'methods' => 'PUT',
+        'callback' => 'samsara_update_payment_method',
+        'permission_callback' => 'samsara_check_authentication',
+    ));
+
+    register_rest_route('samsara/v1', '/payment-methods/(?P<id>[a-zA-Z0-9_-]+)', array(
+        'methods' => 'DELETE',
+        'callback' => 'samsara_delete_payment_method',
+        'permission_callback' => 'samsara_check_authentication',
+    ));
+
+    // Memberships endpoint
+    register_rest_route('samsara/v1', '/memberships', array(
+        'methods' => 'GET',
+        'callback' => 'samsara_get_memberships',
+        'permission_callback' => 'samsara_check_authentication',
+    ));
+
+    // Dashboard stats endpoint
+    register_rest_route('samsara/v1', '/stats', array(
+        'methods' => 'GET',
+        'callback' => 'samsara_get_dashboard_stats',
+        'permission_callback' => 'samsara_check_authentication',
+    ));
+}
+add_action('rest_api_init', 'samsara_register_custom_api_routes');
+
+/**
+ * Permission callback - check if user is authenticated
+ */
+function samsara_check_authentication($request) {
+    return is_user_logged_in();
+}
+
+/**
+ * Get payment methods for current user
+ */
+function samsara_get_payment_methods($request) {
+    $user_id = get_current_user_id();
+
+    // Get customer tokens (payment methods)
+    $tokens = WC_Payment_Tokens::get_customer_tokens($user_id);
+
+    $payment_methods = array();
+
+    foreach ($tokens as $token) {
+        $payment_methods[] = array(
+            'id' => $token->get_id(),
+            'type' => $token->get_type(), // 'CC' for credit card
+            'brand' => $token->get_card_type(),
+            'last4' => $token->get_last4(),
+            'expMonth' => $token->get_expiry_month(),
+            'expYear' => $token->get_expiry_year(),
+            'isDefault' => $token->is_default(),
+            'gateway' => $token->get_gateway_id(),
+        );
+    }
+
+    return rest_ensure_response($payment_methods);
+}
+
+/**
+ * Add a new payment method
+ * Note: This is a simplified implementation
+ * Real payment method addition requires payment gateway integration
+ */
+function samsara_add_payment_method($request) {
+    $user_id = get_current_user_id();
+    $params = $request->get_json_params();
+
+    // This would typically interact with your payment gateway (Stripe, etc.)
+    // For now, return error indicating this requires gateway integration
+    return new WP_Error(
+        'payment_gateway_required',
+        'Adding payment methods requires payment gateway integration',
+        array('status' => 501)
+    );
+}
+
+/**
+ * Update payment method (e.g., set as default)
+ */
+function samsara_update_payment_method($request) {
+    $user_id = get_current_user_id();
+    $token_id = $request->get_param('id');
+    $params = $request->get_json_params();
+
+    // Get the token
+    $token = WC_Payment_Tokens::get($token_id);
+
+    // Verify token belongs to current user
+    if (!$token || $token->get_user_id() != $user_id) {
+        return new WP_Error('invalid_token', 'Payment method not found', array('status' => 404));
+    }
+
+    // Set as default if requested
+    if (isset($params['isDefault']) && $params['isDefault']) {
+        WC_Payment_Tokens::set_users_default($user_id, $token_id);
+    }
+
+    return rest_ensure_response(array(
+        'success' => true,
+        'message' => 'Payment method updated successfully',
+    ));
+}
+
+/**
+ * Delete a payment method
+ */
+function samsara_delete_payment_method($request) {
+    $user_id = get_current_user_id();
+    $token_id = $request->get_param('id');
+
+    // Get the token
+    $token = WC_Payment_Tokens::get($token_id);
+
+    // Verify token belongs to current user
+    if (!$token || $token->get_user_id() != $user_id) {
+        return new WP_Error('invalid_token', 'Payment method not found', array('status' => 404));
+    }
+
+    // Delete the token
+    WC_Payment_Tokens::delete($token_id);
+
+    return rest_ensure_response(array(
+        'success' => true,
+        'message' => 'Payment method deleted successfully',
+    ));
+}
+
+/**
+ * Get user memberships
+ * Returns additional memberships/products the user has access to
+ */
+function samsara_get_memberships($request) {
+    $user_id = get_current_user_id();
+
+    $memberships = array();
+
+    // Check if WooCommerce Memberships plugin is active
+    if (function_exists('wc_memberships_get_user_memberships')) {
+        $user_memberships = wc_memberships_get_user_memberships($user_id);
+
+        foreach ($user_memberships as $membership) {
+            $plan = $membership->get_plan();
+
+            $memberships[] = array(
+                'id' => $membership->get_id(),
+                'name' => $plan->get_name(),
+                'slug' => $plan->get_slug(),
+                'status' => $membership->get_status(),
+                'startDate' => $membership->get_start_date('Y-m-d'),
+                'endDate' => $membership->get_end_date('Y-m-d'),
+                'description' => $plan->get_description(),
+            );
+        }
+    }
+
+    return rest_ensure_response($memberships);
+}
+
+/**
+ * Get dashboard statistics
+ * Returns aggregated data for the dashboard overview
+ */
+function samsara_get_dashboard_stats($request) {
+    $user_id = get_current_user_id();
+
+    $stats = array(
+        'totalOrders' => 0,
+        'activeSubscriptions' => 0,
+        'totalSpent' => 0,
+        'activeMemberships' => 0,
+    );
+
+    // Get total orders count
+    $customer = new WC_Customer($user_id);
+    $orders = wc_get_orders(array(
+        'customer' => $user_id,
+        'limit' => -1,
+    ));
+    $stats['totalOrders'] = count($orders);
+
+    // Calculate total spent
+    foreach ($orders as $order) {
+        if ($order->get_status() === 'completed') {
+            $stats['totalSpent'] += floatval($order->get_total());
+        }
+    }
+
+    // Get active subscriptions count
+    if (function_exists('wcs_get_users_subscriptions')) {
+        $subscriptions = wcs_get_users_subscriptions($user_id);
+        foreach ($subscriptions as $subscription) {
+            if ($subscription->has_status('active')) {
+                $stats['activeSubscriptions']++;
+            }
+        }
+    }
+
+    // Get active memberships count
+    if (function_exists('wc_memberships_get_user_memberships')) {
+        $memberships = wc_memberships_get_user_memberships($user_id, array(
+            'status' => 'active',
+        ));
+        $stats['activeMemberships'] = count($memberships);
+    }
+
+    return rest_ensure_response($stats);
+}
