@@ -1,24 +1,46 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../components/ui/card';
 import { Button } from '../components/ui/button';
 import { Input } from '../components/ui/input';
 import { Label } from '../components/ui/label';
+import { Alert, AlertDescription } from '../components/ui/alert';
 import { Separator } from '../components/ui/separator';
 import { Avatar, AvatarFallback, AvatarImage } from '../components/ui/avatar';
-import { Upload, Mountain, TreePine, Tent, Compass, Flag, Target, Zap, Wind, Sun, Waves, Snowflake } from 'lucide-react';
-import { userData } from '../data/mockData';
+import { Upload, Mountain, TreePine, Tent, Compass, Flag, Target, Zap, Wind, Sun, Waves, Snowflake, Loader2, AlertTriangle } from 'lucide-react';
+import { useCustomer, useCustomerActions } from '../hooks/useCustomer';
 
 const AccountDetails = () => {
   const [isEditing, setIsEditing] = useState(false);
+  const [avatarType, setAvatarType] = useState('initials');
+  const [selectedEmoji, setSelectedEmoji] = useState(null);
+
+  // Fetch live customer data
+  const { customer, loading, error, refetch } = useCustomer();
+  const { updateCustomer, actionLoading } = useCustomerActions();
+
+  // Get user data from WordPress global
+  const userData = window.samsaraMyAccount?.userData || {};
+
   const [formData, setFormData] = useState({
-    firstName: userData.firstName,
-    lastName: userData.lastName,
-    displayName: userData.displayName,
-    email: 'zahan@samsara.com',
-    phone: '+1 (555) 123-4567'
+    firstName: '',
+    lastName: '',
+    displayName: '',
+    email: '',
+    phone: ''
   });
-  const [avatarType, setAvatarType] = useState(userData.avatarType || 'initials');
-  const [selectedEmoji, setSelectedEmoji] = useState(userData.avatarEmoji);
+
+  // Initialize form data when customer loads
+  useEffect(() => {
+    if (customer) {
+      setFormData({
+        firstName: customer.firstName || '',
+        lastName: customer.lastName || '',
+        displayName: customer.displayName || userData.displayName || '',
+        email: customer.email || userData.email || '',
+        phone: customer.billing?.phone || ''
+      });
+    }
+  }, [customer, userData.displayName, userData.email]);
 
   // Outdoor-themed avatar options
   const avatarOptions = [
@@ -35,19 +57,38 @@ const AccountDetails = () => {
     { icon: Snowflake, label: 'Snowflake', color: 'bg-sky-400' },
   ];
 
-  const handleSave = () => {
-    alert('Profile changes would be saved here');
-    setIsEditing(false);
+  const handleSave = async () => {
+    const updateData = {
+      first_name: formData.firstName,
+      last_name: formData.lastName,
+      email: formData.email,
+      billing: {
+        ...customer?.billing,
+        phone: formData.phone,
+        first_name: formData.firstName,
+        last_name: formData.lastName,
+      }
+    };
+
+    const result = await updateCustomer(updateData);
+    if (result.success) {
+      setIsEditing(false);
+      refetch();
+    } else {
+      alert(`Failed to save changes: ${result.error}`);
+    }
   };
 
   const handleCancel = () => {
-    setFormData({
-      firstName: userData.firstName,
-      lastName: userData.lastName,
-      displayName: userData.displayName,
-      email: 'zahan@samsara.com',
-      phone: '+1 (555) 123-4567'
-    });
+    if (customer) {
+      setFormData({
+        firstName: customer.firstName || '',
+        lastName: customer.lastName || '',
+        displayName: customer.displayName || userData.displayName || '',
+        email: customer.email || userData.email || '',
+        phone: customer.billing?.phone || ''
+      });
+    }
     setIsEditing(false);
   };
 
@@ -74,7 +115,7 @@ const AccountDetails = () => {
         </div>
       );
     }
-    
+
     return (
       <Avatar className="h-24 w-24" data-testid="profile-avatar">
         <AvatarImage src={userData.avatarUrl} alt={`${formData.firstName} ${formData.lastName}`} />
@@ -84,6 +125,47 @@ const AccountDetails = () => {
       </Avatar>
     );
   };
+
+  // Loading state
+  if (loading) {
+    return (
+      <div className="max-w-4xl mx-auto space-y-6" data-testid="account-details-loading">
+        <div className="space-y-2">
+          <h1 className="text-3xl font-bold text-stone-900">Account Details</h1>
+          <p className="text-stone-600">Manage your personal information and account settings</p>
+        </div>
+        <Card>
+          <CardContent className="p-12">
+            <div className="flex flex-col items-center justify-center">
+              <Loader2 className="h-8 w-8 animate-spin text-emerald-600 mb-4" />
+              <p className="text-stone-600">Loading account information...</p>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
+
+  // Error state
+  if (error) {
+    return (
+      <div className="max-w-4xl mx-auto space-y-6" data-testid="account-details-error">
+        <div className="space-y-2">
+          <h1 className="text-3xl font-bold text-stone-900">Account Details</h1>
+          <p className="text-stone-600">Manage your personal information and account settings</p>
+        </div>
+        <Alert className="border-red-500 bg-red-50">
+          <AlertTriangle className="h-4 w-4 text-red-600" />
+          <AlertDescription className="ml-2">
+            <div className="text-red-900">
+              <p className="font-medium">Failed to load account information</p>
+              <p className="text-sm">{error}</p>
+            </div>
+          </AlertDescription>
+        </Alert>
+      </div>
+    );
+  }
 
   return (
     <div className="max-w-4xl mx-auto space-y-6" data-testid="account-details-page">
@@ -225,27 +307,36 @@ const AccountDetails = () => {
             <div className="space-y-2">
               <Label>Member Since</Label>
               <p className="text-stone-900" data-testid="member-since-display">
-                {new Date(userData.memberSince).toLocaleDateString('en-US', {
+                {userData.memberSince ? new Date(userData.memberSince).toLocaleDateString('en-US', {
                   month: 'long',
                   day: 'numeric',
                   year: 'numeric'
-                })}
+                }) : 'N/A'}
               </p>
             </div>
           </div>
-          
+
           {isEditing && (
             <div className="flex gap-3 mt-6">
-              <Button 
+              <Button
                 onClick={handleSave}
-                className="bg-emerald-600 hover:bg-emerald-700"
+                disabled={actionLoading}
+                className="bg-emerald-600 hover:bg-emerald-700 disabled:opacity-50"
                 data-testid="save-changes-btn"
               >
-                Save Changes
+                {actionLoading ? (
+                  <>
+                    <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                    Saving...
+                  </>
+                ) : (
+                  'Save Changes'
+                )}
               </Button>
-              <Button 
-                variant="outline" 
+              <Button
+                variant="outline"
                 onClick={handleCancel}
+                disabled={actionLoading}
                 data-testid="cancel-edit-btn"
               >
                 Cancel
