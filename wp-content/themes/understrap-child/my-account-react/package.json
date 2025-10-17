@@ -6,7 +6,7 @@
   "scripts": {
     "start": "npx webpack serve --mode development --config webpack.config.js",
     "build": "npx webpack --mode production --config webpack.config.js",
-    "build:css": "npx tailwindcss -i ./src/styles/input.css -o ./build/css/my-account.css --minify",
+    "build:css": "npx tailwindcss -i ./src/styles/input.css -o ./build/css/my-account.css",
     "build:all": "npm run build && npm run build:css"
   },
   "dependencies": {
