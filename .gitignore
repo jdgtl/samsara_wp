@@ -23,7 +23,6 @@ wp-content/themes/*
 node_modules/
 **/node_modules/
 **/dist/
-**/build/
 **/*.map
 .DS_Store
 Thumbs.db
@@ -32,9 +31,10 @@ Thumbs.db
 .env
 .env.*
 
-# Build artifacts within theme
-wp-content/themes/understrap-child/assets/my-account/js/
-wp-content/themes/understrap-child/assets/my-account/css/
+# React App - Ignore node_modules but TRACK build output
+wp-content/themes/understrap-child/my-account-react/node_modules/
+!wp-content/themes/understrap-child/my-account-react/build/
+!wp-content/themes/understrap-child/my-account-react/build/**
 
 # Dependencies
 package-lock.json
