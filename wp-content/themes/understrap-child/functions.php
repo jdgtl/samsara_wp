@@ -1064,13 +1064,29 @@ function samsara_enqueue_react_my_account() {
 add_action('wp_enqueue_scripts', 'samsara_enqueue_react_my_account');
 
 /**
- * Remove default WooCommerce My Account styles on React template
+ * Remove ALL theme and plugin styles/scripts on React template
+ * Only load React app assets
  */
 function samsara_dequeue_wc_styles_on_react_template() {
     if (is_page_template('template-my-account.php')) {
+        // Remove WooCommerce styles
         wp_dequeue_style('woocommerce-general');
         wp_dequeue_style('woocommerce-layout');
         wp_dequeue_style('woocommerce-smallscreen');
+
+        // Remove theme styles and scripts
+        wp_dequeue_style('child-understrap-styles');
+        wp_dequeue_script('child-understrap-scripts');
+        wp_dequeue_script('bootstrap-scripts');
+        wp_dequeue_script('popper-scripts');
+
+        // Remove parent theme styles if any
+        wp_dequeue_style('understrap-styles');
+        wp_dequeue_script('understrap-scripts');
+
+        // Keep jQuery for WordPress admin bar (if needed)
+        // But we already hide admin bar, so we could remove jQuery too
+        // wp_dequeue_script('jquery');
 
         // Add custom styles for React template
         wp_add_inline_style('samsara-my-account-styles', '
