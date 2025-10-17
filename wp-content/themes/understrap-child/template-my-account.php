@@ -11,11 +11,19 @@ if (!is_user_logged_in()) {
     wp_redirect(wp_login_url());
     exit;
 }
-
-get_header();
 ?>
+<!DOCTYPE html>
+<html <?php language_attributes(); ?>>
+<head>
+    <meta charset="<?php bloginfo( 'charset' ); ?>">
+    <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
+    <?php wp_head(); ?>
+</head>
+<body <?php body_class('samsara-react-account'); ?>>
+<?php wp_body_open(); ?>
 
 <div id="samsara-my-account-root"></div>
 
-<?php
-get_footer();
+<?php wp_footer(); ?>
+</body>
+</html>

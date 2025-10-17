@@ -1071,6 +1071,30 @@ function samsara_dequeue_wc_styles_on_react_template() {
         wp_dequeue_style('woocommerce-general');
         wp_dequeue_style('woocommerce-layout');
         wp_dequeue_style('woocommerce-smallscreen');
+
+        // Add custom styles for React template
+        wp_add_inline_style('samsara-my-account-styles', '
+            body.samsara-react-account {
+                margin: 0 !important;
+                padding: 0 !important;
+            }
+            body.samsara-react-account #wpadminbar {
+                display: none !important;
+            }
+            body.samsara-react-account #samsara-my-account-root {
+                min-height: 100vh;
+            }
+        ');
     }
 }
 add_action('wp_enqueue_scripts', 'samsara_dequeue_wc_styles_on_react_template', 99);
+
+/**
+ * Hide admin bar on React My Account template
+ */
+function samsara_hide_admin_bar_on_react_template() {
+    if (is_page_template('template-my-account.php')) {
+        show_admin_bar(false);
+    }
+}
+add_action('wp', 'samsara_hide_admin_bar_on_react_template');
