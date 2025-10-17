@@ -236,7 +236,7 @@ const Dashboard = () => {
           <div className="flex items-center justify-between">
             <div>
               <CardTitle className="text-xl text-stone-900">Additional Memberships</CardTitle>
-              <CardDescription>Your other training programs and courses</CardDescription>
+              <CardDescription>Legacy training programs and courses</CardDescription>
             </div>
             <div className="flex gap-2">
               <Button 
