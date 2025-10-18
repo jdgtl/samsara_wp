@@ -1542,8 +1542,20 @@ function samsara_add_payment_method($request) {
             return $setup_intent;
         }
 
-        if (empty($setup_intent->client_secret)) {
-            error_log('Setup Intent created but client_secret is empty');
+        // Debug: Log the entire response structure
+        error_log('Setup Intent response type: ' . gettype($setup_intent));
+        error_log('Setup Intent response: ' . print_r($setup_intent, true));
+
+        // Extract client_secret - could be in different locations depending on response format
+        $client_secret = null;
+        if (is_object($setup_intent)) {
+            $client_secret = isset($setup_intent->client_secret) ? $setup_intent->client_secret : null;
+        } elseif (is_array($setup_intent)) {
+            $client_secret = isset($setup_intent['client_secret']) ? $setup_intent['client_secret'] : null;
+        }
+
+        if (empty($client_secret)) {
+            error_log('Setup Intent created but client_secret is empty or missing');
             return new WP_Error(
                 'invalid_setup_intent',
                 'Setup Intent was created but is missing client secret',
@@ -1551,10 +1563,10 @@ function samsara_add_payment_method($request) {
             );
         }
 
-        error_log('Setup Intent created successfully. Client secret exists: ' . !empty($setup_intent->client_secret));
+        error_log('Setup Intent created successfully with client_secret');
 
         return rest_ensure_response(array(
-            'clientSecret' => $setup_intent->client_secret,
+            'clientSecret' => $client_secret,
             'publishableKey' => $stripe_gateway->publishable_key,
         ));
 
