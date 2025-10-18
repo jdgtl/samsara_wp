@@ -29,7 +29,7 @@ This React application replaces the default WooCommerce My Account pages with a 
 - Dashboard with subscription and membership overview
 - Legacy membership content access with expandable restricted pages
 
-**Status:** 100% Complete - All features migrated from mock data to live WordPress/WooCommerce integration.
+**Status:** 95% Complete - All core features migrated to live WordPress/WooCommerce. Payment method management functional on production, troubleshooting test mode save issue on staging.
 
 ---
 
@@ -743,7 +743,6 @@ console.log('API Error:', error);
 2. Review WordPress debug log: `wp-content/debug.log`
 3. Check network tab for failed API calls
 4. Review git commit history for recent changes
-5. Consult migration status: `LIVE_DATA_MIGRATION_STATUS.md`
 
 ---
 
@@ -761,7 +760,6 @@ console.log('API Error:', error);
 ### Related Files
 
 - `../functions.php` - WordPress integration and custom REST API endpoints
-- `LIVE_DATA_MIGRATION_STATUS.md` - Migration progress documentation
 - `package.json` - Dependencies and build scripts
 - `webpack.config.js` - Webpack build configuration
 - `tailwind.config.js` - Tailwind CSS theme configuration
@@ -814,15 +812,20 @@ Before committing:
   - Location: `OrderDetail.jsx` (currently hidden)
 
 ### Medium Priority
-- [ ] **Subscription Pause** - Complete pause/resume subscription functionality
-  - Currently shows UI but backend not fully implemented
-  - Requires WooCommerce Subscriptions API integration
+- [ ] **Subscription Upgrade/Downgrade** - Enable plan changes
+  - UI exists but functionality disabled
+  - Requires proper subscription type configuration in WooCommerce
 
 - [ ] **Bundle Size Optimization** - Reduce JavaScript bundle size
-  - Currently 379 KiB (exceeds recommended 244 KiB)
+  - Currently 380 KiB (exceeds recommended 244 KiB)
   - Implement code splitting
   - Lazy load routes
   - Tree-shake unused components
+
+- [ ] **Staging Payment Method Save** - Debug test mode token persistence
+  - Tokens save successfully in production (live mode)
+  - Test mode on staging: tokens created but not persisting to database
+  - Investigating WooCommerce payment token caching and database write issues
 
 ### Low Priority
 - [ ] **Enhanced Error Handling** - More user-friendly error messages
@@ -849,7 +852,6 @@ Proprietary - Samsara Fitness Platform
 
 For questions or issues:
 1. Check this README
-2. Review `LIVE_DATA_MIGRATION_STATUS.md`
-3. Check git commit history
-4. Review WordPress debug logs
-5. Contact development team
+2. Check git commit history
+3. Review WordPress debug logs
+4. Contact development team
