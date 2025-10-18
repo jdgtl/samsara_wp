@@ -1603,17 +1603,23 @@ function samsara_confirm_payment_method($request) {
     $user_id = get_current_user_id();
     $params = $request->get_json_params();
 
+    error_log('Confirm payment method called for user: ' . $user_id);
+    error_log('Request params: ' . print_r($params, true));
+
     // Required: setup_intent_id from Stripe
     $setup_intent_id = isset($params['setup_intent_id']) ? $params['setup_intent_id'] : null;
     $set_as_default = isset($params['set_as_default']) ? (bool)$params['set_as_default'] : false;
 
     if (!$setup_intent_id) {
+        error_log('Missing setup_intent_id in request');
         return new WP_Error(
             'missing_setup_intent',
             'Setup Intent ID is required',
             array('status' => 400)
         );
     }
+
+    error_log('Fetching Setup Intent: ' . $setup_intent_id);
 
     try {
         // Get Setup Intent from Stripe to retrieve the payment method
