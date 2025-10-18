@@ -1449,12 +1449,18 @@ function samsara_check_authentication($request) {
 function samsara_get_payment_methods($request) {
     $user_id = get_current_user_id();
 
+    error_log('Getting payment methods for user: ' . $user_id);
+
     // Get customer tokens (payment methods)
     $tokens = WC_Payment_Tokens::get_customer_tokens($user_id);
+
+    error_log('Found ' . count($tokens) . ' payment tokens for user ' . $user_id);
 
     $payment_methods = array();
 
     foreach ($tokens as $token) {
+        error_log('Token ID: ' . $token->get_id() . ', Gateway: ' . $token->get_gateway_id() . ', Last4: ' . $token->get_last4());
+
         $payment_methods[] = array(
             'id' => $token->get_id(),
             'type' => $token->get_type(), // 'CC' for credit card
@@ -1466,6 +1472,8 @@ function samsara_get_payment_methods($request) {
             'gateway' => $token->get_gateway_id(),
         );
     }
+
+    error_log('Returning ' . count($payment_methods) . ' payment methods');
 
     return rest_ensure_response($payment_methods);
 }
@@ -1680,6 +1688,7 @@ function samsara_confirm_payment_method($request) {
         $token_id = $token->save();
 
         if (!$token_id) {
+            error_log('Failed to save token to database');
             return new WP_Error(
                 'token_save_failed',
                 'Failed to save payment method',
@@ -1687,10 +1696,22 @@ function samsara_confirm_payment_method($request) {
             );
         }
 
+        error_log('Token saved successfully. Token ID: ' . $token_id . ', User ID: ' . $user_id . ', Gateway: stripe');
+        error_log('Token details - Brand: ' . $token->get_card_type() . ', Last4: ' . $token->get_last4() . ', Default: ' . ($token->is_default() ? 'yes' : 'no'));
+
         // Store Stripe customer ID in token meta
         $customer_id = $setup_intent->customer;
         if ($customer_id) {
             update_metadata('payment_token', $token_id, 'customer_id', $customer_id);
+            error_log('Stored customer_id in token meta: ' . $customer_id);
+        }
+
+        // Verify token was saved
+        $saved_token = WC_Payment_Tokens::get($token_id);
+        if ($saved_token) {
+            error_log('Verified token exists in database. User ID: ' . $saved_token->get_user_id() . ', Gateway: ' . $saved_token->get_gateway_id());
+        } else {
+            error_log('WARNING: Token was saved but cannot be retrieved!');
         }
 
         return rest_ensure_response(array(
