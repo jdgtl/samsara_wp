@@ -153,6 +153,16 @@ const SubscriptionDetail = () => {
     alert('Plan change interface would open here');
   };
 
+  const handleResubscribe = () => {
+    // Redirect to the subscription product page to re-purchase
+    if (subscription.productUrl) {
+      window.location.href = subscription.productUrl;
+    } else {
+      // Fallback to shop page if product URL not available
+      window.location.href = '/shop/';
+    }
+  };
+
   return (
     <div className="max-w-4xl mx-auto space-y-6" data-testid="subscription-detail-page">
       {/* Back button */}
@@ -299,7 +309,8 @@ const SubscriptionDetail = () => {
             )}
 
             {subscription.status === 'canceled' && (
-              <Button 
+              <Button
+                onClick={handleResubscribe}
                 className="gap-2 bg-emerald-600 hover:bg-emerald-700"
                 data-testid="resubscribe-btn"
               >

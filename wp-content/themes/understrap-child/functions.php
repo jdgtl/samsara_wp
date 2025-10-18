@@ -1982,8 +1982,11 @@ function samsara_get_user_subscriptions($request) {
                 continue;
             }
 
-            // Get line items
+            // Get line items and product info
             $line_items = array();
+            $product_id = null;
+            $product_url = null;
+
             foreach ($subscription->get_items() as $item) {
                 $line_items[] = array(
                     'id' => $item->get_id(),
@@ -1991,6 +1994,14 @@ function samsara_get_user_subscriptions($request) {
                     'quantity' => $item->get_quantity(),
                     'total' => $item->get_total(),
                 );
+
+                // Get product ID from first item for re-subscribe functionality
+                if (!$product_id) {
+                    $product_id = $item->get_product_id();
+                    if ($product_id) {
+                        $product_url = get_permalink($product_id);
+                    }
+                }
             }
 
             // Format subscription data to match WooCommerce REST API structure
@@ -2019,6 +2030,8 @@ function samsara_get_user_subscriptions($request) {
                 'line_items' => $line_items,
                 'payment_method' => $subscription->get_payment_method(),
                 'payment_method_title' => $subscription->get_payment_method_title(),
+                'product_id' => $product_id,
+                'product_url' => $product_url,
             );
         }
 
