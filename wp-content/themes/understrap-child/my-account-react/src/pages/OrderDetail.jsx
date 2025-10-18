@@ -6,7 +6,7 @@ import { Button } from '../components/ui/button';
 import { Separator } from '../components/ui/separator';
 import { Alert, AlertDescription } from '../components/ui/alert';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '../components/ui/dialog';
-import { ArrowLeft, Download, Mail, Loader2, AlertTriangle, Repeat } from 'lucide-react';
+import { ArrowLeft, Loader2, AlertTriangle, Repeat } from 'lucide-react';
 import { useOrder } from '../hooks/useOrders';
 import { get } from '../services/api';
 
@@ -126,14 +126,6 @@ const OrderDetail = () => {
         {displayName}
       </Badge>
     );
-  };
-
-  const handleDownloadReceipt = () => {
-    alert('Receipt download would be triggered here');
-  };
-
-  const handleContactSupport = () => {
-    alert('Contact support modal/email would open here');
   };
 
   return (

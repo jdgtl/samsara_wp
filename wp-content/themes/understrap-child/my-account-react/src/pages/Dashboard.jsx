@@ -16,7 +16,7 @@ import {
   ChevronDown,
   ChevronUp
 } from 'lucide-react';
-import { getDaysUntilExpiration } from '../data/mockData';
+import { getDaysUntilExpiration } from '../lib/utils';
 import { useDashboard } from '../hooks/useDashboard';
 import { useSubscriptionActions } from '../hooks/useSubscriptions';
 import { useNavigate } from 'react-router-dom';
