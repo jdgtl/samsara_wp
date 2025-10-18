@@ -1679,12 +1679,27 @@ function samsara_confirm_payment_method($request) {
         }
 
         // Set as default if no other payment methods exist or if requested
-        $existing_tokens = WC_Payment_Tokens::get_customer_tokens($user_id);
+        $existing_tokens = WC_Payment_Tokens::get_customer_tokens($user_id, 'stripe');
+        error_log('Existing tokens for user before save: ' . count($existing_tokens));
+
         if (empty($existing_tokens) || $set_as_default) {
             $token->set_default(true);
         }
 
-        // Save token
+        // Make sure all required fields are set
+        error_log('About to save token with: User=' . $token->get_user_id() . ', Gateway=' . $token->get_gateway_id() . ', Token=' . substr($payment_method_id, 0, 10) . '...');
+
+        // Clear WooCommerce customer cache before saving (important!)
+        // This is what the Stripe plugin does
+        try {
+            $stripe_customer = new WC_Stripe_Customer($user_id);
+            $stripe_customer->clear_cache();
+            error_log('Cleared Stripe customer cache');
+        } catch (Exception $e) {
+            error_log('Could not clear customer cache: ' . $e->getMessage());
+        }
+
+        // Save token - this should trigger database insert
         $token_id = $token->save();
 
         if (!$token_id) {
