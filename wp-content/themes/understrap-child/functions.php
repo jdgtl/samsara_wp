@@ -1511,22 +1511,29 @@ function samsara_add_payment_method($request) {
         }
 
         // Get or create Stripe customer
-        $customer_id = get_user_meta($user_id, '_stripe_customer_id', true);
+        // Use different meta keys for test vs live mode
+        $is_test_mode = ($stripe_gateway->testmode === 'yes');
+        $customer_meta_key = $is_test_mode ? '_stripe_customer_id_test' : '_stripe_customer_id';
+        $customer_id = get_user_meta($user_id, $customer_meta_key, true);
 
         if (!$customer_id) {
             // Create Stripe customer if doesn't exist
             $user = get_userdata($user_id);
             $customer = WC_Stripe_API::request(array(
                 'email' => $user->user_email,
-                'description' => $user->display_name,
+                'description' => $user->display_name . ($is_test_mode ? ' (Test)' : ''),
             ), 'customers');
 
             if (is_wp_error($customer)) {
+                error_log('Error creating Stripe customer: ' . $customer->get_error_message());
                 return $customer;
             }
 
             $customer_id = $customer->id;
-            update_user_meta($user_id, '_stripe_customer_id', $customer_id);
+            update_user_meta($user_id, $customer_meta_key, $customer_id);
+            error_log('Created new Stripe customer: ' . $customer_id . ' (test mode: ' . ($is_test_mode ? 'yes' : 'no') . ')');
+        } else {
+            error_log('Using existing Stripe customer: ' . $customer_id . ' (test mode: ' . ($is_test_mode ? 'yes' : 'no') . ')');
         }
 
         // Create Setup Intent
