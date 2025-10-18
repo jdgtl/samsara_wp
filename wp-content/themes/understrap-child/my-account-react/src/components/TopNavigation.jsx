@@ -239,7 +239,7 @@ const TopNavigation = () => {
   };
 
   return (
-    <header className="sticky top-0 z-40 w-full border-b border-stone-200 bg-white/95 backdrop-blur supports-[backdrop-filter]:bg-white/80">
+    <header className="w-full border-b border-stone-200 bg-white">
       <div className="container mx-auto px-4">
         <div className="flex h-16 items-center justify-between">
           {/* Logo */}
