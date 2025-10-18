@@ -1512,7 +1512,19 @@ function samsara_add_payment_method($request) {
 
         // Get or create Stripe customer
         // Use different meta keys for test vs live mode
-        $is_test_mode = ($stripe_gateway->testmode === 'yes');
+        // Check multiple possible properties for test mode detection
+        $is_test_mode = false;
+        if (isset($stripe_gateway->testmode) && $stripe_gateway->testmode === 'yes') {
+            $is_test_mode = true;
+        } elseif (method_exists($stripe_gateway, 'is_test_mode') && $stripe_gateway->is_test_mode()) {
+            $is_test_mode = true;
+        } elseif (isset($stripe_gateway->test_mode) && $stripe_gateway->test_mode === 'yes') {
+            $is_test_mode = true;
+        }
+
+        error_log('Stripe gateway testmode property: ' . print_r($stripe_gateway->testmode ?? 'not set', true));
+        error_log('Detected test mode: ' . ($is_test_mode ? 'yes' : 'no'));
+
         $customer_meta_key = $is_test_mode ? '_stripe_customer_id_test' : '_stripe_customer_id';
         $customer_id = get_user_meta($user_id, $customer_meta_key, true);
 
