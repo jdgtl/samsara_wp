@@ -185,7 +185,7 @@ npm run build:all
 
 1. **Make changes** to files in `src/`
 2. **Dev server auto-reloads** - see changes immediately
-3. **Test** in browser at the WordPress site URL + `/account-dashboard`
+3. **Test** in browser at the WordPress site URL + `/athlete`
 4. **Build** for production when ready
 5. **Commit** changes to git
 
@@ -796,6 +796,46 @@ Before committing:
 - [ ] Check browser console for errors
 - [ ] Test loading and error states
 - [ ] Build successfully completes
+
+---
+
+## Roadmap / Future Enhancements
+
+### High Priority
+- [ ] **Download Receipt** - Implement PDF receipt generation for orders
+  - Add PDF generation library (jsPDF or similar)
+  - Create branded receipt template
+  - Include order details, line items, totals
+  - Location: `OrderDetail.jsx` (currently hidden)
+
+- [ ] **Contact Support** - Implement support contact functionality
+  - Add contact form integration
+  - Or link to existing support system
+  - Location: `OrderDetail.jsx` (currently hidden)
+
+### Medium Priority
+- [ ] **Subscription Pause** - Complete pause/resume subscription functionality
+  - Currently shows UI but backend not fully implemented
+  - Requires WooCommerce Subscriptions API integration
+
+- [ ] **Bundle Size Optimization** - Reduce JavaScript bundle size
+  - Currently 379 KiB (exceeds recommended 244 KiB)
+  - Implement code splitting
+  - Lazy load routes
+  - Tree-shake unused components
+
+### Low Priority
+- [ ] **Enhanced Error Handling** - More user-friendly error messages
+- [ ] **Loading States** - Skeleton screens for better UX
+- [ ] **Offline Support** - Service worker for offline functionality
+- [ ] **Performance Monitoring** - Add analytics/monitoring
+
+### URL Structure Notes
+- Main dashboard: `/athlete/` (changed from `/account-dashboard/`)
+- Membership content: Top-level URLs (e.g., `/bodyweight-program-level-1/`)
+  - WordPress admin: Organized under `/programs/` parent
+  - User-facing: Clean URLs without `/programs/`
+  - Old `/my-account/*` URLs redirect to new structure
 
 ---
 

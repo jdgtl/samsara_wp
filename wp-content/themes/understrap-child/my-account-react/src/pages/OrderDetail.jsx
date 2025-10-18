@@ -274,9 +274,10 @@ const OrderDetail = () => {
         </Card>
       )}
 
-      {/* Actions */}
+      {/* Actions - TODO: Implement Download Receipt and Contact Support functionality */}
+      {/* Temporarily hidden until proper implementation
       <div className="flex flex-wrap gap-3">
-        <Button 
+        <Button
           onClick={handleDownloadReceipt}
           className="gap-2 bg-emerald-600 hover:bg-emerald-700"
           data-testid="download-receipt-btn"
@@ -284,8 +285,8 @@ const OrderDetail = () => {
           <Download className="h-4 w-4" />
           Download Receipt
         </Button>
-        <Button 
-          variant="outline" 
+        <Button
+          variant="outline"
           onClick={handleContactSupport}
           className="gap-2"
           data-testid="contact-support-btn"
@@ -294,6 +295,7 @@ const OrderDetail = () => {
           Contact Support
         </Button>
       </div>
+      */}
     </div>
   );
 };

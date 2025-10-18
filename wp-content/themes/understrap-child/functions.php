@@ -999,13 +999,13 @@ add_action( 'woocommerce_account_payment-methods_endpoint', 'woocommerce_account
 
 /**
  * Add rewrite rules for React SPA routing
- * Ensures all /account-dashboard/* routes serve the React template
+ * Ensures all /athlete/* routes serve the React template
  */
 function samsara_react_dashboard_rewrite_rules() {
-    // Add rewrite rule to catch all account-dashboard sub-routes
+    // Add rewrite rule to catch all athlete sub-routes
     add_rewrite_rule(
-        '^account-dashboard/?(.*)$',
-        'index.php?pagename=account-dashboard&react_route=$matches[1]',
+        '^athlete/?(.*)$',
+        'index.php?pagename=athlete&react_route=$matches[1]',
         'top'
     );
 }
@@ -2148,4 +2148,134 @@ function samsara_get_subscription_orders($request) {
             array('status' => 500)
         );
     }
+}
+
+/**
+ * ========================================
+ * PROGRAMS URL STRUCTURE & REDIRECTS
+ * ========================================
+ *
+ * This section handles:
+ * 1. Hiding /programs/ from user-facing URLs
+ * 2. Redirecting old /my-account/ URLs to new structure
+ *
+ * WordPress Structure: /programs/page-slug/
+ * User-Facing URLs: /page-slug/
+ * Old URLs: /my-account/page-slug/ → /page-slug/
+ */
+
+/**
+ * Rewrite URLs to hide /programs/ from user-facing URLs
+ * Structure: /programs/page-slug/ becomes /page-slug/
+ */
+add_action('init', 'samsara_programs_rewrite_rules');
+function samsara_programs_rewrite_rules() {
+    // Match any top-level URL that isn't a WordPress or WooCommerce endpoint
+    // Exclude: programs page itself, shop, cart, checkout, my-account, athlete
+    add_rewrite_rule(
+        '^(?!programs$|shop|cart|checkout|my-account|athlete|wp-admin|wp-content|wp-includes)([^/]+)/?$',
+        'index.php?pagename=programs/$matches[1]',
+        'top'
+    );
+
+    // Also handle pagination if needed
+    add_rewrite_rule(
+        '^(?!programs$|shop|cart|checkout|my-account|athlete)([^/]+)/page/?([0-9]{1,})/?$',
+        'index.php?pagename=programs/$matches[1]&paged=$matches[2]',
+        'top'
+    );
+}
+
+/**
+ * Filter permalinks to remove /programs/ from URLs
+ * This makes get_permalink() return clean URLs
+ */
+add_filter('page_link', 'samsara_remove_programs_from_permalink', 10, 2);
+function samsara_remove_programs_from_permalink($permalink, $post) {
+    // Get post object if we received an ID
+    if (is_numeric($post)) {
+        $post = get_post($post);
+    }
+
+    // Safety check - ensure we have a valid post object
+    if (!$post || !is_object($post)) {
+        return $permalink;
+    }
+
+    // Only modify pages that are children of the "programs" page
+    if ($post->post_type === 'page' && $post->post_parent) {
+        $parent = get_post($post->post_parent);
+        if ($parent && $parent->post_name === 'programs') {
+            // Remove /programs/ from the URL
+            $permalink = str_replace('/programs/', '/', $permalink);
+        }
+    }
+    return $permalink;
+}
+
+/**
+ * Redirect old /my-account/* URLs and /programs/* URLs to new top-level URLs
+ */
+add_action('template_redirect', 'samsara_redirect_legacy_my_account_urls', 1);
+function samsara_redirect_legacy_my_account_urls() {
+    $request_uri = $_SERVER['REQUEST_URI'];
+
+    // Redirect /programs/* to clean top-level URLs (prevent duplicate content)
+    if (preg_match('#^/programs/([^/]+)/?$#', $request_uri, $matches)) {
+        $slug = $matches[1];
+        // Don't redirect the /programs/ page itself
+        if ($slug !== '' && $slug !== 'programs') {
+            wp_redirect(home_url('/' . $slug . '/'), 301);
+            exit;
+        }
+    }
+
+    // Check if this is an old /my-account/ content URL (not a WooCommerce endpoint)
+    if (preg_match('#^/my-account/([^/]+)/?$#', $request_uri, $matches)) {
+        $slug = $matches[1];
+
+        // Don't redirect WooCommerce dashboard endpoints
+        $dashboard_endpoints = array(
+            'dashboard',
+            'orders',
+            'view-order',
+            'downloads',
+            'edit-account',
+            'edit-address',
+            'payment-methods',
+            'lost-password',
+            'customer-logout',
+            'subscriptions',
+            'view-subscription'
+        );
+
+        if (!in_array($slug, $dashboard_endpoints)) {
+            // This is membership content - redirect to top-level URL
+            wp_redirect(home_url('/' . $slug . '/'), 301);
+            exit;
+        }
+    }
+
+    // Redirect /my-account/ itself to the new React dashboard
+    if (preg_match('#^/my-account/?$#', $request_uri)) {
+        wp_redirect(home_url('/athlete/'), 301);
+        exit;
+    }
+
+    // Redirect old /account-dashboard/ to new /athlete/ URL
+    if (preg_match('#^/account-dashboard/?(.*)$#', $request_uri, $matches)) {
+        $subroute = $matches[1];
+        wp_redirect(home_url('/athlete/' . $subroute), 301);
+        exit;
+    }
+}
+
+/**
+ * Flush rewrite rules on theme activation
+ * This ensures the custom rewrite rules are registered
+ */
+add_action('after_switch_theme', 'samsara_flush_rewrite_rules');
+function samsara_flush_rewrite_rules() {
+    samsara_programs_rewrite_rules();
+    flush_rewrite_rules();
 }
