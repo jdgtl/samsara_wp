@@ -1492,9 +1492,20 @@ function samsara_add_payment_method($request) {
         $stripe_gateway = isset($gateways['stripe']) ? $gateways['stripe'] : null;
 
         if (!$stripe_gateway || $stripe_gateway->enabled !== 'yes') {
+            error_log('Stripe gateway not available. Enabled: ' . ($stripe_gateway ? $stripe_gateway->enabled : 'null'));
             return new WP_Error(
                 'stripe_not_enabled',
                 'Stripe gateway is not enabled',
+                array('status' => 503)
+            );
+        }
+
+        // Check if publishable key is set
+        if (empty($stripe_gateway->publishable_key)) {
+            error_log('Stripe publishable key is not set. Test mode: ' . ($stripe_gateway->testmode === 'yes' ? 'yes' : 'no'));
+            return new WP_Error(
+                'stripe_key_missing',
+                'Stripe publishable key is not configured. Please check your Stripe settings.',
                 array('status' => 503)
             );
         }
@@ -1519,6 +1530,7 @@ function samsara_add_payment_method($request) {
         }
 
         // Create Setup Intent
+        error_log('Creating Setup Intent for customer: ' . $customer_id);
         $setup_intent = WC_Stripe_API::request(array(
             'customer' => $customer_id,
             'payment_method_types' => array('card'),
@@ -1526,8 +1538,20 @@ function samsara_add_payment_method($request) {
         ), 'setup_intents');
 
         if (is_wp_error($setup_intent)) {
+            error_log('Setup Intent error: ' . $setup_intent->get_error_message());
             return $setup_intent;
         }
+
+        if (empty($setup_intent->client_secret)) {
+            error_log('Setup Intent created but client_secret is empty');
+            return new WP_Error(
+                'invalid_setup_intent',
+                'Setup Intent was created but is missing client secret',
+                array('status' => 500)
+            );
+        }
+
+        error_log('Setup Intent created successfully. Client secret exists: ' . !empty($setup_intent->client_secret));
 
         return rest_ensure_response(array(
             'clientSecret' => $setup_intent->client_secret,
