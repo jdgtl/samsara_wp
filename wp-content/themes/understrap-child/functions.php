@@ -1721,12 +1721,25 @@ function samsara_confirm_payment_method($request) {
             error_log('Stored customer_id in token meta: ' . $customer_id);
         }
 
-        // Verify token was saved
+        // Verify token was saved by checking directly in database
+        global $wpdb;
+        $db_token = $wpdb->get_row($wpdb->prepare(
+            "SELECT * FROM {$wpdb->prefix}woocommerce_payment_tokens WHERE token_id = %d",
+            $token_id
+        ));
+
+        if ($db_token) {
+            error_log('Token found in database! ID: ' . $db_token->token_id . ', User: ' . $db_token->user_id . ', Gateway: ' . $db_token->gateway_id . ', Type: ' . $db_token->type);
+        } else {
+            error_log('CRITICAL: Token ID ' . $token_id . ' was returned by save() but NOT in database!');
+        }
+
+        // Also try WC method
         $saved_token = WC_Payment_Tokens::get($token_id);
         if ($saved_token) {
-            error_log('Verified token exists in database. User ID: ' . $saved_token->get_user_id() . ', Gateway: ' . $saved_token->get_gateway_id());
+            error_log('WC_Payment_Tokens::get() SUCCESS - User ID: ' . $saved_token->get_user_id() . ', Gateway: ' . $saved_token->get_gateway_id());
         } else {
-            error_log('WARNING: Token was saved but cannot be retrieved!');
+            error_log('WARNING: WC_Payment_Tokens::get() returned NULL for token_id ' . $token_id);
         }
 
         return rest_ensure_response(array(
