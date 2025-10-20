@@ -1565,6 +1565,66 @@ function samsara_add_payment_method($request) {
             return $setup_intent;
         }
 
+        // Check if response is an error object (customer not found, etc.)
+        if (isset($setup_intent->error)) {
+            $error_code = $setup_intent->error->code ?? 'unknown';
+            $error_message = $setup_intent->error->message ?? 'Unknown error';
+
+            error_log('Stripe API returned error: ' . $error_code . ' - ' . $error_message);
+
+            // If customer doesn't exist, delete the cached ID and create a new customer
+            if ($error_code === 'resource_missing' && strpos($error_message, 'customer') !== false) {
+                error_log('Customer not found in Stripe, creating new customer...');
+
+                // Delete the invalid customer ID
+                delete_user_meta($user_id, $customer_meta_key);
+
+                // Create new customer
+                $user = get_userdata($user_id);
+                $customer = WC_Stripe_API::request(array(
+                    'email' => $user->user_email,
+                    'description' => $user->display_name . ($is_test_mode ? ' (Test)' : ''),
+                ), 'customers');
+
+                if (is_wp_error($customer)) {
+                    error_log('Error creating new Stripe customer: ' . $customer->get_error_message());
+                    return $customer;
+                }
+
+                $customer_id = $customer->id;
+                update_user_meta($user_id, $customer_meta_key, $customer_id);
+                error_log('Created replacement Stripe customer: ' . $customer_id);
+
+                // Retry Setup Intent with new customer
+                $setup_intent = WC_Stripe_API::request(array(
+                    'customer' => $customer_id,
+                    'payment_method_types' => array('card'),
+                    'usage' => 'off_session',
+                ), 'setup_intents');
+
+                if (is_wp_error($setup_intent)) {
+                    error_log('Setup Intent retry error: ' . $setup_intent->get_error_message());
+                    return $setup_intent;
+                }
+
+                // Check retry for errors
+                if (isset($setup_intent->error)) {
+                    return new WP_Error(
+                        'stripe_error',
+                        $setup_intent->error->message ?? 'Failed to create Setup Intent',
+                        array('status' => 400)
+                    );
+                }
+            } else {
+                // Other error types
+                return new WP_Error(
+                    'stripe_error',
+                    $error_message,
+                    array('status' => 400)
+                );
+            }
+        }
+
         // Debug: Log the entire response structure
         error_log('Setup Intent response type: ' . gettype($setup_intent));
         error_log('Setup Intent response: ' . print_r($setup_intent, true));
