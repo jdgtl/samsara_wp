@@ -1782,6 +1782,11 @@ function samsara_confirm_payment_method($request) {
 
         error_log('🔧 Using direct database insert as workaround');
 
+        // FORCE DATABASE COMMIT - prevent transaction rollback
+        // The insert works but gets rolled back 3 seconds later by something
+        $wpdb->query('COMMIT');
+        error_log('💥 Forced database COMMIT before insert');
+
         $insert_result = $wpdb->insert(
             $wpdb->prefix . 'woocommerce_payment_tokens',
             array(
@@ -1842,6 +1847,10 @@ function samsara_confirm_payment_method($request) {
 
         error_log('💳 Token metadata saved - Brand: ' . $payment_method->card->brand . ', Last4: ' . $payment_method->card->last4 . ', Exp: ' . $payment_method->card->exp_month . '/' . $payment_method->card->exp_year);
 
+        // COMMIT AGAIN after all metadata inserts
+        $wpdb->query('COMMIT');
+        error_log('💥 Forced database COMMIT after metadata inserts');
+
         // Fire WooCommerce hooks so other plugins know a token was created
         // This mimics what $token->save() would do
         do_action('woocommerce_payment_token_created', $token_id, null);
@@ -1885,6 +1894,11 @@ function samsara_confirm_payment_method($request) {
         } else {
             error_log('WARNING: WC_Payment_Tokens::get() returned NULL for token_id ' . $token_id);
         }
+
+        // FINAL COMMIT before returning response
+        // This ensures the transaction is fully committed before the REST response is sent
+        $wpdb->query('COMMIT');
+        error_log('💥 FINAL database COMMIT before returning success response');
 
         return rest_ensure_response(array(
             'success' => true,
