@@ -1451,10 +1451,18 @@ function samsara_get_payment_methods($request) {
 
     error_log('Getting payment methods for user: ' . $user_id);
 
+    // BYPASS WC CACHE - Query database directly first
+    global $wpdb;
+    $db_tokens = $wpdb->get_results($wpdb->prepare(
+        "SELECT * FROM {$wpdb->prefix}woocommerce_payment_tokens WHERE user_id = %d",
+        $user_id
+    ));
+    error_log('🔍 Direct DB query found ' . count($db_tokens) . ' tokens for user ' . $user_id);
+
     // Get customer tokens (payment methods)
     $tokens = WC_Payment_Tokens::get_customer_tokens($user_id);
 
-    error_log('Found ' . count($tokens) . ' payment tokens for user ' . $user_id);
+    error_log('📦 WC method found ' . count($tokens) . ' payment tokens for user ' . $user_id);
 
     $payment_methods = array();
 
@@ -1797,6 +1805,18 @@ function samsara_confirm_payment_method($request) {
 
         $token_id = $wpdb->insert_id;
         error_log('✅ Direct database insert SUCCESS! Token ID: ' . $token_id);
+
+        // IMMEDIATE verification - check if it's actually there
+        $verify_insert = $wpdb->get_row($wpdb->prepare(
+            "SELECT * FROM {$wpdb->prefix}woocommerce_payment_tokens WHERE token_id = %d",
+            $token_id
+        ));
+
+        if ($verify_insert) {
+            error_log('✅ VERIFIED - Token IS in database immediately after insert: ' . json_encode($verify_insert));
+        } else {
+            error_log('❌ CRITICAL - Token NOT in database immediately after insert! Rolling back?');
+        }
 
         // Now insert token metadata (card details)
         $wpdb->insert(
