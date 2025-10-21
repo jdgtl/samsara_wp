@@ -1451,33 +1451,35 @@ function samsara_get_payment_methods($request) {
 
     error_log('Getting payment methods for user: ' . $user_id);
 
-    // BYPASS WC CACHE - Query database directly first
+    // BYPASS WC CACHE COMPLETELY - Query database directly and build response manually
+    // WC's get_customer_tokens() caches incorrectly even after cache clear
     global $wpdb;
     $db_tokens = $wpdb->get_results($wpdb->prepare(
-        "SELECT * FROM {$wpdb->prefix}woocommerce_payment_tokens WHERE user_id = %d",
+        "SELECT * FROM {$wpdb->prefix}woocommerce_payment_tokens WHERE user_id = %d AND gateway_id = 'stripe'",
         $user_id
     ));
     error_log('🔍 Direct DB query found ' . count($db_tokens) . ' tokens for user ' . $user_id);
 
-    // Get customer tokens (payment methods)
-    $tokens = WC_Payment_Tokens::get_customer_tokens($user_id);
-
-    error_log('📦 WC method found ' . count($tokens) . ' payment tokens for user ' . $user_id);
-
     $payment_methods = array();
 
-    foreach ($tokens as $token) {
-        error_log('Token ID: ' . $token->get_id() . ', Gateway: ' . $token->get_gateway_id() . ', Last4: ' . $token->get_last4());
+    foreach ($db_tokens as $db_token) {
+        // Get token metadata directly from database
+        $token_meta = $wpdb->get_results($wpdb->prepare(
+            "SELECT meta_key, meta_value FROM {$wpdb->prefix}woocommerce_payment_tokenmeta WHERE payment_token_id = %d",
+            $db_token->token_id
+        ), OBJECT_K);
+
+        error_log('💳 Processing token ID: ' . $db_token->token_id . ', Last4: ' . ($token_meta['last4']->meta_value ?? 'N/A'));
 
         $payment_methods[] = array(
-            'id' => $token->get_id(),
-            'type' => $token->get_type(), // 'CC' for credit card
-            'brand' => $token->get_card_type(),
-            'last4' => $token->get_last4(),
-            'expMonth' => $token->get_expiry_month(),
-            'expYear' => $token->get_expiry_year(),
-            'isDefault' => $token->is_default(),
-            'gateway' => $token->get_gateway_id(),
+            'id' => $db_token->token_id,
+            'type' => $db_token->type,
+            'brand' => $token_meta['card_type']->meta_value ?? '',
+            'last4' => $token_meta['last4']->meta_value ?? '',
+            'expMonth' => $token_meta['expiry_month']->meta_value ?? '',
+            'expYear' => $token_meta['expiry_year']->meta_value ?? '',
+            'isDefault' => (bool)$db_token->is_default,
+            'gateway' => $db_token->gateway_id,
         );
     }
 
