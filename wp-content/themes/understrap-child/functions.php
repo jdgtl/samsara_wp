@@ -1538,6 +1538,11 @@ function samsara_add_payment_method($request) {
             $customer = WC_Stripe_API::request(array(
                 'email' => $user->user_email,
                 'description' => $user->display_name . ($is_test_mode ? ' (Test)' : ''),
+                'metadata' => array(
+                    'wp_user_id' => $user_id,
+                    'wp_username' => $user->user_login,
+                    'wp_display_name' => $user->display_name,
+                ),
             ), 'customers');
 
             if (is_wp_error($customer)) {
@@ -1583,6 +1588,11 @@ function samsara_add_payment_method($request) {
                 $user = get_userdata($user_id);
                 $customer = WC_Stripe_API::request(array(
                     'email' => $user->user_email,
+                    'metadata' => array(
+                        'wp_user_id' => $user_id,
+                        'wp_username' => $user->user_login,
+                        'wp_display_name' => $user->display_name,
+                    ),
                     'description' => $user->display_name . ($is_test_mode ? ' (Test)' : ''),
                 ), 'customers');
 
@@ -1724,30 +1734,9 @@ function samsara_confirm_payment_method($request) {
             return $payment_method;
         }
 
-        // Create WooCommerce payment token
-        $token = new WC_Payment_Token_CC();
-        $token->set_token($payment_method_id);
-        $token->set_gateway_id('stripe');
-        $token->set_user_id($user_id);
-
-        // Set card details
-        if (isset($payment_method->card)) {
-            $token->set_card_type(strtolower($payment_method->card->brand));
-            $token->set_last4($payment_method->card->last4);
-            $token->set_expiry_month($payment_method->card->exp_month);
-            $token->set_expiry_year($payment_method->card->exp_year);
-        }
-
-        // Set as default if no other payment methods exist or if requested
+        // Get existing tokens before creating new one
         $existing_tokens = WC_Payment_Tokens::get_customer_tokens($user_id, 'stripe');
         error_log('Existing tokens for user before save: ' . count($existing_tokens));
-
-        if (empty($existing_tokens) || $set_as_default) {
-            $token->set_default(true);
-        }
-
-        // Make sure all required fields are set
-        error_log('About to save token with: User=' . $token->get_user_id() . ', Gateway=' . $token->get_gateway_id() . ', Token=' . substr($payment_method_id, 0, 10) . '...');
 
         // Clear WooCommerce customer cache before saving (important!)
         // This is what the Stripe plugin does
@@ -1759,8 +1748,35 @@ function samsara_confirm_payment_method($request) {
             error_log('Could not clear customer cache: ' . $e->getMessage());
         }
 
+        // Create WooCommerce payment token
+        $token = new WC_Payment_Token_CC();
+        $token->set_token($payment_method_id);
+        $token->set_gateway_id('stripe');
+        $token->set_user_id($user_id);
+
+        // Set card details
+        if (isset($payment_method->card)) {
+            $token->set_card_type(strtolower($payment_method->card->brand));
+            $token->set_last4($payment_method->card->last4);
+            $token->set_expiry_month(str_pad($payment_method->card->exp_month, 2, '0', STR_PAD_LEFT));
+            $token->set_expiry_year($payment_method->card->exp_year);
+        }
+
+        // Set as default if no other payment methods exist or if requested
+        $is_default = (empty($existing_tokens) || $set_as_default);
+        $token->set_default($is_default);
+
+        error_log('About to save token: User=' . $token->get_user_id() . ', Gateway=' . $token->get_gateway_id() . ', Token=' . substr($payment_method_id, 0, 10) . ', Default=' . ($is_default ? 'yes' : 'no'));
+
+        // CRITICAL FIX: Disable WordPress object cache for this save operation
+        // This prevents issues with autoincrement IDs being returned before DB insert completes
+        wp_suspend_cache_addition(true);
+
         // Save token - this should trigger database insert
         $token_id = $token->save();
+
+        // Re-enable cache
+        wp_suspend_cache_addition(false);
 
         if (!$token_id) {
             error_log('Failed to save token to database');
@@ -1780,6 +1796,12 @@ function samsara_confirm_payment_method($request) {
             update_metadata('payment_token', $token_id, 'customer_id', $customer_id);
             error_log('Stored customer_id in token meta: ' . $customer_id);
         }
+
+        // CRITICAL: Clear WooCommerce payment tokens cache
+        // This ensures the next API call to get_customer_tokens returns the new token
+        // WooCommerce caches tokens per user, so we need to clear it after adding new ones
+        wp_cache_delete($user_id, 'wc_payment_tokens');
+        error_log('Cleared WooCommerce payment tokens cache for user ' . $user_id);
 
         // Verify token was saved by checking directly in database
         global $wpdb;
@@ -1839,6 +1861,9 @@ function samsara_update_payment_method($request) {
         WC_Payment_Tokens::set_users_default($user_id, $token_id);
     }
 
+    // Clear WooCommerce payment tokens cache to ensure fresh data on next fetch
+    wp_cache_delete($user_id, 'wc_payment_tokens');
+
     return rest_ensure_response(array(
         'success' => true,
         'message' => 'Payment method updated successfully',
@@ -1862,6 +1887,9 @@ function samsara_delete_payment_method($request) {
 
     // Delete the token
     WC_Payment_Tokens::delete($token_id);
+
+    // Clear WooCommerce payment tokens cache to ensure fresh data on next fetch
+    wp_cache_delete($user_id, 'wc_payment_tokens');
 
     return rest_ensure_response(array(
         'success' => true,
