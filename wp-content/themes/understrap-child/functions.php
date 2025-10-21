@@ -1822,6 +1822,12 @@ function samsara_confirm_payment_method($request) {
 
         error_log('💳 Token metadata saved - Brand: ' . $payment_method->card->brand . ', Last4: ' . $payment_method->card->last4 . ', Exp: ' . $payment_method->card->exp_month . '/' . $payment_method->card->exp_year);
 
+        // Fire WooCommerce hooks so other plugins know a token was created
+        // This mimics what $token->save() would do
+        do_action('woocommerce_payment_token_created', $token_id, null);
+        do_action('woocommerce_new_payment_token', $token_id, null);
+        error_log('🔔 Fired WooCommerce token creation hooks');
+
         // Store Stripe customer ID in token meta
         $customer_id = $setup_intent->customer;
         if ($customer_id) {
