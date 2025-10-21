@@ -1768,36 +1768,69 @@ function samsara_confirm_payment_method($request) {
 
         error_log('About to save token: User=' . $token->get_user_id() . ', Gateway=' . $token->get_gateway_id() . ', Token=' . substr($payment_method_id, 0, 10) . ', Default=' . ($is_default ? 'yes' : 'no'));
 
-        // CRITICAL FIX: Disable WordPress object cache for this save operation
-        // This prevents issues with autoincrement IDs being returned before DB insert completes
-        wp_suspend_cache_addition(true);
-        error_log('🔒 Cache addition suspended for token save');
+        // WORKAROUND: Direct database insert because $token->save() fails silently
+        // WooCommerce's save() method returns an ID but doesn't persist to DB for unknown reason
+        global $wpdb;
 
-        // Save token - this should trigger database insert
-        $token_id = $token->save();
-        error_log('💾 Token save() returned ID: ' . ($token_id ? $token_id : 'NULL'));
+        error_log('🔧 Using direct database insert as workaround');
 
-        // Re-enable cache
-        wp_suspend_cache_addition(false);
-        error_log('🔓 Cache addition re-enabled');
+        $insert_result = $wpdb->insert(
+            $wpdb->prefix . 'woocommerce_payment_tokens',
+            array(
+                'gateway_id' => 'stripe',
+                'token' => $payment_method_id,
+                'user_id' => $user_id,
+                'type' => 'CC',
+                'is_default' => $is_default ? 1 : 0,
+            ),
+            array('%s', '%s', '%d', '%s', '%d')
+        );
 
-        if (!$token_id) {
-            error_log('Failed to save token to database');
+        if (!$insert_result) {
+            error_log('❌ Direct database insert failed: ' . $wpdb->last_error);
             return new WP_Error(
                 'token_save_failed',
-                'Failed to save payment method',
+                'Failed to save payment method to database: ' . $wpdb->last_error,
                 array('status' => 500)
             );
         }
 
-        error_log('Token saved successfully. Token ID: ' . $token_id . ', User ID: ' . $user_id . ', Gateway: stripe');
-        error_log('Token details - Brand: ' . $token->get_card_type() . ', Last4: ' . $token->get_last4() . ', Default: ' . ($token->is_default() ? 'yes' : 'no'));
+        $token_id = $wpdb->insert_id;
+        error_log('✅ Direct database insert SUCCESS! Token ID: ' . $token_id);
+
+        // Now insert token metadata (card details)
+        $wpdb->insert(
+            $wpdb->prefix . 'woocommerce_payment_tokenmeta',
+            array('payment_token_id' => $token_id, 'meta_key' => 'card_type', 'meta_value' => strtolower($payment_method->card->brand)),
+            array('%d', '%s', '%s')
+        );
+        $wpdb->insert(
+            $wpdb->prefix . 'woocommerce_payment_tokenmeta',
+            array('payment_token_id' => $token_id, 'meta_key' => 'last4', 'meta_value' => $payment_method->card->last4),
+            array('%d', '%s', '%s')
+        );
+        $wpdb->insert(
+            $wpdb->prefix . 'woocommerce_payment_tokenmeta',
+            array('payment_token_id' => $token_id, 'meta_key' => 'expiry_month', 'meta_value' => str_pad($payment_method->card->exp_month, 2, '0', STR_PAD_LEFT)),
+            array('%d', '%s', '%s')
+        );
+        $wpdb->insert(
+            $wpdb->prefix . 'woocommerce_payment_tokenmeta',
+            array('payment_token_id' => $token_id, 'meta_key' => 'expiry_year', 'meta_value' => $payment_method->card->exp_year),
+            array('%d', '%s', '%s')
+        );
+
+        error_log('💳 Token metadata saved - Brand: ' . $payment_method->card->brand . ', Last4: ' . $payment_method->card->last4 . ', Exp: ' . $payment_method->card->exp_month . '/' . $payment_method->card->exp_year);
 
         // Store Stripe customer ID in token meta
         $customer_id = $setup_intent->customer;
         if ($customer_id) {
-            update_metadata('payment_token', $token_id, 'customer_id', $customer_id);
-            error_log('Stored customer_id in token meta: ' . $customer_id);
+            $wpdb->insert(
+                $wpdb->prefix . 'woocommerce_payment_tokenmeta',
+                array('payment_token_id' => $token_id, 'meta_key' => 'customer_id', 'meta_value' => $customer_id),
+                array('%d', '%s', '%s')
+            );
+            error_log('✅ Stored customer_id in token meta: ' . $customer_id);
         }
 
         // CRITICAL: Clear WooCommerce payment tokens cache
