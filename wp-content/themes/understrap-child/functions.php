@@ -1771,12 +1771,15 @@ function samsara_confirm_payment_method($request) {
         // CRITICAL FIX: Disable WordPress object cache for this save operation
         // This prevents issues with autoincrement IDs being returned before DB insert completes
         wp_suspend_cache_addition(true);
+        error_log('🔒 Cache addition suspended for token save');
 
         // Save token - this should trigger database insert
         $token_id = $token->save();
+        error_log('💾 Token save() returned ID: ' . ($token_id ? $token_id : 'NULL'));
 
         // Re-enable cache
         wp_suspend_cache_addition(false);
+        error_log('🔓 Cache addition re-enabled');
 
         if (!$token_id) {
             error_log('Failed to save token to database');

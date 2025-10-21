@@ -120,22 +120,29 @@ const AddPaymentMethodModal = ({ isOpen, onClose, onSuccess }) => {
       }
 
       // Save to WooCommerce
-      console.log('Saving payment method to WooCommerce...');
+      console.log('💳 Saving payment method to WooCommerce...', {
+        setupIntentId: setupIntent.id,
+        setAsDefault,
+        timestamp: new Date().toISOString()
+      });
+
       const result = await paymentMethodsApi.confirmPaymentMethod(
         setupIntent.id,
         setAsDefault
       );
 
-      console.log('WooCommerce result:', result);
+      console.log('✅ WooCommerce save result:', result);
 
       if (!result.success) {
         throw new Error(result.message || 'Failed to save payment method');
       }
 
       setSuccess(true);
+      console.log('🎉 Payment method added successfully, will refresh in 1.5s');
 
       // Close modal after short delay
       setTimeout(() => {
+        console.log('🔄 Calling onSuccess() to refresh payment methods list');
         onSuccess();
         onClose();
         resetForm();
