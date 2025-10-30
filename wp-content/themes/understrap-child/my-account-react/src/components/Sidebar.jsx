@@ -107,7 +107,7 @@ const Sidebar = ({ isOpen, onClose }) => {
         <div className="p-6 space-y-3 flex flex-col items-center text-center" data-testid="user-profile-section">
           <Avatar className="h-20 w-20" data-testid="user-avatar">
             <AvatarImage src={userData.avatarUrl} alt={userData.displayName} />
-            <AvatarFallback className="bg-emerald-600 text-white text-xl">
+            <AvatarFallback className="bg-samsara-gold text-samsara-black text-xl">
               {userData.firstName?.[0]}{userData.lastName?.[0]}
             </AvatarFallback>
           </Avatar>
@@ -169,9 +169,9 @@ const Sidebar = ({ isOpen, onClose }) => {
                 onClick={onClose}
                 className={`
                   flex items-center gap-3 px-4 py-3 rounded-lg transition-colors
-                  focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:ring-offset-2
+                  focus:outline-none focus:ring-2 focus:ring-samsara-gold focus:ring-offset-2
                   ${active 
-                    ? 'bg-emerald-600 text-white' 
+                    ? 'bg-samsara-gold text-samsara-black' 
                     : 'text-stone-700 hover:bg-stone-200'
                   }
                 `}

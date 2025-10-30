@@ -324,7 +324,7 @@ const Dashboard = () => {
               <>
                 <Button
                   onClick={handleManageSubscription}
-                  className="bg-emerald-600 hover:bg-emerald-700"
+                  className="bg-samsara-gold hover:bg-samsara-gold/90 text-samsara-black"
                   data-testid="manage-subscription-btn"
                 >
                   Manage
@@ -346,7 +346,7 @@ const Dashboard = () => {
                   <Button
                     onClick={handlePauseClick}
                     disabled={actionLoading}
-                    className="bg-emerald-600 hover:bg-emerald-700"
+                    className="bg-samsara-gold hover:bg-samsara-gold/90 text-samsara-black"
                     data-testid="resume-btn"
                   >
                     <Play className="h-4 w-4 mr-2" />
@@ -456,151 +456,75 @@ const Dashboard = () => {
               </Button>
             </div>
           ) : (
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Plan Name</TableHead>
-                  <TableHead>Status</TableHead>
-                  <TableHead>Started</TableHead>
-                  <TableHead>Expires</TableHead>
-                  <TableHead className="text-right">Action</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {filteredMemberships.map((membership) => {
-                  const isExpanded = expandedMemberships[membership.id];
-                  const hasPages = membership.restrictedPages && membership.restrictedPages.length > 0;
+            <div className="grid grid-cols-2 lg:grid-cols-3 gap-4">
+              {/* Show one card per program page, not per membership */}
+              {filteredMemberships.flatMap((membership) => {
+                const hasPages = membership.restrictedPages && membership.restrictedPages.length > 0;
+
+                if (!hasPages) return [];
+
+                // Create one card for each program page
+                return membership.restrictedPages.map((page) => {
+                  const imageUrl = page.featuredImage || null;
 
                   return (
-                    <React.Fragment key={membership.id}>
-                      <TableRow data-testid={`membership-row-${membership.id}`}>
-                        <TableCell className="font-medium">{membership.name}</TableCell>
-                        <TableCell>{getStatusBadge(membership.status)}</TableCell>
-                        <TableCell>
-                          {new Date(membership.startedAt).toLocaleDateString('en-US', {
-                            month: 'short',
-                            day: 'numeric',
-                            year: 'numeric'
-                          })}
-                        </TableCell>
-                        <TableCell>
-                          {membership.expiresAt
-                            ? new Date(membership.expiresAt).toLocaleDateString('en-US', {
-                                month: 'short',
-                                day: 'numeric',
-                                year: 'numeric'
-                              })
-                            : 'Never'
-                          }
-                        </TableCell>
-                        <TableCell className="text-right">
-                          {hasPages ? (
-                            <Button
-                              size="sm"
-                              variant="ghost"
-                              onClick={() => setExpandedMemberships(prev => ({
-                                ...prev,
-                                [membership.id]: !prev[membership.id]
-                              }))}
-                              data-testid={`view-membership-${membership.id}`}
-                            >
-                              {isExpanded ? (
-                                <>
-                                  <ChevronUp className="h-4 w-4 mr-1" />
-                                  Hide ({membership.restrictedPages.length})
-                                </>
-                              ) : (
-                                <>
-                                  <ChevronDown className="h-4 w-4 mr-1" />
-                                  View ({membership.restrictedPages.length})
-                                </>
-                              )}
-                            </Button>
-                          ) : (
-                            <Button
-                              size="sm"
-                              variant="ghost"
-                              disabled
-                              data-testid={`view-membership-${membership.id}`}
-                            >
-                              No content
-                            </Button>
-                          )}
-                        </TableCell>
-                      </TableRow>
-                      {isExpanded && hasPages && (
-                        <TableRow>
-                          <TableCell colSpan={5} className="bg-stone-50 p-4">
-                            <div className="space-y-2">
-                              <p className="text-sm font-medium text-stone-700 mb-3">
-                                Membership Content:
-                              </p>
-                              <div className="grid gap-2">
-                                {membership.restrictedPages.map((page) => (
-                                  <Button
-                                    key={page.id}
-                                    variant="outline"
-                                    size="sm"
-                                    className="justify-start"
-                                    onClick={() => window.location.href = page.url}
-                                  >
-                                    <ExternalLink className="h-4 w-4 mr-2" />
-                                    {page.title}
-                                  </Button>
-                                ))}
-                              </div>
-                            </div>
-                          </TableCell>
-                        </TableRow>
+                    <Card
+                      key={`${membership.id}-${page.id}`}
+                      className="overflow-hidden hover:shadow-lg transition-shadow cursor-pointer group"
+                      onClick={() => window.location.href = page.url}
+                      data-testid={`program-card-${page.id}`}
+                    >
+                      {/* Featured Image */}
+                      {imageUrl ? (
+                        <div className="aspect-video overflow-hidden bg-stone-200">
+                          <img
+                            src={imageUrl}
+                            alt={page.title}
+                            className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+                          />
+                        </div>
+                      ) : (
+                        <div className="aspect-video bg-gradient-to-br from-stone-100 to-stone-200 flex items-center justify-center">
+                          <div className="text-stone-400 text-center p-4">
+                            <p className="text-sm font-medium">{page.title}</p>
+                          </div>
+                        </div>
                       )}
-                    </React.Fragment>
+
+                      {/* Card Content */}
+                      <CardContent className="p-4">
+                        <div className="flex items-start justify-between mb-2">
+                          <h3 className="font-semibold text-sm line-clamp-2 flex-1">
+                            {page.title}
+                          </h3>
+                          {getStatusBadge(membership.status)}
+                        </div>
+
+                        {/* Show membership name as subtitle */}
+                        <p className="text-xs text-stone-500 mt-1">
+                          {membership.name}
+                        </p>
+
+                        {/* Show expired date if applicable */}
+                        {membership.expiresAt && (
+                          <p className="text-xs text-stone-500 mt-2">
+                            Expires: {new Date(membership.expiresAt).toLocaleDateString('en-US', {
+                              month: 'short',
+                              day: 'numeric',
+                              year: 'numeric'
+                            })}
+                          </p>
+                        )}
+                      </CardContent>
+                    </Card>
                   );
-                })}
-              </TableBody>
-            </Table>
+                });
+              })}
+            </div>
           )}
         </CardContent>
       </Card>
 
-      {/* Pause Confirmation Dialog */}
-      <AlertDialog open={showPauseDialog} onOpenChange={setShowPauseDialog}>
-        <AlertDialogContent data-testid="pause-dialog">
-          <AlertDialogHeader>
-            <AlertDialogTitle>Pause Subscription?</AlertDialogTitle>
-            <AlertDialogDescription>
-              Your subscription will be paused and you won't be charged. You can resume anytime.
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel data-testid="pause-cancel-btn">Cancel</AlertDialogCancel>
-            <AlertDialogAction onClick={handlePause} data-testid="pause-confirm-btn">
-              Pause Subscription
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
-
-      {/* Cancel Confirmation Dialog */}
-      <AlertDialog open={showCancelDialog} onOpenChange={setShowCancelDialog}>
-        <AlertDialogContent data-testid="cancel-dialog">
-          <AlertDialogHeader>
-            <AlertDialogTitle>Cancel Subscription?</AlertDialogTitle>
-            <AlertDialogDescription>
-              This action cannot be undone. Your subscription will be canceled and you'll lose access at the end of your current billing period.
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel data-testid="cancel-cancel-btn">Keep Subscription</AlertDialogCancel>
-            <AlertDialogAction
-              onClick={handleCancel}
-              className="bg-red-600 hover:bg-red-700"
-              data-testid="cancel-confirm-btn"
-            >
-              Yes, Cancel Subscription
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
     </div>
   );
 };

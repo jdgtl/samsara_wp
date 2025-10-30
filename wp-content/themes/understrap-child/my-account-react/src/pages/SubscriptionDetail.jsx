@@ -6,20 +6,43 @@ import { Button } from '../components/ui/button';
 import { Separator } from '../components/ui/separator';
 import { Alert, AlertDescription } from '../components/ui/alert';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '../components/ui/alert-dialog';
-import { ArrowLeft, Pause, Play, XCircle, CreditCard, FileText, Loader2, AlertTriangle } from 'lucide-react';
+import { ArrowLeft, XCircle, FileText, Loader2, AlertTriangle, AlertCircle } from 'lucide-react';
 import { useSubscription, useSubscriptionActions, useSubscriptionOrders } from '../hooks/useSubscriptions';
+import { subscriptionsApi } from '../services/woocommerce';
+import SubscriptionTimeline from '../components/SubscriptionTimeline';
 
 const SubscriptionDetail = () => {
   const { subId } = useParams();
   const navigate = useNavigate();
   const [countdown, setCountdown] = useState({ days: 0, hours: 0 });
   const [showCancelDialog, setShowCancelDialog] = useState(false);
-  const [showPauseDialog, setShowPauseDialog] = useState(false);
 
   // Fetch live subscription data
   const { subscription, loading, error } = useSubscription(subId);
-  const { cancelSubscription, pauseSubscription, resumeSubscription, actionLoading } = useSubscriptionActions();
+  const { cancelSubscription, actionLoading } = useSubscriptionActions();
   const { orders: relatedOrders, loading: ordersLoading } = useSubscriptionOrders(subId);
+
+  // Fetch cancellation eligibility
+  const [cancellationEligibility, setCancellationEligibility] = useState(null);
+  const [eligibilityLoading, setEligibilityLoading] = useState(true);
+
+  useEffect(() => {
+    const fetchCancellationEligibility = async () => {
+      if (!subId) return;
+
+      try {
+        setEligibilityLoading(true);
+        const data = await subscriptionsApi.getCancellationEligibility(subId);
+        setCancellationEligibility(data);
+      } catch (err) {
+        console.error('Error fetching cancellation eligibility:', err);
+      } finally {
+        setEligibilityLoading(false);
+      }
+    };
+
+    fetchCancellationEligibility();
+  }, [subId]);
 
   // Calculate countdown for next payment
   useEffect(() => {
@@ -108,7 +131,6 @@ const SubscriptionDetail = () => {
     const variants = {
       active: { variant: 'default', className: 'bg-emerald-100 text-emerald-800 hover:bg-emerald-100' },
       trial: { variant: 'secondary', className: 'bg-blue-100 text-blue-800 hover:bg-blue-100' },
-      paused: { variant: 'outline', className: 'bg-amber-100 text-amber-800 hover:bg-amber-100' },
       canceled: { variant: 'destructive', className: 'bg-red-100 text-red-800 hover:bg-red-100' },
     };
 
@@ -120,25 +142,6 @@ const SubscriptionDetail = () => {
     );
   };
 
-  const handlePause = async () => {
-    setShowPauseDialog(false);
-    const result = await pauseSubscription(subId);
-    if (result.success) {
-      window.location.reload(); // Reload to fetch updated data
-    } else {
-      alert(`Failed to pause subscription: ${result.error}`);
-    }
-  };
-
-  const handleResume = async () => {
-    const result = await resumeSubscription(subId);
-    if (result.success) {
-      window.location.reload(); // Reload to fetch updated data
-    } else {
-      alert(`Failed to resume subscription: ${result.error}`);
-    }
-  };
-
   const handleCancel = async () => {
     setShowCancelDialog(false);
     const result = await cancelSubscription(subId);
@@ -147,10 +150,6 @@ const SubscriptionDetail = () => {
     } else {
       alert(`Failed to cancel subscription: ${result.error}`);
     }
-  };
-
-  const handleChangePlan = () => {
-    alert('Plan change interface would open here');
   };
 
   const handleResubscribe = () => {
@@ -252,6 +251,22 @@ const SubscriptionDetail = () => {
         </CardContent>
       </Card>
 
+      {/* Payment Timeline & Cancellation Window */}
+      {cancellationEligibility && subscription.status === 'active' && (
+        <Card data-testid="cancellation-timeline-section">
+          <CardHeader>
+            <CardTitle>Subscription Timeline</CardTitle>
+            <CardDescription>Track your payment progress and cancellation window</CardDescription>
+          </CardHeader>
+          <CardContent>
+            <SubscriptionTimeline
+              eligibility={cancellationEligibility}
+              subscription={subscription}
+            />
+          </CardContent>
+        </Card>
+      )}
+
       {/* Actions */}
       <Card data-testid="subscription-actions-section">
         <CardHeader>
@@ -259,59 +274,51 @@ const SubscriptionDetail = () => {
           <CardDescription>Control your subscription settings</CardDescription>
         </CardHeader>
         <CardContent>
-          <div className="flex flex-wrap gap-3">
+          <div className="space-y-4">
             {subscription.status === 'active' && (
               <>
-                <Button
-                  variant="outline"
-                  onClick={() => setShowPauseDialog(true)}
-                  className="gap-2"
-                  data-testid="pause-subscription-btn"
-                >
-                  <Pause className="h-4 w-4" />
-                  Pause Subscription
-                </Button>
-                {/* TODO: Re-enable when subscription switching is configured in WooCommerce
-                <Button
-                  variant="outline"
-                  onClick={handleChangePlan}
-                  className="gap-2"
-                  data-testid="change-plan-btn"
-                >
-                  <CreditCard className="h-4 w-4" />
-                  Change Plan
-                </Button>
-                */}
+                <div className="flex flex-wrap gap-3">
+                  <Button
+                    variant="destructive"
+                    onClick={() => setShowCancelDialog(true)}
+                    disabled={!cancellationEligibility?.cancelable || eligibilityLoading}
+                    className="gap-2"
+                    data-testid="cancel-subscription-btn"
+                  >
+                    <XCircle className="h-4 w-4" />
+                    Cancel Subscription
+                  </Button>
+                </div>
+
+                {/* Visual feedback when cancel is disabled */}
+                {!eligibilityLoading && !cancellationEligibility?.cancelable && cancellationEligibility?.reasons && (
+                  <Alert className="border-stone-300 bg-stone-50">
+                    <AlertCircle className="h-4 w-4 text-stone-600" />
+                    <AlertDescription className="ml-2">
+                      <div className="text-stone-700">
+                        <p className="font-medium text-sm mb-2">Cancellation is currently disabled</p>
+                        <ul className="text-xs space-y-1 list-disc list-inside">
+                          {cancellationEligibility.reasons.map((reason, idx) => (
+                            <li key={idx}>{reason}</li>
+                          ))}
+                        </ul>
+                        {cancellationEligibility.window?.start && (
+                          <p className="text-xs mt-2 font-medium text-emerald-700">
+                            ✓ Cancellation will be available: {cancellationEligibility.window.start}
+                            {cancellationEligibility.window.end && ` to ${cancellationEligibility.window.end}`}
+                          </p>
+                        )}
+                      </div>
+                    </AlertDescription>
+                  </Alert>
+                )}
               </>
-            )}
-            
-            {subscription.status === 'paused' && (
-              <Button 
-                onClick={handleResume}
-                className="gap-2 bg-emerald-600 hover:bg-emerald-700"
-                data-testid="resume-subscription-btn"
-              >
-                <Play className="h-4 w-4" />
-                Resume Subscription
-              </Button>
-            )}
-            
-            {(subscription.status === 'active' || subscription.status === 'paused') && (
-              <Button 
-                variant="destructive"
-                onClick={() => setShowCancelDialog(true)}
-                className="gap-2"
-                data-testid="cancel-subscription-btn"
-              >
-                <XCircle className="h-4 w-4" />
-                Cancel Subscription
-              </Button>
             )}
 
             {subscription.status === 'canceled' && (
               <Button
                 onClick={handleResubscribe}
-                className="gap-2 bg-emerald-600 hover:bg-emerald-700"
+                className="gap-2 bg-samsara-gold hover:bg-samsara-gold/90 text-samsara-black"
                 data-testid="resubscribe-btn"
               >
                 Re-subscribe
@@ -362,24 +369,6 @@ const SubscriptionDetail = () => {
           </CardContent>
         </Card>
       )}
-
-      {/* Pause Confirmation Dialog */}
-      <AlertDialog open={showPauseDialog} onOpenChange={setShowPauseDialog}>
-        <AlertDialogContent data-testid="pause-dialog">
-          <AlertDialogHeader>
-            <AlertDialogTitle>Pause Subscription?</AlertDialogTitle>
-            <AlertDialogDescription>
-              Your subscription will be paused and you won't be charged. You can resume anytime.
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel data-testid="pause-cancel-btn">Cancel</AlertDialogCancel>
-            <AlertDialogAction onClick={handlePause} data-testid="pause-confirm-btn">
-              Pause Subscription
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
 
       {/* Cancel Confirmation Dialog */}
       <AlertDialog open={showCancelDialog} onOpenChange={setShowCancelDialog}>

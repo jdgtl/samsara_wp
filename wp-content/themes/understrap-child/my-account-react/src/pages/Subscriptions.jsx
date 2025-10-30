@@ -129,7 +129,7 @@ const Subscriptions = () => {
                   size="sm"
                   variant={statusFilter === option.value ? 'default' : 'outline'}
                   onClick={() => setStatusFilter(option.value)}
-                  className={statusFilter === option.value ? 'bg-emerald-600 hover:bg-emerald-700' : ''}
+                  className={statusFilter === option.value ? 'bg-samsara-gold hover:bg-samsara-gold/90 text-samsara-black' : ''}
                   data-testid={`filter-${option.value}`}
                 >
                   {option.label}

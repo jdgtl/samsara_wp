@@ -19,6 +19,7 @@ require get_stylesheet_directory() . '/inc/setup.php';
 require get_stylesheet_directory() . '/inc/nav.php';
 require get_stylesheet_directory() . '/inc/widgets.php';
 require get_stylesheet_directory() . '/inc/sidebars.php';
+require get_stylesheet_directory() . '/cancellation-eligibility-endpoint.php';
 
 require_once get_stylesheet_directory() . '/inc/Mobile_Detect.php';
 global $detect;
@@ -999,13 +1000,13 @@ add_action( 'woocommerce_account_payment-methods_endpoint', 'woocommerce_account
 
 /**
  * Add rewrite rules for React SPA routing
- * Ensures all /athlete/* routes serve the React template
+ * Ensures all /account/* routes serve the React template
  */
 function samsara_react_dashboard_rewrite_rules() {
-    // Add rewrite rule to catch all athlete sub-routes
+    // Add rewrite rule to catch all account sub-routes
     add_rewrite_rule(
-        '^athlete/?(.*)$',
-        'index.php?pagename=athlete&react_route=$matches[1]',
+        '^account/?(.*)$',
+        'index.php?pagename=account&react_route=$matches[1]',
         'top'
     );
 }
@@ -1182,7 +1183,7 @@ function samsara_dequeue_wc_styles_on_react_template() {
 
         // Build CSS - hide admin bar only if NOT switched
         $admin_bar_css = $is_switched ? '' : 'body.samsara-react-account #wpadminbar { display: none !important; }';
-        $padding_top = $is_switched ? 'padding-top: 32px !important;' : ''; // Account for admin bar height
+        // Removed padding-top for admin bar - React nav is at top now
 
         // Add custom styles for React template to reset any remaining WordPress styles
         wp_add_inline_style('samsara-my-account-styles', '
@@ -1191,7 +1192,6 @@ function samsara_dequeue_wc_styles_on_react_template() {
                 margin: 0 !important;
                 padding: 0 !important;
                 background: #faf9f7 !important;
-                ' . $padding_top . '
             }
             ' . $admin_bar_css . '
             body.samsara-react-account #samsara-my-account-root {
@@ -1309,6 +1309,30 @@ function samsara_register_custom_api_routes() {
     register_rest_route('samsara/v1', '/orders/(?P<id>\d+)/subscription', array(
         'methods' => 'GET',
         'callback' => 'samsara_get_order_subscription',
+        'permission_callback' => 'samsara_check_authentication',
+        'args' => array(
+            'id' => array(
+                'required' => true,
+                'validate_callback' => function($param) {
+                    return is_numeric($param);
+                }
+            ),
+        ),
+    ));
+
+    // Analyze all subscriptions for switching eligibility (admin only)
+    register_rest_route('samsara/v1', '/analyze-subscriptions', array(
+        'methods' => 'GET',
+        'callback' => 'samsara_analyze_subscriptions',
+        'permission_callback' => function() {
+            return current_user_can('manage_woocommerce');
+        },
+    ));
+
+    // Get cancellation eligibility for a specific subscription
+    register_rest_route('samsara/v1', '/subscriptions/(?P<id>\d+)/cancellation-eligibility', array(
+        'methods' => 'GET',
+        'callback' => 'samsara_get_cancellation_eligibility',
         'permission_callback' => 'samsara_check_authentication',
         'args' => array(
             'id' => array(
@@ -2048,10 +2072,22 @@ function samsara_get_memberships($request) {
                                 if (!empty($rules)) {
                                     foreach ($rules as $rule) {
                                         if (isset($rule['membership_plan_id']) && $rule['membership_plan_id'] == $plan_id) {
+                                            // Get featured image
+                                            $thumbnail_id = get_post_thumbnail_id($page->ID);
+                                            $featured_image = $thumbnail_id ? wp_get_attachment_image_url($thumbnail_id, 'medium') : null;
+
+                                            // Get clean URL - apply permalink filter and ensure absolute URL
+                                            $page_url = get_permalink($page->ID);
+                                            // Ensure it's an absolute URL
+                                            if (strpos($page_url, 'http') !== 0) {
+                                                $page_url = home_url($page_url);
+                                            }
+
                                             $restricted_pages[] = array(
                                                 'id' => $page->ID,
                                                 'title' => $page->post_title,
-                                                'url' => get_permalink($page->ID),
+                                                'url' => $page_url,
+                                                'featuredImage' => $featured_image,
                                             );
                                             break;
                                         }
@@ -2076,10 +2112,22 @@ function samsara_get_memberships($request) {
                                                         continue;
                                                     }
 
+                                                    // Get featured image
+                                                    $thumbnail_id = get_post_thumbnail_id($page_id);
+                                                    $featured_image = $thumbnail_id ? wp_get_attachment_image_url($thumbnail_id, 'medium') : null;
+
+                                                    // Get clean URL - apply permalink filter and ensure absolute URL
+                                                    $page_url = get_permalink($page_id);
+                                                    // Ensure it's an absolute URL
+                                                    if (strpos($page_url, 'http') !== 0) {
+                                                        $page_url = home_url($page_url);
+                                                    }
+
                                                     $restricted_pages[] = array(
                                                         'id' => $page_id,
                                                         'title' => $page->post_title,
-                                                        'url' => get_permalink($page_id),
+                                                        'featuredImage' => $featured_image,
+                                                        'url' => $page_url,
                                                     );
                                                 }
                                             }
@@ -2456,16 +2504,16 @@ function samsara_get_subscription_orders($request) {
 add_action('init', 'samsara_programs_rewrite_rules');
 function samsara_programs_rewrite_rules() {
     // Match any top-level URL that isn't a WordPress or WooCommerce endpoint
-    // Exclude: programs page itself, shop, cart, checkout, my-account, athlete
+    // Exclude: programs page itself, shop, cart, checkout, my-account, account
     add_rewrite_rule(
-        '^(?!programs$|shop|cart|checkout|my-account|athlete|wp-admin|wp-content|wp-includes)([^/]+)/?$',
+        '^(?!programs$|shop|cart|checkout|my-account|account|wp-admin|wp-content|wp-includes)([^/]+)/?$',
         'index.php?pagename=programs/$matches[1]',
         'top'
     );
 
     // Also handle pagination if needed
     add_rewrite_rule(
-        '^(?!programs$|shop|cart|checkout|my-account|athlete)([^/]+)/page/?([0-9]{1,})/?$',
+        '^(?!programs$|shop|cart|checkout|my-account|account)([^/]+)/page/?([0-9]{1,})/?$',
         'index.php?pagename=programs/$matches[1]&paged=$matches[2]',
         'top'
     );
@@ -2499,11 +2547,55 @@ function samsara_remove_programs_from_permalink($permalink, $post) {
 }
 
 /**
- * Redirect old /my-account/* URLs and /programs/* URLs to new top-level URLs
+ * Prevent WordPress from loading the "account" page
+ * This runs very early to bypass WooCommerce Memberships restrictions
  */
-add_action('template_redirect', 'samsara_redirect_legacy_my_account_urls', 1);
+add_action('parse_request', 'samsara_intercept_account_page', 1);
+function samsara_intercept_account_page($wp) {
+    $request_uri = $_SERVER['REQUEST_URI'];
+
+    // If requesting /account or /account/, set the pagename to load our React template
+    if ($request_uri === '/account' || $request_uri === '/account/' || strpos($request_uri, '/account/') === 0) {
+        // Force WordPress to think this is our account page (the React dashboard)
+        // This bypasses any other page with the same slug
+        $wp->query_vars['pagename'] = 'account';
+
+        // If there's a subroute, capture it
+        if (preg_match('#^/account/(.+)$#', $request_uri, $matches)) {
+            $wp->query_vars['react_route'] = $matches[1];
+        }
+
+        // Prevent WooCommerce Memberships from intercepting
+        remove_all_filters('template_include');
+        add_filter('template_include', 'samsara_force_account_template', 999);
+    }
+}
+
+/**
+ * Force the account template to load
+ */
+function samsara_force_account_template($template) {
+    // Return the page template that contains our React app
+    $account_template = get_page_template_slug(get_page_by_path('account'));
+    if ($account_template) {
+        return locate_template($account_template);
+    }
+    return $template;
+}
+
+/**
+ * Redirect old URLs to new /account/* structure
+ * IMPORTANT: Runs at priority -1 to execute BEFORE Redirection plugin (which runs at priority 1)
+ */
+add_action('template_redirect', 'samsara_redirect_legacy_my_account_urls', -1);
 function samsara_redirect_legacy_my_account_urls() {
     $request_uri = $_SERVER['REQUEST_URI'];
+
+    // Fix: Ensure /account (without trailing slash) redirects to /account/
+    if ($request_uri === '/account') {
+        wp_redirect(home_url('/account/'), 301);
+        exit;
+    }
 
     // Redirect /programs/* to clean top-level URLs (prevent duplicate content)
     if (preg_match('#^/programs/([^/]+)/?$#', $request_uri, $matches)) {
@@ -2515,42 +2607,24 @@ function samsara_redirect_legacy_my_account_urls() {
         }
     }
 
-    // Check if this is an old /my-account/ content URL (not a WooCommerce endpoint)
-    if (preg_match('#^/my-account/([^/]+)/?$#', $request_uri, $matches)) {
-        $slug = $matches[1];
-
-        // Don't redirect WooCommerce dashboard endpoints
-        $dashboard_endpoints = array(
-            'dashboard',
-            'orders',
-            'view-order',
-            'downloads',
-            'edit-account',
-            'edit-address',
-            'payment-methods',
-            'lost-password',
-            'customer-logout',
-            'subscriptions',
-            'view-subscription'
-        );
-
-        if (!in_array($slug, $dashboard_endpoints)) {
-            // This is membership content - redirect to top-level URL
-            wp_redirect(home_url('/' . $slug . '/'), 301);
-            exit;
-        }
-    }
-
-    // Redirect /my-account/ itself to the new React dashboard
-    if (preg_match('#^/my-account/?$#', $request_uri)) {
-        wp_redirect(home_url('/athlete/'), 301);
+    // Redirect ALL /my-account/* URLs to /account/* (React app replaces WooCommerce My Account)
+    if (preg_match('#^/my-account/?(.*)$#', $request_uri, $matches)) {
+        $subroute = $matches[1];
+        wp_redirect(home_url('/account/' . $subroute), 301);
         exit;
     }
 
-    // Redirect old /account-dashboard/ to new /athlete/ URL
+    // Redirect old /athlete/* URLs to new /account/* URL (backward compatibility)
+    if (preg_match('#^/athlete/?(.*)$#', $request_uri, $matches)) {
+        $subroute = $matches[1];
+        wp_redirect(home_url('/account/' . $subroute), 301);
+        exit;
+    }
+
+    // Redirect old /account-dashboard/* to new /account/* URL (backward compatibility)
     if (preg_match('#^/account-dashboard/?(.*)$#', $request_uri, $matches)) {
         $subroute = $matches[1];
-        wp_redirect(home_url('/athlete/' . $subroute), 301);
+        wp_redirect(home_url('/account/' . $subroute), 301);
         exit;
     }
 }
@@ -2563,4 +2637,279 @@ add_action('after_switch_theme', 'samsara_flush_rewrite_rules');
 function samsara_flush_rewrite_rules() {
     samsara_programs_rewrite_rules();
     flush_rewrite_rules();
+}
+
+/**
+ * Analyze all subscriptions for switching eligibility
+ * Checks custom cancellation rules to determine which subscriptions can be switched
+ */
+function samsara_analyze_subscriptions($request) {
+    if (!function_exists('wcs_get_subscriptions')) {
+        return new WP_Error('subscriptions_not_available', 'WooCommerce Subscriptions not active', array('status' => 500));
+    }
+
+    // Get all subscriptions
+    $args = array(
+        'subscriptions_per_page' => -1,
+        'subscription_status' => array('active', 'on-hold', 'pending-cancel'),
+        'orderby' => 'ID',
+        'order' => 'ASC',
+    );
+
+    $subscriptions = wcs_get_subscriptions($args);
+
+    $cancelable_count = 0;
+    $non_cancelable_count = 0;
+    $analysis_results = array();
+
+    foreach ($subscriptions as $subscription) {
+        $subscription_id = $subscription->get_id();
+        $user_id = $subscription->get_user_id();
+        $status = $subscription->get_status();
+        $start_date = $subscription->get_date('start');
+        $next_payment = $subscription->get_date('next_payment');
+        $payment_count = $subscription->get_payment_count();
+
+        // Get subscription items to find product
+        $items = $subscription->get_items();
+        $product_name = '';
+        $product_id = 0;
+        $variation_id = 0;
+        foreach ($items as $item) {
+            $product_name = $item->get_name();
+            $product_id = $item->get_product_id();
+            $variation_id = $item->get_variation_id();
+            break;
+        }
+
+        // Check custom cancellation rules metadata on subscription
+        $switch_button_hidden = get_post_meta($subscription_id, '_ccp_switch_button', true);
+        $minimum_period = get_post_meta($subscription_id, '_ccp_minimum_period', true);
+        $cooling_off_period = get_post_meta($subscription_id, '_ccp_cooling_off_period', true);
+        $rolling_cycle = get_post_meta($subscription_id, '_ccp_rolling_cycle', true);
+        $disable_cancellation_days = get_post_meta($subscription_id, '_ccp_disable_cancellation_x_days', true);
+
+        // Get product-level rules if subscription rules don't exist
+        $check_product_id = $variation_id > 0 ? $variation_id : $product_id;
+        if (empty($minimum_period) && $check_product_id > 0) {
+            $product = wc_get_product($check_product_id);
+            if ($product) {
+                // For variations, check parent product
+                $parent_id = $product->get_parent_id();
+                if ($parent_id > 0) {
+                    $minimum_period = get_post_meta($parent_id, '_ccp_minimum_period', true);
+                    $cooling_off_period = get_post_meta($parent_id, '_ccp_cooling_off_period', true);
+                    $rolling_cycle = get_post_meta($parent_id, '_ccp_rolling_cycle', true);
+                    $disable_cancellation_days = get_post_meta($parent_id, '_ccp_disable_cancellation_x_days', true);
+                } else {
+                    $minimum_period = get_post_meta($check_product_id, '_ccp_minimum_period', true);
+                    $cooling_off_period = get_post_meta($check_product_id, '_ccp_cooling_off_period', true);
+                    $rolling_cycle = get_post_meta($check_product_id, '_ccp_rolling_cycle', true);
+                    $disable_cancellation_days = get_post_meta($check_product_id, '_ccp_disable_cancellation_x_days', true);
+                }
+            }
+        }
+
+        // Get user info
+        $user = get_userdata($user_id);
+        $user_email = $user ? $user->user_email : '';
+        $user_name = $user ? $user->display_name : '';
+
+        // Calculate detailed cancellation rules and timeframe
+        $cancel_available_start = null;
+        $cancel_available_end = null;
+        $cancelable = true;
+        $cancel_blocking_reasons = array();
+        $cancel_details = array();
+
+        // Cooling-off period check
+        $in_cooling_off = false;
+        if (!empty($cooling_off_period) && $cooling_off_period > 0 && $start_date) {
+            $start_timestamp = strtotime($start_date);
+            $cooling_off_end = strtotime("+{$cooling_off_period} days", $start_timestamp);
+            if (time() < $cooling_off_end) {
+                $in_cooling_off = true;
+                $cancel_available_start = date('m/d/Y', $cooling_off_end);
+                $cancelable = false;
+                $cancel_blocking_reasons[] = "In cooling-off period";
+                $days_remaining = ceil(($cooling_off_end - time()) / 86400);
+                $cancel_details[] = "Cooling-off period: {$cooling_off_period} day(s) from start ({$days_remaining} days remaining)";
+            } else {
+                $cancel_details[] = "Cooling-off period: {$cooling_off_period} day(s) from start (completed)";
+            }
+        }
+
+        // Minimum period check and calculate when cancellation becomes available
+        $minimum_period_met = true;
+        if (!empty($minimum_period) && $minimum_period > 0) {
+            if ($payment_count < $minimum_period) {
+                $minimum_period_met = false;
+                $cancelable = false;
+                $remaining_periods = $minimum_period - $payment_count;
+                $cancel_blocking_reasons[] = "Minimum period not met";
+                $cancel_details[] = "Minimum period: {$minimum_period} billing cycle(s) required ({$payment_count}/{$minimum_period} completed, {$remaining_periods} remaining)";
+
+                // Calculate the date when minimum period will be met
+                if ($next_payment && $remaining_periods > 0) {
+                    $next_payment_timestamp = strtotime($next_payment);
+                    $billing_period = $subscription->get_billing_period();
+                    $billing_interval = $subscription->get_billing_interval();
+
+                    // Calculate periods needed
+                    $periods_needed = $remaining_periods - 1; // -1 because next_payment is the first one
+
+                    if ($billing_period === 'month') {
+                        $cancel_available_start = date('m/d/Y', strtotime("+{$periods_needed} months", $next_payment_timestamp));
+                    } elseif ($billing_period === 'year') {
+                        $cancel_available_start = date('m/d/Y', strtotime("+{$periods_needed} years", $next_payment_timestamp));
+                    } elseif ($billing_period === 'week') {
+                        $weeks = $periods_needed * $billing_interval;
+                        $cancel_available_start = date('m/d/Y', strtotime("+{$weeks} weeks", $next_payment_timestamp));
+                    } elseif ($billing_period === 'day') {
+                        $days = $periods_needed * $billing_interval;
+                        $cancel_available_start = date('m/d/Y', strtotime("+{$days} days", $next_payment_timestamp));
+                    }
+                }
+            } else {
+                $cancel_details[] = "Minimum period: {$minimum_period} billing cycle(s) required (✓ completed)";
+            }
+        }
+
+        // Rolling cycle information
+        if (!empty($rolling_cycle) && $rolling_cycle > 0) {
+            $current_position_in_cycle = $payment_count % $rolling_cycle;
+            if ($current_position_in_cycle === 0) {
+                $current_position_in_cycle = $rolling_cycle;
+            }
+            $cancel_details[] = "Rolling cycle: Resets every {$rolling_cycle} period(s) (currently at {$current_position_in_cycle}/{$rolling_cycle})";
+
+            // Calculate when minimum period will reset
+            if (!empty($minimum_period) && $minimum_period > 0) {
+                $next_reset = $rolling_cycle - $current_position_in_cycle;
+                if ($next_reset > 0) {
+                    $cancel_details[] = "Note: Minimum period will reset in {$next_reset} payment(s)";
+
+                    // Calculate the end of cancellation window (when rolling cycle resets)
+                    if ($cancel_available_start && $next_payment) {
+                        $billing_period = $subscription->get_billing_period();
+                        $billing_interval = $subscription->get_billing_interval();
+                        $start_timestamp = strtotime($cancel_available_start);
+
+                        // Calculate periods until reset
+                        $periods_until_reset = $rolling_cycle - $minimum_period;
+
+                        if ($periods_until_reset > 0) {
+                            if ($billing_period === 'month') {
+                                $cancel_available_end = date('m/d/Y', strtotime("+{$periods_until_reset} months", $start_timestamp));
+                            } elseif ($billing_period === 'year') {
+                                $cancel_available_end = date('m/d/Y', strtotime("+{$periods_until_reset} years", $start_timestamp));
+                            } elseif ($billing_period === 'week') {
+                                $weeks = $periods_until_reset * $billing_interval;
+                                $cancel_available_end = date('m/d/Y', strtotime("+{$weeks} weeks", $start_timestamp));
+                            } elseif ($billing_period === 'day') {
+                                $days = $periods_until_reset * $billing_interval;
+                                $cancel_available_end = date('m/d/Y', strtotime("+{$days} days", $start_timestamp));
+                            }
+                        }
+                    }
+                }
+            }
+        }
+
+        // Disable cancellation days (blackout period before end of cycle)
+        if (!empty($disable_cancellation_days) && $disable_cancellation_days > 0) {
+            $cancel_details[] = "Cancellation blackout: Last {$disable_cancellation_days} day(s) before end of each rolling cycle";
+        }
+
+        // Overall cancellation status
+        if ($cancelable) {
+            $cancel_details[] = "✓ Currently cancelable";
+        } else {
+            $cancel_details[] = "✗ Currently NOT cancelable";
+        }
+
+        // Calculate lifetime value
+        $lifetime_value = 0;
+        $related_orders = $subscription->get_related_orders('ids', 'any');
+        foreach ($related_orders as $order_id) {
+            $order = wc_get_order($order_id);
+            if ($order) {
+                $lifetime_value += floatval($order->get_total());
+            }
+        }
+
+        // Calculate additional KPIs
+        $total_payments = $payment_count;
+        $average_order_value = $total_payments > 0 ? $lifetime_value / $total_payments : 0;
+        $subscription_length_days = $start_date ? floor((time() - strtotime($start_date)) / 86400) : 0;
+
+        // Get billing period for calculating projected value
+        $billing_period = $subscription->get_billing_period();
+        $billing_interval = $subscription->get_billing_interval();
+
+        // Projected annual value
+        $current_total = $subscription->get_total();
+        $periods_per_year = 0;
+        if ($billing_period === 'month') {
+            $periods_per_year = 12 / $billing_interval;
+        } elseif ($billing_period === 'year') {
+            $periods_per_year = 1 / $billing_interval;
+        }
+        $projected_annual_value = $current_total * $periods_per_year;
+
+        // Store results
+        $result = array(
+            'id' => $subscription_id,
+            'user_id' => $user_id,
+            'user_email' => $user_email,
+            'user_name' => $user_name,
+            'status' => $status,
+            'product' => $product_name,
+            'product_id' => $product_id,
+            'variation_id' => $variation_id,
+            'start_date' => $start_date,
+            'next_payment' => $next_payment,
+            'payment_count' => $payment_count,
+            'cancelable' => $cancelable,
+            'cancellation_timeframe' => array(
+                'available_start' => $cancel_available_start,
+                'available_end' => $cancel_available_end,
+                'blocking_reasons' => $cancel_blocking_reasons,
+                'details' => $cancel_details,
+            ),
+            'kpis' => array(
+                'lifetime_value' => $lifetime_value,
+                'total_payments' => $total_payments,
+                'average_order_value' => $average_order_value,
+                'subscription_length_days' => $subscription_length_days,
+                'projected_annual_value' => $projected_annual_value,
+                'billing_period' => $billing_period,
+                'billing_interval' => $billing_interval,
+            ),
+            'rules' => array(
+                'minimum_period' => $minimum_period ?: 'none',
+                'cooling_off_period' => $cooling_off_period ?: 'none',
+                'rolling_cycle' => $rolling_cycle ?: 'none',
+                'disable_cancellation_days' => $disable_cancellation_days ?: 'none',
+            ),
+        );
+
+        $analysis_results[] = $result;
+
+        if ($cancelable) {
+            $cancelable_count++;
+        } else {
+            $non_cancelable_count++;
+        }
+    }
+
+    return new WP_REST_Response(array(
+        'success' => true,
+        'summary' => array(
+            'total' => count($subscriptions),
+            'cancelable' => $cancelable_count,
+            'non_cancelable' => $non_cancelable_count,
+        ),
+        'subscriptions' => $analysis_results,
+    ), 200);
 }

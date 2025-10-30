@@ -7,12 +7,12 @@ module.exports = {
   theme: {
     extend: {
       colors: {
-        // Samsara Brand Colors - Earthy, Natural Tones
+        // Samsara Brand Colors - Based on samsaraexperience.com
         background: "hsl(40, 10%, 97%)", // Light stone/beige
         foreground: "hsl(30, 10%, 15%)", // Dark stone
         primary: {
-          DEFAULT: "hsl(150, 70%, 45%)", // Emerald green - main brand color
-          foreground: "hsl(0, 0%, 100%)",
+          DEFAULT: "#E2B72D", // Gold - PRIMARY action color (from website)
+          foreground: "#0C0004", // Dark text on gold buttons
         },
         secondary: {
           DEFAULT: "hsl(30, 10%, 90%)", // Muted stone grays
@@ -27,12 +27,12 @@ module.exports = {
           foreground: "hsl(30, 10%, 15%)",
         },
         destructive: {
-          DEFAULT: "hsl(0, 84%, 60%)",
+          DEFAULT: "#BA4542", // Red from website
           foreground: "hsl(0, 0%, 100%)",
         },
         border: "hsl(30, 15%, 88%)",
         input: "hsl(30, 15%, 88%)",
-        ring: "hsl(150, 70%, 45%)",
+        ring: "#E2B72D", // Gold focus ring
         card: {
           DEFAULT: "hsl(0, 0%, 100%)",
           foreground: "hsl(30, 10%, 15%)",
@@ -41,7 +41,13 @@ module.exports = {
           DEFAULT: "hsl(0, 0%, 100%)",
           foreground: "hsl(30, 10%, 15%)",
         },
-        // Use Tailwind's default emerald colors (emerald-600 = #059669)
+        // Samsara brand colors (from brand guidelines + website)
+        samsara: {
+          gold: '#E2B72D',     // PRIMARY - main CTAs (from website)
+          green: '#2E9754',    // SECONDARY - success states, Spanish Green
+          red: '#BA4542',      // Alerts/errors (from website)
+          black: '#0C0004',    // Dark UI (from website)
+        },
         stone: {
           50: "hsl(40, 10%, 97%)",
           100: "hsl(40, 10%, 95%)",
@@ -56,8 +62,8 @@ module.exports = {
         },
         // Chart colors for data visualization
         chart: {
-          1: "hsl(150, 70%, 45%)",
-          2: "hsl(160, 84%, 39%)",
+          1: "#E2B72D", // Gold
+          2: "#2E9754", // Green
           3: "hsl(30, 10%, 50%)",
           4: "hsl(40, 80%, 50%)",
           5: "hsl(20, 80%, 50%)",

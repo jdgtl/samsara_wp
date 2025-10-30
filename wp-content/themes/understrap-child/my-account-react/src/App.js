@@ -13,7 +13,7 @@ import { Toaster } from "./components/ui/sonner";
 function App() {
   return (
     <div className="App">
-      <Router basename="/athlete">
+      <Router basename="/account">
         <Routes>
           {/* Account routes with layout */}
           <Route element={<Layout />}>

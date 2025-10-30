@@ -176,7 +176,7 @@ const Orders = () => {
                     setStatusFilter(option.value);
                     setCurrentPage(1);
                   }}
-                  className={statusFilter === option.value ? 'bg-emerald-600 hover:bg-emerald-700' : ''}
+                  className={statusFilter === option.value ? 'bg-samsara-gold hover:bg-samsara-gold/90 text-samsara-black' : ''}
                   data-testid={`filter-${option.value}`}
                 >
                   {option.label}

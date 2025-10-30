@@ -254,7 +254,7 @@ const AddPaymentMethodModal = ({ isOpen, onClose, onSuccess }) => {
               <Button
                 type="submit"
                 disabled={loading || success || !stripe || !cardElement}
-                className="flex-1 bg-emerald-600 hover:bg-emerald-700"
+                className="flex-1 bg-samsara-gold hover:bg-samsara-gold/90 text-samsara-black"
               >
                 {loading ? (
                   <>

@@ -35,6 +35,7 @@
     font-feature-settings: "rlig" 1, "calt" 1;
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
+    padding-top: 0 !important; /* Override WordPress admin bar padding */
   }
 }
 
@@ -47,6 +48,12 @@
   .bg-emerald-600 {
     background-color: rgb(5 150 105) !important;
   }
+}
+
+/* Override WordPress admin bar padding for React account pages */
+body.samsara-react-account {
+  padding-top: 0 !important;
+  margin-top: 0 !important;
 }
 
   /* Force all avatar icon colors to override WordPress styles */

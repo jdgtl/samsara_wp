@@ -238,7 +238,7 @@ const Payments = () => {
               </div>
               <Button
                 onClick={handleAddPaymentMethod}
-                className="gap-2 bg-emerald-600 hover:bg-emerald-700"
+                className="gap-2 bg-samsara-gold hover:bg-samsara-gold/90 text-samsara-black"
                 data-testid="add-payment-method-btn"
               >
                 <Plus className="h-4 w-4" />
@@ -254,7 +254,7 @@ const Payments = () => {
               {(!paymentMethods || paymentMethods.length === 0) ? (
                 <div className="text-center py-12 text-stone-600">
                   <p className="mb-4">No payment methods saved</p>
-                  <Button onClick={handleAddPaymentMethod} className="bg-emerald-600 hover:bg-emerald-700">
+                  <Button onClick={handleAddPaymentMethod} className="bg-samsara-gold hover:bg-samsara-gold/90 text-samsara-black">
                     <Plus className="h-4 w-4 mr-2" />
                     Add Your First Card
                   </Button>
@@ -327,13 +327,13 @@ const Payments = () => {
               {(!paymentMethods || paymentMethods.length === 0) ? (
                 <button
                   onClick={handleAddPaymentMethod}
-                  className="relative border-2 border-dashed border-stone-300 rounded-2xl p-6 hover:border-emerald-500 hover:bg-emerald-50 transition-all aspect-[1.586/1] flex flex-col items-center justify-center group"
+                  className="relative border-2 border-dashed border-stone-300 rounded-2xl p-6 hover:border-samsara-gold hover:bg-samsara-gold/10 transition-all aspect-[1.586/1] flex flex-col items-center justify-center group"
                   data-testid="add-card-cta"
                 >
-                  <div className="w-16 h-16 rounded-full bg-stone-100 group-hover:bg-emerald-100 flex items-center justify-center mb-3 transition-colors">
-                    <Plus className="h-8 w-8 text-stone-400 group-hover:text-emerald-600 transition-colors" />
+                  <div className="w-16 h-16 rounded-full bg-stone-100 group-hover:bg-samsara-gold/20 flex items-center justify-center mb-3 transition-colors">
+                    <Plus className="h-8 w-8 text-stone-400 group-hover:text-samsara-gold transition-colors" />
                   </div>
-                  <p className="text-stone-600 group-hover:text-emerald-700 font-medium transition-colors">
+                  <p className="text-stone-600 group-hover:text-samsara-gold font-medium transition-colors">
                     ADD PAYMENT METHOD
                   </p>
                 </button>

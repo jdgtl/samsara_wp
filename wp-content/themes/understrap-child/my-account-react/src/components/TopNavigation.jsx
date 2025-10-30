@@ -73,7 +73,7 @@ const TopNavigation = () => {
           return (
             <div key={item.label} className="relative group">
               <button
-                className="px-3 py-2 text-stone-700 hover:text-emerald-700 font-medium text-sm flex items-center gap-1 transition-colors"
+                className="px-3 py-2 text-white/80 hover:text-samsara-gold font-medium text-sm flex items-center gap-1 transition-colors"
                 data-testid={`nav-${item.label.toLowerCase().replace(/\s+/g, '-')}`}
               >
                 {item.label}
@@ -85,7 +85,7 @@ const TopNavigation = () => {
                     <a
                       key={subItem.label}
                       href={subItem.href}
-                      className="block px-4 py-2 text-sm text-stone-700 hover:bg-stone-50 hover:text-emerald-700 transition-colors"
+                      className="block px-4 py-2 text-sm text-stone-700 hover:bg-stone-50 hover:text-samsara-gold transition-colors"
                       data-testid={`nav-${subItem.label.toLowerCase().replace(/\s+/g, '-')}`}
                     >
                       {subItem.label}
@@ -105,8 +105,8 @@ const TopNavigation = () => {
               to={item.href}
               className={`px-3 py-2 font-medium text-sm transition-colors ${
                 isActive('/account')
-                  ? 'text-emerald-700 font-semibold'
-                  : 'text-stone-700 hover:text-emerald-700'
+                  ? 'text-samsara-gold font-semibold'
+                  : 'text-white/80 hover:text-samsara-gold'
               }`}
               data-testid={`nav-${item.label.toLowerCase().replace(/\s+/g, '-')}`}
             >
@@ -119,7 +119,7 @@ const TopNavigation = () => {
           <a
             key={item.label}
             href={item.href}
-            className="px-3 py-2 text-stone-700 hover:text-emerald-700 font-medium text-sm transition-colors"
+            className="px-3 py-2 text-white/80 hover:text-samsara-gold font-medium text-sm transition-colors"
             data-testid={`nav-${item.label.toLowerCase().replace(/\s+/g, '-')}`}
           >
             {item.label}
@@ -130,7 +130,7 @@ const TopNavigation = () => {
       {/* Cart Icon */}
       <a
         href="https://samsaraexperience.com/cart/"
-        className="ml-2 p-2 text-stone-700 hover:text-emerald-700 transition-colors"
+        className="ml-2 p-2 text-white/80 hover:text-samsara-gold transition-colors"
         aria-label="Shopping Cart"
         data-testid="nav-cart"
       >
@@ -179,7 +179,7 @@ const TopNavigation = () => {
                             key={subItem.label}
                             href={subItem.href}
                             onClick={() => setMobileOpen(false)}
-                            className="block px-8 py-2 text-sm text-stone-600 hover:text-emerald-700"
+                            className="block px-8 py-2 text-sm text-stone-600 hover:text-samsara-gold"
                             data-testid={`mobile-nav-${subItem.label.toLowerCase().replace(/\s+/g, '-')}`}
                           >
                             {subItem.label}
@@ -199,7 +199,7 @@ const TopNavigation = () => {
                     onClick={() => setMobileOpen(false)}
                     className={`px-4 py-3 font-medium text-sm transition-colors ${
                       isActive('/account')
-                        ? 'text-emerald-700 bg-emerald-50 font-semibold'
+                        ? 'text-samsara-gold bg-samsara-gold/10 font-semibold'
                         : 'text-stone-700 hover:bg-stone-50'
                     }`}
                     data-testid={`mobile-nav-${item.label.toLowerCase().replace(/\s+/g, '-')}`}
@@ -239,16 +239,15 @@ const TopNavigation = () => {
   };
 
   return (
-    <header className="w-full border-b border-stone-200 bg-white">
-      <div className="container mx-auto px-4">
+    <header className="w-full bg-samsara-black">
+      <div className="px-4 sm:px-6 lg:px-8">
         <div className="flex h-16 items-center justify-between">
           {/* Logo */}
           <Link to="/" className="flex items-center" data-testid="nav-logo">
-            <img 
-              src="https://customer-assets.emergentagent.com/job_quick-dash-6/artifacts/9sp1lhlg_samsara-logo-white-name.png" 
-              alt="Samsara" 
-              className="h-8 w-auto brightness-0"
-              style={{ filter: 'brightness(0)' }}
+            <img
+              src="https://customer-assets.emergentagent.com/job_quick-dash-6/artifacts/9sp1lhlg_samsara-logo-white-name.png"
+              alt="Samsara"
+              className="h-8 w-auto"
             />
           </Link>
 
@@ -259,7 +258,7 @@ const TopNavigation = () => {
           <div className="flex items-center gap-2 lg:hidden">
             <a
               href="https://samsaraexperience.com/cart/"
-              className="p-2 text-stone-700 hover:text-emerald-700 transition-colors"
+              className="p-2 text-white/80 hover:text-samsara-gold transition-colors"
               aria-label="Shopping Cart"
               data-testid="mobile-cart-icon"
             >

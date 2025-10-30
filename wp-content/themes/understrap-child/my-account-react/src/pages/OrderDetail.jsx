@@ -271,7 +271,7 @@ const OrderDetail = () => {
       <div className="flex flex-wrap gap-3">
         <Button
           onClick={handleDownloadReceipt}
-          className="gap-2 bg-emerald-600 hover:bg-emerald-700"
+          className="gap-2 bg-samsara-gold hover:bg-samsara-gold/90 text-samsara-black"
           data-testid="download-receipt-btn"
         >
           <Download className="h-4 w-4" />

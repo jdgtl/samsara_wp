@@ -122,40 +122,8 @@ export const useSubscriptionActions = () => {
     }
   };
 
-  const pauseSubscription = async (subscriptionId) => {
-    try {
-      setActionLoading(true);
-      setActionError(null);
-      await subscriptionsApi.pauseSubscription(subscriptionId);
-      return { success: true };
-    } catch (err) {
-      setActionError(err.message || 'Failed to pause subscription');
-      console.error('Error pausing subscription:', err);
-      return { success: false, error: err.message };
-    } finally {
-      setActionLoading(false);
-    }
-  };
-
-  const resumeSubscription = async (subscriptionId) => {
-    try {
-      setActionLoading(true);
-      setActionError(null);
-      await subscriptionsApi.resumeSubscription(subscriptionId);
-      return { success: true };
-    } catch (err) {
-      setActionError(err.message || 'Failed to resume subscription');
-      console.error('Error resuming subscription:', err);
-      return { success: false, error: err.message };
-    } finally {
-      setActionLoading(false);
-    }
-  };
-
   return {
     cancelSubscription,
-    pauseSubscription,
-    resumeSubscription,
     actionLoading,
     actionError,
   };

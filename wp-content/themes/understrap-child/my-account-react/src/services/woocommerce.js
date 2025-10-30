@@ -105,12 +105,12 @@ export const subscriptionsApi = {
   },
 
   /**
-   * Update subscription status (pause, cancel, reactivate)
-   * Note: This may need custom endpoint as WCS API has limited support
+   * Update subscription status (cancel only)
+   * Note: Pause/resume functionality has been removed per business requirements
    */
   async updateSubscriptionStatus(subscriptionId, status) {
     return await put(`${WCS_API_BASE}/subscriptions/${subscriptionId}`, {
-      status: status, // 'active', 'on-hold', 'cancelled', etc.
+      status: status, // 'cancelled' only
     });
   },
 
@@ -122,17 +122,10 @@ export const subscriptionsApi = {
   },
 
   /**
-   * Pause subscription
+   * Get cancellation eligibility for a subscription
    */
-  async pauseSubscription(subscriptionId) {
-    return await this.updateSubscriptionStatus(subscriptionId, 'on-hold');
-  },
-
-  /**
-   * Resume subscription
-   */
-  async resumeSubscription(subscriptionId) {
-    return await this.updateSubscriptionStatus(subscriptionId, 'active');
+  async getCancellationEligibility(subscriptionId) {
+    return await get(`/wp-json/samsara/v1/subscriptions/${subscriptionId}/cancellation-eligibility`);
   },
 };
 
@@ -285,7 +278,7 @@ export const transformers = {
     return {
       id: wcSub.id.toString(),
       startDate: wcSub.date_created,
-      status: wcSub.status === 'on-hold' ? 'paused' : (wcSub.status === 'cancelled' ? 'canceled' : wcSub.status),
+      status: wcSub.status === 'cancelled' ? 'canceled' : wcSub.status,
       nextPaymentDate: wcSub.next_payment_date || null,
       nextPaymentAmount: parseFloat(wcSub.total || 0),
       planName: wcSub.line_items?.[0]?.name || 'Subscription',

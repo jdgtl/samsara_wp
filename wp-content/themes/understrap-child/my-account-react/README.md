@@ -27,9 +27,17 @@ This React application replaces the default WooCommerce My Account pages with a 
 - Payment method management (add, edit, delete)
 - Account details editing (profile, addresses)
 - Dashboard with subscription and membership overview
-- Legacy membership content access with expandable restricted pages
+- Membership content access via visual card grid with featured images
+- Clean URL structure for program pages
 
 **Status:** 95% Complete - All core features migrated to live WordPress/WooCommerce. Payment method management functional on production, troubleshooting test mode save issue on staging.
+
+**Recent Updates (2025):**
+- Changed dashboard URL from `/athlete/` to `/account/` with redirects for backward compatibility
+- Updated brand styling: Gold (#E2B72D) primary CTAs, black navigation, green for success states only
+- Implemented card-based grid layout for membership content (2x2 mobile, 3 columns desktop)
+- Added featured image support for program pages
+- Organized program content under `/programs/` parent with clean URL rewriting (user-facing URLs hide `/programs/`)
 
 ---
 
@@ -41,10 +49,16 @@ This React application replaces the default WooCommerce My Account pages with a 
 - **Axios** - HTTP client for API calls
 
 ### Styling
-- **Tailwind CSS 3.4** - Utility-first CSS framework
+- **Tailwind CSS 3.4** - Utility-first CSS framework with custom Samsara brand colors
 - **Radix UI** - Accessible component primitives
 - **shadcn/ui** - Pre-built component library
 - **Lucide React** - Icon library
+
+**Brand Colors:**
+- Gold (#E2B72D) - Primary CTAs and interactive elements
+- Spanish Green (#2E9754) - Success states and positive feedback
+- Deep Cinnabar (#BA4542) - Errors and destructive actions
+- Xikectic (#0C0004) - Dark UI elements and navigation
 
 ### Build Tools
 - **Webpack 5** - Module bundler
@@ -185,7 +199,7 @@ npm run build:all
 
 1. **Make changes** to files in `src/`
 2. **Dev server auto-reloads** - see changes immediately
-3. **Test** in browser at the WordPress site URL + `/athlete`
+3. **Test** in browser at the WordPress site URL + `/account`
 4. **Build** for production when ready
 5. **Commit** changes to git
 
@@ -490,10 +504,17 @@ module.exports = {
   theme: {
     extend: {
       colors: {
-        // Add custom colors
-        brand: {
-          primary: '#10b981',
-          secondary: '#3b82f6',
+        // Samsara brand colors
+        samsara: {
+          gold: '#E2B72D',     // PRIMARY - main CTAs
+          green: '#2E9754',    // SECONDARY - success states
+          red: '#BA4542',      // Alerts/errors
+          black: '#0C0004',    // Dark UI
+        },
+        // Tailwind theme colors use gold as primary
+        primary: {
+          DEFAULT: "#E2B72D",
+          foreground: "#0C0004",
         }
       }
     }
@@ -833,12 +854,27 @@ Before committing:
 - [ ] **Offline Support** - Service worker for offline functionality
 - [ ] **Performance Monitoring** - Add analytics/monitoring
 
-### URL Structure Notes
-- Main dashboard: `/athlete/` (changed from `/account-dashboard/`)
-- Membership content: Top-level URLs (e.g., `/bodyweight-program-level-1/`)
-  - WordPress admin: Organized under `/programs/` parent
-  - User-facing: Clean URLs without `/programs/`
-  - Old `/my-account/*` URLs redirect to new structure
+### URL Structure
+
+**Current Structure (Updated 2025):**
+- Main dashboard: `/account/` (replaces WooCommerce My Account)
+- Membership content: Top-level clean URLs (e.g., `/bodyweight-level-1/`)
+  - WordPress admin: Organized under `/programs/` parent page
+  - User-facing: Clean URLs without `/programs/` prefix
+  - Automatic URL rewriting via `page_link` filter in functions.php
+
+**Redirects (Backward Compatibility):**
+- `/my-account/*` → `/account/*` (301 redirect)
+- `/athlete/*` → `/account/*` (301 redirect)
+- `/account-dashboard/*` → `/account/*` (301 redirect)
+- `/programs/page-slug/` → `/page-slug/` (301 redirect)
+
+**How URL Rewriting Works:**
+1. Admin creates page under `/programs/` parent (e.g., `/programs/bodyweight-level-1/`)
+2. `samsara_programs_rewrite_rules()` catches requests to `/bodyweight-level-1/`
+3. WordPress internally routes to `/programs/bodyweight-level-1/`
+4. `samsara_remove_programs_from_permalink()` filters `get_permalink()` to return clean URLs
+5. User only sees `/bodyweight-level-1/` in browser and dashboard links
 
 ---
 

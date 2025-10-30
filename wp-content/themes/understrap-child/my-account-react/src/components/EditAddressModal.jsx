@@ -277,7 +277,7 @@ const EditAddressModal = ({ isOpen, onClose, onSuccess, addressType, initialAddr
             </Button>
             <Button
               type="submit"
-              className="bg-emerald-600 hover:bg-emerald-700"
+              className="bg-samsara-gold hover:bg-samsara-gold/90 text-samsara-black"
               disabled={loading}
             >
               {loading ? (
