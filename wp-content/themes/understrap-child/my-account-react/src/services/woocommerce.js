@@ -125,7 +125,7 @@ export const subscriptionsApi = {
    * Get cancellation eligibility for a subscription
    */
   async getCancellationEligibility(subscriptionId) {
-    return await get(`/wp-json/samsara/v1/subscriptions/${subscriptionId}/cancellation-eligibility`);
+    return await get(`samsara/v1/subscriptions/${subscriptionId}/cancellation-eligibility`);
   },
 };
 
