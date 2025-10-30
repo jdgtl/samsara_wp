@@ -35,6 +35,15 @@ This React application replaces the default WooCommerce My Account pages with a 
 **Recent Updates (January 2025):**
 
 ### User Experience Enhancements
+- **Semantic Navigation Links:** Full implementation of proper HTML link semantics (January 30, 2025)
+  - All clickable cards and navigation elements now use `<a>` or `<Link>` tags
+  - Right-click "Open in new tab" functionality enabled
+  - URL preview in browser status bar on hover
+  - Middle-click opens links in new tab
+  - Improved keyboard navigation (Tab + Enter)
+  - Enhanced screen reader accessibility
+  - Better SEO with crawlable navigation
+  - Affected pages: Dashboard (Basecamp card, memberships), Orders, Subscriptions, OrderDetail, SubscriptionDetail
 - **Custom Avatar System:** Full avatar customization with real-time updates
   - Upload custom photos (JPG, PNG, GIF, WebP, max 5MB)
   - Choose from 11 outdoor-themed icon avatars (Mountain, Pine Tree, Tent, etc.)
@@ -46,6 +55,7 @@ This React application replaces the default WooCommerce My Account pages with a 
   - Bottom-aligned content for better visual impact
   - Updated messaging: "Click here to access your basecamp training hub"
   - 50/50 responsive layout (stacks on mobile < 1024px)
+  - Now a proper `<a>` tag with external URL support
 - **Empty State CTAs:** Consistent call-to-action buttons across all empty states
   - "Join Athlete Team" and "Join Basecamp" buttons
   - Unified design pattern on Dashboard, Orders, and Subscriptions pages
@@ -66,6 +76,11 @@ This React application replaces the default WooCommerce My Account pages with a 
   - Matches Payments page toggle pattern
 
 ### Technical Architecture
+- **Semantic HTML Implementation:** Proper use of navigation elements
+  - External links: `<a href target="_blank" rel="noopener noreferrer">`
+  - Internal navigation: React Router `<Link to>`
+  - Hybrid approach: Links wrapping buttons/cards for proper semantics
+  - All visual designs preserved while improving HTML structure
 - **Avatar Context Provider:** Implemented React Context for global avatar state
   - Located: `src/contexts/AvatarContext.jsx`
   - Manages avatarType, selectedEmoji, uploadedAvatarUrl globally

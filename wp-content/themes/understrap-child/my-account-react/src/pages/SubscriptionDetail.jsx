@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { useParams, useNavigate } from 'react-router-dom';
+import { useParams, useNavigate, Link } from 'react-router-dom';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '../components/ui/card';
 import { Badge } from '../components/ui/badge';
 import { Button } from '../components/ui/button';
@@ -67,15 +67,16 @@ const SubscriptionDetail = () => {
   if (loading) {
     return (
       <div className="max-w-4xl mx-auto space-y-6" data-testid="subscription-detail-loading">
-        <Button
-          variant="ghost"
-          onClick={() => navigate('/subscriptions')}
-          className="gap-2"
-          data-testid="back-btn"
-        >
-          <ArrowLeft className="h-4 w-4" />
-          Back to Subscriptions
-        </Button>
+        <Link to="/subscriptions">
+          <Button
+            variant="ghost"
+            className="gap-2"
+            data-testid="back-btn"
+          >
+            <ArrowLeft className="h-4 w-4" />
+            Back to Subscriptions
+          </Button>
+        </Link>
         <Card>
           <CardContent className="p-12">
             <div className="flex flex-col items-center justify-center">
@@ -92,15 +93,16 @@ const SubscriptionDetail = () => {
   if (error || !subscription) {
     return (
       <div className="max-w-4xl mx-auto space-y-6" data-testid="subscription-not-found">
-        <Button
-          variant="ghost"
-          onClick={() => navigate('/subscriptions')}
-          className="gap-2"
-          data-testid="back-btn"
-        >
-          <ArrowLeft className="h-4 w-4" />
-          Back to Subscriptions
-        </Button>
+        <Link to="/subscriptions">
+          <Button
+            variant="ghost"
+            className="gap-2"
+            data-testid="back-btn"
+          >
+            <ArrowLeft className="h-4 w-4" />
+            Back to Subscriptions
+          </Button>
+        </Link>
         {error ? (
           <Alert className="border-red-500 bg-red-50">
             <AlertTriangle className="h-4 w-4 text-red-600" />
@@ -115,9 +117,11 @@ const SubscriptionDetail = () => {
           <Card>
             <CardContent className="text-center py-12">
               <p className="text-stone-600 mb-4">Subscription not found</p>
-              <Button onClick={() => navigate('/subscriptions')} data-testid="back-to-subscriptions-btn">
-                Back to Subscriptions
-              </Button>
+              <Link to="/subscriptions">
+                <Button data-testid="back-to-subscriptions-btn">
+                  Back to Subscriptions
+                </Button>
+              </Link>
             </CardContent>
           </Card>
         )}
@@ -163,15 +167,16 @@ const SubscriptionDetail = () => {
   return (
     <div className="max-w-4xl mx-auto space-y-6" data-testid="subscription-detail-page">
       {/* Back button */}
-      <Button 
-        variant="ghost" 
-        onClick={() => navigate('/subscriptions')}
-        className="gap-2"
-        data-testid="back-btn"
-      >
-        <ArrowLeft className="h-4 w-4" />
-        Back to Subscriptions
-      </Button>
+      <Link to="/subscriptions">
+        <Button
+          variant="ghost"
+          className="gap-2"
+          data-testid="back-btn"
+        >
+          <ArrowLeft className="h-4 w-4" />
+          Back to Subscriptions
+        </Button>
+      </Link>
 
       {/* Subscription Header */}
       <Card>
@@ -333,10 +338,10 @@ const SubscriptionDetail = () => {
           <CardContent>
             <div className="space-y-3">
               {relatedOrders.map((order) => (
-                <div
+                <Link
                   key={order.id}
-                  className="flex justify-between items-center p-3 border border-stone-200 rounded-lg hover:bg-stone-50 cursor-pointer transition-colors"
-                  onClick={() => navigate(`/orders/${order.id}`)}
+                  to={`/orders/${order.id}`}
+                  className="flex justify-between items-center p-3 border border-stone-200 rounded-lg hover:bg-stone-50 cursor-pointer transition-colors no-underline hover:no-underline"
                   data-testid={`related-order-${order.id}`}
                 >
                   <div>
@@ -358,7 +363,7 @@ const SubscriptionDetail = () => {
                     <FileText className="h-4 w-4" />
                     View
                   </Button>
-                </div>
+                </Link>
               ))}
             </div>
           </CardContent>

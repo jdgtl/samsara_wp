@@ -15,7 +15,7 @@ import {
 } from 'lucide-react';
 import { getDaysUntilExpiration } from '../lib/utils';
 import { useDashboard } from '../hooks/useDashboard';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, Link } from 'react-router-dom';
 
 const Dashboard = () => {
   const navigate = useNavigate();
@@ -87,14 +87,7 @@ const Dashboard = () => {
     );
   };
 
-  const handleManageSubscription = () => {
-    navigate(`/subscriptions/${primarySubscription.id}`);
-  };
-
-  const handleOpenBasecamp = () => {
-    const basecampUrl = window.samsaraMyAccount?.basecampUrl || 'https://videos.samsaraexperience.com';
-    window.open(basecampUrl, '_blank');
-  };
+  const basecampUrl = window.samsaraMyAccount?.basecampUrl || 'https://videos.samsaraexperience.com';
 
   // Check if user has Basecamp access based on memberships OR subscriptions
   // First check memberships
@@ -317,13 +310,14 @@ const Dashboard = () => {
             <div className="flex flex-wrap gap-2 pt-2">
               {/* Only show Manage button for actual subscriptions, not manually-added memberships */}
               {!primarySubscription.isMembership && (
-                <Button
-                  onClick={handleManageSubscription}
-                  className="bg-samsara-gold hover:bg-samsara-gold/90 text-samsara-black"
-                  data-testid="manage-subscription-btn"
-                >
-                  Manage Subscription
-                </Button>
+                <Link to={`/subscriptions/${primarySubscription.id}`}>
+                  <Button
+                    className="bg-samsara-gold hover:bg-samsara-gold/90 text-samsara-black"
+                    data-testid="manage-subscription-btn"
+                  >
+                    Manage Subscription
+                  </Button>
+                </Link>
               )}
             </div>
           </CardContent>
@@ -352,9 +346,11 @@ const Dashboard = () => {
 
         {/* Training Hub / Basecamp CTA - Only show if user has Basecamp access */}
         {hasBasecampAccess && (
-          <div
-            onClick={handleOpenBasecamp}
-            className="relative overflow-hidden rounded-lg border-2 border-samsara-gold cursor-pointer group h-full min-h-[400px] flex flex-col"
+          <a
+            href={basecampUrl}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="relative overflow-hidden rounded-lg border-2 border-samsara-gold cursor-pointer group h-full min-h-[400px] flex flex-col no-underline hover:no-underline"
             data-testid="basecamp-cta-card"
           >
             {/* Background Image with Overlay */}
@@ -379,7 +375,7 @@ const Dashboard = () => {
                 </p>
               </div>
             </div>
-          </div>
+          </a>
         )}
       </div>
 
@@ -483,10 +479,10 @@ const Dashboard = () => {
                       const imageUrl = page.featuredImage || null;
 
                       return (
-                        <div
+                        <a
                           key={`${membership.id}-${page.id}`}
-                          className="flex items-center gap-4 p-4 border border-stone-200 rounded-lg hover:shadow-md transition-shadow cursor-pointer group"
-                          onClick={() => window.location.href = page.url}
+                          href={page.url}
+                          className="flex items-center gap-4 p-4 border border-stone-200 rounded-lg hover:shadow-md transition-shadow cursor-pointer group no-underline hover:no-underline"
                           data-testid={`program-list-item-${page.id}`}
                         >
                           {/* Thumbnail */}
@@ -531,7 +527,7 @@ const Dashboard = () => {
                               </p>
                             )}
                           </div>
-                        </div>
+                        </a>
                       );
                     });
                   })}
@@ -552,12 +548,13 @@ const Dashboard = () => {
                       const imageUrl = page.featuredImage || null;
 
                       return (
-                        <Card
+                        <a
                           key={`${membership.id}-${page.id}`}
-                          className="overflow-hidden hover:shadow-lg transition-shadow cursor-pointer group"
-                          onClick={() => window.location.href = page.url}
+                          href={page.url}
+                          className="block no-underline hover:no-underline"
                           data-testid={`program-card-${page.id}`}
                         >
+                          <Card className="overflow-hidden hover:shadow-lg transition-shadow cursor-pointer group">
                           {/* Featured Image */}
                           {imageUrl ? (
                             <div className="aspect-video overflow-hidden bg-stone-200">
@@ -601,6 +598,7 @@ const Dashboard = () => {
                             )}
                           </CardContent>
                         </Card>
+                        </a>
                       );
                     });
                   })}

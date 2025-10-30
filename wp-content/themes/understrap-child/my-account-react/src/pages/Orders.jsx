@@ -15,7 +15,7 @@ import {
 } from '../components/ui/pagination';
 import { ArrowUpDown, Search, Loader2, AlertTriangle } from 'lucide-react';
 import { useOrders } from '../hooks/useOrders';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, Link } from 'react-router-dom';
 
 const ITEMS_PER_PAGE = 10;
 
@@ -257,13 +257,13 @@ const Orders = () => {
                     {paginatedOrders.map((order) => (
                       <TableRow key={order.id} data-testid={`order-row-${order.id}`}>
                         <TableCell className="font-medium">
-                          <button
-                            onClick={() => handleViewOrder(order.id)}
+                          <Link
+                            to={`/orders/${order.id}`}
                             className="text-emerald-600 hover:underline"
                             data-testid={`order-link-${order.id}`}
                           >
                             #{order.id}
-                          </button>
+                          </Link>
                         </TableCell>
                         <TableCell>
                           {new Date(order.date).toLocaleDateString('en-US', {
@@ -285,14 +285,15 @@ const Orders = () => {
                           ${order.total.toFixed(2)}
                         </TableCell>
                         <TableCell className="text-right">
-                          <Button
-                            size="sm"
-                            variant="ghost"
-                            onClick={() => handleViewOrder(order.id)}
-                            data-testid={`view-order-${order.id}`}
-                          >
-                            View
-                          </Button>
+                          <Link to={`/orders/${order.id}`}>
+                            <Button
+                              size="sm"
+                              variant="ghost"
+                              data-testid={`view-order-${order.id}`}
+                            >
+                              View
+                            </Button>
+                          </Link>
                         </TableCell>
                       </TableRow>
                     ))}

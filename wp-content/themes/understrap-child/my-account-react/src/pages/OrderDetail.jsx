@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { useParams, useNavigate } from 'react-router-dom';
+import { useParams, useNavigate, Link } from 'react-router-dom';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '../components/ui/card';
 import { Badge } from '../components/ui/badge';
 import { Button } from '../components/ui/button';
@@ -44,15 +44,16 @@ const OrderDetail = () => {
   if (loading) {
     return (
       <div className="max-w-4xl mx-auto space-y-6" data-testid="order-detail-loading">
-        <Button
-          variant="ghost"
-          onClick={() => navigate('/orders')}
-          className="gap-2"
-          data-testid="back-btn"
-        >
-          <ArrowLeft className="h-4 w-4" />
-          Back to Orders
-        </Button>
+        <Link to="/orders">
+          <Button
+            variant="ghost"
+            className="gap-2"
+            data-testid="back-btn"
+          >
+            <ArrowLeft className="h-4 w-4" />
+            Back to Orders
+          </Button>
+        </Link>
         <Card>
           <CardContent className="p-12">
             <div className="flex flex-col items-center justify-center">
@@ -69,15 +70,16 @@ const OrderDetail = () => {
   if (error || !order) {
     return (
       <div className="max-w-4xl mx-auto space-y-6" data-testid="order-not-found">
-        <Button
-          variant="ghost"
-          onClick={() => navigate('/orders')}
-          className="gap-2"
-          data-testid="back-btn"
-        >
-          <ArrowLeft className="h-4 w-4" />
-          Back to Orders
-        </Button>
+        <Link to="/orders">
+          <Button
+            variant="ghost"
+            className="gap-2"
+            data-testid="back-btn"
+          >
+            <ArrowLeft className="h-4 w-4" />
+            Back to Orders
+          </Button>
+        </Link>
         {error ? (
           <Alert className="border-red-500 bg-red-50">
             <AlertTriangle className="h-4 w-4 text-red-600" />
@@ -92,9 +94,11 @@ const OrderDetail = () => {
           <Card>
             <CardContent className="text-center py-12">
               <p className="text-stone-600 mb-4">Order not found</p>
-              <Button onClick={() => navigate('/orders')} data-testid="back-to-orders-btn">
-                Back to Orders
-              </Button>
+              <Link to="/orders">
+                <Button data-testid="back-to-orders-btn">
+                  Back to Orders
+                </Button>
+              </Link>
             </CardContent>
           </Card>
         )}
@@ -131,15 +135,16 @@ const OrderDetail = () => {
   return (
     <div className="max-w-4xl mx-auto space-y-6" data-testid="order-detail-page">
       {/* Back button */}
-      <Button 
-        variant="ghost" 
-        onClick={() => navigate('/orders')}
-        className="gap-2"
-        data-testid="back-btn"
-      >
-        <ArrowLeft className="h-4 w-4" />
-        Back to Orders
-      </Button>
+      <Link to="/orders">
+        <Button
+          variant="ghost"
+          className="gap-2"
+          data-testid="back-btn"
+        >
+          <ArrowLeft className="h-4 w-4" />
+          Back to Orders
+        </Button>
+      </Link>
 
       {/* Order Header */}
       <Card>
@@ -239,9 +244,9 @@ const OrderDetail = () => {
             </CardDescription>
           </CardHeader>
           <CardContent>
-            <div
-              className="flex justify-between items-center p-4 border border-stone-200 rounded-lg hover:bg-stone-50 cursor-pointer transition-colors"
-              onClick={() => navigate(`/subscriptions/${subscriptionInfo.subscriptionId}`)}
+            <Link
+              to={`/subscriptions/${subscriptionInfo.subscriptionId}`}
+              className="flex justify-between items-center p-4 border border-stone-200 rounded-lg hover:bg-stone-50 cursor-pointer transition-colors no-underline hover:no-underline"
               data-testid="related-subscription"
             >
               <div className="flex items-center gap-3">
@@ -261,7 +266,7 @@ const OrderDetail = () => {
               >
                 View
               </Button>
-            </div>
+            </Link>
           </CardContent>
         </Card>
       )}

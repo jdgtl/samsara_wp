@@ -1190,6 +1190,7 @@ function samsara_enqueue_react_my_account() {
             'displayName' => wp_get_current_user()->display_name,
             'email' => wp_get_current_user()->user_email,
             'memberSince' => wp_get_current_user()->user_registered,
+            'avatarUrl' => get_avatar_url(get_current_user_id(), array('size' => 256)),
         ),
         'siteUrl' => get_site_url(),
         'basecampUrl' => 'https://videos.samsaraexperience.com',
@@ -1407,6 +1408,25 @@ function samsara_register_custom_api_routes() {
                 }
             ),
         ),
+    ));
+
+    // Avatar endpoints
+    register_rest_route('samsara/v1', '/avatar/upload', array(
+        'methods' => 'POST',
+        'callback' => 'samsara_upload_avatar',
+        'permission_callback' => 'samsara_check_authentication',
+    ));
+
+    register_rest_route('samsara/v1', '/avatar/preferences', array(
+        'methods' => 'GET',
+        'callback' => 'samsara_get_avatar_preferences',
+        'permission_callback' => 'samsara_check_authentication',
+    ));
+
+    register_rest_route('samsara/v1', '/avatar/preferences', array(
+        'methods' => 'PUT',
+        'callback' => 'samsara_save_avatar_preferences',
+        'permission_callback' => 'samsara_check_authentication',
     ));
 }
 add_action('rest_api_init', 'samsara_register_custom_api_routes');
@@ -2976,5 +2996,135 @@ function samsara_analyze_subscriptions($request) {
             'non_cancelable' => $non_cancelable_count,
         ),
         'subscriptions' => $analysis_results,
+    ), 200);
+}
+
+/**
+ * Upload avatar image
+ */
+function samsara_upload_avatar($request) {
+    $user_id = get_current_user_id();
+
+    if (!$user_id) {
+        return new WP_Error('unauthorized', 'User not authenticated', array('status' => 401));
+    }
+
+    // Get uploaded file
+    $files = $request->get_file_params();
+
+    if (empty($files['avatar'])) {
+        return new WP_Error('no_file', 'No file uploaded', array('status' => 400));
+    }
+
+    $file = $files['avatar'];
+
+    // Validate file type
+    $allowed_types = array('image/jpeg', 'image/jpg', 'image/png', 'image/gif', 'image/webp');
+    if (!in_array($file['type'], $allowed_types)) {
+        return new WP_Error('invalid_type', 'Invalid file type. Please upload a JPG, PNG, GIF, or WebP image.', array('status' => 400));
+    }
+
+    // Validate file size (max 5MB)
+    $max_size = 5 * 1024 * 1024; // 5MB in bytes
+    if ($file['size'] > $max_size) {
+        return new WP_Error('file_too_large', 'File size exceeds 5MB limit', array('status' => 400));
+    }
+
+    // Handle the upload
+    require_once(ABSPATH . 'wp-admin/includes/image.php');
+    require_once(ABSPATH . 'wp-admin/includes/file.php');
+    require_once(ABSPATH . 'wp-admin/includes/media.php');
+
+    // Upload file to WordPress media library
+    $attachment_id = media_handle_upload('avatar', 0);
+
+    if (is_wp_error($attachment_id)) {
+        return new WP_Error('upload_failed', $attachment_id->get_error_message(), array('status' => 500));
+    }
+
+    // Get the uploaded image URL
+    $avatar_url = wp_get_attachment_url($attachment_id);
+
+    // Save the attachment ID to user meta
+    update_user_meta($user_id, 'samsara_avatar_attachment_id', $attachment_id);
+    update_user_meta($user_id, 'samsara_avatar_url', $avatar_url);
+    update_user_meta($user_id, 'samsara_avatar_type', 'upload');
+
+    return new WP_REST_Response(array(
+        'success' => true,
+        'avatarUrl' => $avatar_url,
+        'attachmentId' => $attachment_id,
+    ), 200);
+}
+
+/**
+ * Get avatar preferences
+ */
+function samsara_get_avatar_preferences($request) {
+    $user_id = get_current_user_id();
+
+    if (!$user_id) {
+        return new WP_Error('unauthorized', 'User not authenticated', array('status' => 401));
+    }
+
+    $avatar_type = get_user_meta($user_id, 'samsara_avatar_type', true);
+    $avatar_url = get_user_meta($user_id, 'samsara_avatar_url', true);
+    $avatar_emoji = get_user_meta($user_id, 'samsara_avatar_emoji', true);
+
+    // Default to initials if nothing is set
+    if (empty($avatar_type)) {
+        $avatar_type = 'initials';
+    }
+
+    return new WP_REST_Response(array(
+        'success' => true,
+        'preferences' => array(
+            'avatarType' => $avatar_type,
+            'avatarUrl' => $avatar_url ?: get_avatar_url($user_id, array('size' => 256)),
+            'avatarEmoji' => $avatar_emoji ? json_decode($avatar_emoji, true) : null,
+        ),
+    ), 200);
+}
+
+/**
+ * Save avatar preferences
+ */
+function samsara_save_avatar_preferences($request) {
+    $user_id = get_current_user_id();
+
+    if (!$user_id) {
+        return new WP_Error('unauthorized', 'User not authenticated', array('status' => 401));
+    }
+
+    $params = $request->get_json_params();
+
+    if (!isset($params['avatarType'])) {
+        return new WP_Error('missing_type', 'Avatar type is required', array('status' => 400));
+    }
+
+    $avatar_type = sanitize_text_field($params['avatarType']);
+    $allowed_types = array('initials', 'emoji', 'upload');
+
+    if (!in_array($avatar_type, $allowed_types)) {
+        return new WP_Error('invalid_type', 'Invalid avatar type', array('status' => 400));
+    }
+
+    // Update avatar type
+    update_user_meta($user_id, 'samsara_avatar_type', $avatar_type);
+
+    // If emoji type, save the emoji selection
+    if ($avatar_type === 'emoji' && isset($params['avatarEmoji'])) {
+        update_user_meta($user_id, 'samsara_avatar_emoji', json_encode($params['avatarEmoji']));
+    }
+
+    // If switching away from upload, clear the upload URL
+    if ($avatar_type !== 'upload') {
+        delete_user_meta($user_id, 'samsara_avatar_url');
+        delete_user_meta($user_id, 'samsara_avatar_attachment_id');
+    }
+
+    return new WP_REST_Response(array(
+        'success' => true,
+        'message' => 'Avatar preferences saved successfully',
     ), 200);
 }

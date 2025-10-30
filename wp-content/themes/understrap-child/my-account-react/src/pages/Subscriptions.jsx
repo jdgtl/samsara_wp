@@ -6,7 +6,7 @@ import { Alert, AlertDescription } from '../components/ui/alert';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '../components/ui/table';
 import { ArrowUpDown, Loader2, AlertTriangle } from 'lucide-react';
 import { useSubscriptions } from '../hooks/useSubscriptions';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, Link } from 'react-router-dom';
 
 const Subscriptions = () => {
   const navigate = useNavigate();
@@ -215,14 +215,15 @@ const Subscriptions = () => {
                         }
                       </TableCell>
                       <TableCell className="text-right">
-                        <Button
-                          size="sm"
-                          variant="outline"
-                          onClick={() => handleViewSubscription(subscription.id)}
-                          data-testid={`manage-subscription-${subscription.id}`}
-                        >
-                          Manage
-                        </Button>
+                        <Link to={`/subscriptions/${subscription.id}`}>
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            data-testid={`manage-subscription-${subscription.id}`}
+                          >
+                            Manage
+                          </Button>
+                        </Link>
                       </TableCell>
                     </TableRow>
                   ))}
