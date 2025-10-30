@@ -19,7 +19,7 @@ import { useNavigate } from 'react-router-dom';
 
 const Dashboard = () => {
   const navigate = useNavigate();
-  const [countdown, setCountdown] = useState({ days: 0, hours: 0 });
+  const [countdown, setCountdown] = useState({ days: 0 });
   const [membershipFilter, setMembershipFilter] = useState('all');
   const [expandedMemberships, setExpandedMemberships] = useState({});
 
@@ -61,9 +61,8 @@ const Dashboard = () => {
       const diff = nextPayment - now;
 
       const days = Math.floor(diff / (1000 * 60 * 60 * 24));
-      const hours = Math.floor((diff % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
 
-      setCountdown({ days, hours });
+      setCountdown({ days });
     };
 
     calculateCountdown();
@@ -281,7 +280,7 @@ const Dashboard = () => {
                   })}
                 </p>
                 <p className="text-sm text-emerald-700 font-medium" data-testid="countdown">
-                  in {countdown.days} days, {countdown.hours} hours
+                  in {countdown.days} days
                 </p>
               </div>
               <div className="space-y-1">

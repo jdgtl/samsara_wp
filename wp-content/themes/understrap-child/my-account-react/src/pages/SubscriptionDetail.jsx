@@ -13,7 +13,7 @@ import { subscriptionsApi } from '../services/woocommerce';
 const SubscriptionDetail = () => {
   const { subId } = useParams();
   const navigate = useNavigate();
-  const [countdown, setCountdown] = useState({ days: 0, hours: 0 });
+  const [countdown, setCountdown] = useState({ days: 0 });
   const [showCancelDialog, setShowCancelDialog] = useState(false);
 
   // Fetch live subscription data
@@ -51,11 +51,10 @@ const SubscriptionDetail = () => {
       const now = new Date();
       const nextPayment = new Date(subscription.nextPaymentDate);
       const diff = nextPayment - now;
-      
+
       const days = Math.floor(diff / (1000 * 60 * 60 * 24));
-      const hours = Math.floor((diff % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
-      
-      setCountdown({ days, hours });
+
+      setCountdown({ days });
     };
 
     calculateCountdown();
@@ -220,7 +219,7 @@ const SubscriptionDetail = () => {
                   })}
                 </p>
                 <p className="text-sm text-emerald-700 font-medium mt-1" data-testid="payment-countdown">
-                  in {countdown.days} days, {countdown.hours} hours
+                  in {countdown.days} days
                 </p>
               </div>
             )}
