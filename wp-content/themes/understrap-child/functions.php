@@ -19,7 +19,7 @@ require get_stylesheet_directory() . '/inc/setup.php';
 require get_stylesheet_directory() . '/inc/nav.php';
 require get_stylesheet_directory() . '/inc/widgets.php';
 require get_stylesheet_directory() . '/inc/sidebars.php';
-require get_stylesheet_directory() . '/cancellation-eligibility-endpoint.php';
+require get_stylesheet_directory() . '/inc/cancellation-eligibility-endpoint.php';
 
 require_once get_stylesheet_directory() . '/inc/Mobile_Detect.php';
 global $detect;
