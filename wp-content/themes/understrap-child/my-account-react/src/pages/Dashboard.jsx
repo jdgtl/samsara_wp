@@ -321,13 +321,13 @@ const Dashboard = () => {
             <div className="flex flex-col sm:flex-row gap-3 justify-center">
               <Button
                 className="bg-samsara-gold hover:bg-samsara-gold/90 text-samsara-black"
-                onClick={() => window.location.href = '/product/athlete-team/'}
+                onClick={() => window.location.href = '/athlete-team/'}
               >
                 Join Athlete Team
               </Button>
               <Button
                 className="bg-samsara-gold hover:bg-samsara-gold/90 text-samsara-black"
-                onClick={() => window.location.href = '/product/basecamp/'}
+                onClick={() => window.location.href = '/training-basecamp/'}
               >
                 Join Basecamp
               </Button>
