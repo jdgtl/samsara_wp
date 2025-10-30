@@ -72,10 +72,49 @@ const TopNavigation = () => {
   const navItems = wpMenu.length > 0 ? wpMenu.map(item => {
     // Check if this is an internal link (account-related)
     const isInternal = item.href && (item.href.includes('/account') || item.href.startsWith('/account'));
-    return {
+
+    // Extract path from full URL for internal links
+    let href = item.href;
+    if (isInternal && item.href) {
+      try {
+        const url = new URL(item.href);
+        href = url.pathname; // Get just the path portion (e.g., /account/)
+      } catch (e) {
+        // If URL parsing fails, assume it's already a path
+        href = item.href;
+      }
+    }
+
+    // Also process sub-items if they exist
+    const processedItem = {
       ...item,
+      href,
       isInternal
     };
+
+    if (item.items && item.items.length > 0) {
+      processedItem.items = item.items.map(subItem => {
+        const subIsInternal = subItem.href && (subItem.href.includes('/account') || subItem.href.startsWith('/account'));
+        let subHref = subItem.href;
+
+        if (subIsInternal && subItem.href) {
+          try {
+            const url = new URL(subItem.href);
+            subHref = url.pathname;
+          } catch (e) {
+            subHref = subItem.href;
+          }
+        }
+
+        return {
+          ...subItem,
+          href: subHref,
+          isInternal: subIsInternal
+        };
+      });
+    }
+
+    return processedItem;
   }) : fallbackMenu;
 
   // Desktop Navigation
