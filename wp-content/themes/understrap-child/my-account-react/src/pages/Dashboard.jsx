@@ -317,13 +317,21 @@ const Dashboard = () => {
       ) : (
         <Card className="border-2 border-stone-200" data-testid="no-subscription-card">
           <CardContent className="p-12 text-center">
-            <p className="text-stone-600 mb-4">You don't have an active subscription</p>
-            <Button
-              className="bg-emerald-600 hover:bg-emerald-700"
-              onClick={() => window.location.href = '/shop'}
-            >
-              Browse Plans
-            </Button>
+            <p className="text-stone-600 mb-4">No active recurring subscription</p>
+            <div className="flex flex-col sm:flex-row gap-3 justify-center">
+              <Button
+                className="bg-samsara-gold hover:bg-samsara-gold/90 text-samsara-black"
+                onClick={() => window.location.href = '/product/athlete-team/'}
+              >
+                Join Athlete Team
+              </Button>
+              <Button
+                className="bg-samsara-gold hover:bg-samsara-gold/90 text-samsara-black"
+                onClick={() => window.location.href = '/product/basecamp/'}
+              >
+                Join Basecamp
+              </Button>
+            </div>
           </CardContent>
         </Card>
       )}
