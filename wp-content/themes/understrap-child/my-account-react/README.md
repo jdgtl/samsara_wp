@@ -30,20 +30,60 @@ This React application replaces the default WooCommerce My Account pages with a 
 - Membership content access via visual card grid with featured images
 - Clean URL structure for program pages
 
-**Status:** 95% Complete - All core features migrated to live WordPress/WooCommerce. Payment method management functional on production, troubleshooting test mode save issue on staging.
+**Status:** 98% Complete - All core features migrated to live WordPress/WooCommerce with enhanced user experience.
 
-**Recent Updates (2025):**
-- **Mobile-First Navigation:** Implemented app-style bottom navigation bar for mobile devices (< 768px)
-  - Fixed bottom navigation with 5 nav items displayed horizontally
-  - Gold active states, clean icon + label design
-  - Desktop (≥ 768px) maintains full sidebar with user profile
-  - Removed hamburger menu in favor of persistent bottom nav
-- **Dashboard Welcome Section:** User profile (avatar, name, member since) now appears in Dashboard on mobile
-- Changed dashboard URL from `/athlete/` to `/account/` with redirects for backward compatibility
-- Updated brand styling: Gold (#E2B72D) primary CTAs, black navigation, green for success states only
-- Implemented card-based grid layout for membership content (2x2 mobile, 3 columns desktop)
-- Added featured image support for program pages
-- Organized program content under `/programs/` parent with clean URL rewriting (user-facing URLs hide `/programs/`)
+**Recent Updates (January 2025):**
+
+### User Experience Enhancements
+- **Custom Avatar System:** Full avatar customization with real-time updates
+  - Upload custom photos (JPG, PNG, GIF, WebP, max 5MB)
+  - Choose from 11 outdoor-themed icon avatars (Mountain, Pine Tree, Tent, etc.)
+  - Reset to default Gravatar/initials option
+  - Global state management - updates reflected instantly across all pages
+  - Avatar preferences persist via user meta
+- **Basecamp Training Hub Card:** Redesigned prominent side-by-side CTA on Dashboard
+  - Hero image background with gradient overlay
+  - Bottom-aligned content for better visual impact
+  - Updated messaging: "Click here to access your basecamp training hub"
+  - 50/50 responsive layout (stacks on mobile < 1024px)
+- **Empty State CTAs:** Consistent call-to-action buttons across all empty states
+  - "Join Athlete Team" and "Join Basecamp" buttons
+  - Unified design pattern on Dashboard, Orders, and Subscriptions pages
+  - Gold brand styling for consistency
+
+### Responsive Design Improvements
+- **Breakpoint Optimization:** Adjusted responsive breakpoints for better UX
+  - Additional Memberships: 1 column (mobile) → 2 columns (640px+) → 3 columns (1024px+)
+  - Primary subscription + Basecamp cards stack below 1024px
+  - View toggle and filters reorganized for mobile devices
+- **Sidebar Navigation:** Fixed positioning for optimal visibility
+  - Accounts for top navigation height (64px offset)
+  - Logout button always visible at bottom (no scrolling required)
+  - Mobile: Logout button in top user card (bottom-right position)
+- **List/Card View Toggle:** Added for Additional Memberships section
+  - Card view: Visual grid with large featured images
+  - List view: Compact rows with thumbnails (96x64px)
+  - Matches Payments page toggle pattern
+
+### Technical Architecture
+- **Avatar Context Provider:** Implemented React Context for global avatar state
+  - Located: `src/contexts/AvatarContext.jsx`
+  - Manages avatarType, selectedEmoji, uploadedAvatarUrl globally
+  - Real-time updates across Sidebar, Dashboard, and Account Details
+- **Avatar REST API:** Three new endpoints for avatar management
+  - `POST /wp-json/samsara/v1/avatar/upload` - Upload and validate images
+  - `GET /wp-json/samsara/v1/avatar/preferences` - Retrieve saved preferences
+  - `PUT /wp-json/samsara/v1/avatar/preferences` - Save avatar settings
+- **Reusable Components:** New AvatarDisplay component with loading state support
+
+### Previous Updates (2024-2025)
+- **Mobile-First Navigation:** Bottom nav bar for mobile (< 768px), sidebar for desktop
+- **Dashboard Welcome Section:** User profile (avatar, name, member since) on mobile Dashboard
+- Changed dashboard URL from `/athlete/` to `/account/` with redirects
+- Updated brand styling: Gold (#E2B72D) primary CTAs, black navigation, green for success states
+- Card-based grid layout for membership content with featured images
+- WordPress menu integration for top navigation with FontAwesome support
+- Clean URL structure for program pages (organized under `/programs/` with public URL rewriting)
 
 ---
 
@@ -89,6 +129,7 @@ my-account-react/
 ├── src/
 │   ├── components/           # React components
 │   │   ├── ui/              # Reusable UI components (shadcn/ui)
+│   │   ├── AvatarDisplay.jsx # Reusable avatar component
 │   │   ├── Layout.jsx       # Main layout wrapper
 │   │   ├── Sidebar.jsx      # Responsive navigation (sidebar on desktop, bottom nav on mobile)
 │   │   └── TopNavigation.jsx # Public site navigation header
@@ -102,9 +143,12 @@ my-account-react/
 │   │   ├── Payments.jsx
 │   │   └── AccountDetails.jsx
 │   │
+│   ├── contexts/            # React Context providers
+│   │   └── AvatarContext.jsx # Global avatar state management
+│   │
 │   ├── services/            # API service layer
 │   │   ├── api.js          # Base Axios configuration
-│   │   └── woocommerce.js  # WooCommerce API methods
+│   │   └── woocommerce.js  # WooCommerce API methods (including avatarApi)
 │   │
 │   ├── hooks/               # Custom React hooks
 │   │   ├── useOrders.js
@@ -114,18 +158,15 @@ my-account-react/
 │   │   ├── useMemberships.js
 │   │   └── useDashboard.js
 │   │
-│   ├── data/                # Mock data (for reference)
-│   │   └── mockData.js
-│   │
 │   ├── lib/                 # Utility functions
 │   │   └── utils.js
 │   │
-│   ├── App.js               # Main app component
+│   ├── App.js               # Main app component (wrapped with AvatarProvider)
 │   └── index.js             # Entry point
 │
 ├── build/                   # Production build output
 │   ├── js/
-│   │   └── index.js        # Bundled JavaScript
+│   │   └── index.js        # Bundled JavaScript (~392 KB)
 │   └── css/
 │       └── my-account.css  # Compiled CSS
 │
@@ -375,6 +416,9 @@ GET    /wp-json/samsara/v1/stats                    # Get dashboard statistics
 GET    /wp-json/samsara/v1/user-subscriptions       # Get user subscriptions (bypasses User Switching issues)
 GET    /wp-json/samsara/v1/customer-addresses       # Get billing/shipping addresses
 PUT    /wp-json/samsara/v1/customer-addresses       # Update addresses
+POST   /wp-json/samsara/v1/avatar/upload            # Upload custom avatar image (max 5MB, validates type)
+GET    /wp-json/samsara/v1/avatar/preferences       # Get user's saved avatar preferences
+PUT    /wp-json/samsara/v1/avatar/preferences       # Save avatar type and selection
 ```
 
 ### Authentication
@@ -856,6 +900,14 @@ Before committing:
 
 ## Roadmap / Future Enhancements
 
+### Completed (January 2025)
+- [x] **Custom Avatar System** - Full avatar customization with upload and icons
+- [x] **Responsive Breakpoint Optimization** - Better mobile/tablet experience
+- [x] **List/Card View Toggle** - For Additional Memberships section
+- [x] **Logout Button Positioning** - Always visible without scrolling
+- [x] **Empty State CTAs** - Consistent "Join" buttons across all pages
+- [x] **Basecamp Card Redesign** - Hero image with gradient overlay
+
 ### High Priority
 - [ ] **Download Receipt** - Implement PDF receipt generation for orders
   - Add PDF generation library (jsPDF or similar)
@@ -874,7 +926,7 @@ Before committing:
   - Requires proper subscription type configuration in WooCommerce
 
 - [ ] **Bundle Size Optimization** - Reduce JavaScript bundle size
-  - Currently 380 KiB (exceeds recommended 244 KiB)
+  - Currently 392 KiB (exceeds recommended 244 KiB)
   - Implement code splitting
   - Lazy load routes
   - Tree-shake unused components

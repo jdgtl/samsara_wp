@@ -4,16 +4,26 @@ import { Button } from '../components/ui/button';
 import { Input } from '../components/ui/input';
 import { Label } from '../components/ui/label';
 import { Alert, AlertDescription } from '../components/ui/alert';
-// import { Separator } from '../components/ui/separator';
-// import { Avatar, AvatarFallback, AvatarImage } from '../components/ui/avatar';
-// import { Upload, Mountain, TreePine, Tent, Compass, Flag, Target, Zap, Wind, Sun, Waves, Snowflake, Loader2, AlertTriangle } from 'lucide-react';
-import { Loader2, AlertTriangle } from 'lucide-react';
+import { Separator } from '../components/ui/separator';
+import { Avatar, AvatarFallback, AvatarImage } from '../components/ui/avatar';
+import { Upload, Mountain, TreePine, Tent, Compass, Flag, Target, Zap, Wind, Sun, Waves, Snowflake, Loader2, AlertTriangle } from 'lucide-react';
 import { useCustomer, useCustomerActions } from '../hooks/useCustomer';
+import { avatarApi } from '../services/woocommerce';
+import { toast } from 'sonner';
+import { useAvatar } from '../contexts/AvatarContext';
 
 const AccountDetails = () => {
   const [isEditing, setIsEditing] = useState(false);
-  // const [avatarType, setAvatarType] = useState('initials');
-  // const [selectedEmoji, setSelectedEmoji] = useState(null);
+  const [avatarLoading, setAvatarLoading] = useState(false);
+
+  // Use global avatar context
+  const {
+    avatarType,
+    selectedEmoji,
+    uploadedAvatarUrl,
+    avatarOptions,
+    updateAvatar
+  } = useAvatar();
 
   // Fetch live customer data
   const { customer, loading, error, refetch } = useCustomer();
@@ -42,21 +52,6 @@ const AccountDetails = () => {
       });
     }
   }, [customer, userData.displayName, userData.email]);
-
-  // Outdoor-themed avatar options - commented out for now
-  // const avatarOptions = [
-  //   { icon: Mountain, label: 'Mountain', color: 'bg-stone-600' },
-  //   { icon: TreePine, label: 'Pine Tree', color: 'bg-emerald-700' },
-  //   { icon: Tent, label: 'Tent', color: 'bg-amber-600' },
-  //   { icon: Compass, label: 'Compass', color: 'bg-blue-600' },
-  //   { icon: Flag, label: 'Flag', color: 'bg-red-600' },
-  //   { icon: Target, label: 'Target', color: 'bg-orange-600' },
-  //   { icon: Zap, label: 'Lightning', color: 'bg-yellow-600' },
-  //   { icon: Wind, label: 'Wind', color: 'bg-cyan-600' },
-  //   { icon: Sun, label: 'Sun', color: 'bg-yellow-500' },
-  //   { icon: Waves, label: 'Waves', color: 'bg-blue-500' },
-  //   { icon: Snowflake, label: 'Snowflake', color: 'bg-sky-400' },
-  // ];
 
   const handleSave = async () => {
     const updateData = {
@@ -93,40 +88,102 @@ const AccountDetails = () => {
     setIsEditing(false);
   };
 
-  // Commented out - will implement later
-  // const handleChangePassword = () => {
-  //   alert('Password change interface would open here');
-  // };
+  const handleUploadAvatar = async (event) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
 
-  // const handleUploadAvatar = () => {
-  //   alert('Avatar upload interface would open here');
-  //   setAvatarType('upload');
-  // };
+    // Validate file size (5MB)
+    if (file.size > 5 * 1024 * 1024) {
+      toast.error('File size must be less than 5MB');
+      return;
+    }
 
-  // const handleSelectEmoji = (option) => {
-  //   setSelectedEmoji(option);
-  //   setAvatarType('emoji');
-  // };
+    // Validate file type
+    const allowedTypes = ['image/jpeg', 'image/jpg', 'image/png', 'image/gif', 'image/webp'];
+    if (!allowedTypes.includes(file.type)) {
+      toast.error('Please upload a JPG, PNG, GIF, or WebP image');
+      return;
+    }
 
-  // const getCurrentAvatar = () => {
-  //   if (avatarType === 'emoji' && selectedEmoji) {
-  //     const Icon = selectedEmoji.icon;
-  //     return (
-  //       <div className={`h-24 w-24 rounded-full flex items-center justify-center ${selectedEmoji.color}`}>
-  //         <Icon className="h-12 w-12 text-white" />
-  //       </div>
-  //     );
-  //   }
+    setAvatarLoading(true);
 
-  //   return (
-  //     <Avatar className="h-24 w-24" data-testid="profile-avatar">
-  //       <AvatarImage src={userData.avatarUrl} alt={`${formData.firstName} ${formData.lastName}`} />
-  //       <AvatarFallback className="bg-emerald-600 text-white text-2xl">
-  //         {formData.firstName?.[0]}{formData.lastName?.[0]}
-  //       </AvatarFallback>
-  //     </Avatar>
-  //   );
-  // };
+    try {
+      const response = await avatarApi.uploadAvatar(file);
+      if (response.success) {
+        // Update global context immediately
+        updateAvatar('upload', null, response.avatarUrl);
+        toast.success('Avatar uploaded successfully!');
+      }
+    } catch (error) {
+      toast.error(error.message || 'Failed to upload avatar');
+    } finally {
+      setAvatarLoading(false);
+    }
+  };
+
+  const handleSelectEmoji = async (option) => {
+    // Save preference immediately (only save label and color, not the icon component)
+    try {
+      await avatarApi.savePreferences({
+        avatarType: 'emoji',
+        avatarEmoji: {
+          label: option.label,
+          color: option.color,
+        },
+      });
+      // Update global context immediately
+      updateAvatar('emoji', option, null);
+      toast.success('Avatar style updated!');
+    } catch (error) {
+      console.error('Failed to save avatar preference:', error);
+      toast.error('Failed to save avatar preference');
+    }
+  };
+
+  const handleResetToDefault = async () => {
+    try {
+      await avatarApi.savePreferences({
+        avatarType: 'initials',
+      });
+      // Update global context immediately
+      updateAvatar('initials', null, null);
+      toast.success('Reset to default avatar!');
+    } catch (error) {
+      console.error('Failed to reset avatar:', error);
+      toast.error('Failed to reset avatar');
+    }
+  };
+
+  const getCurrentAvatar = () => {
+    if (avatarType === 'emoji' && selectedEmoji) {
+      const Icon = selectedEmoji.icon;
+      return (
+        <div className={`h-24 w-24 rounded-full flex items-center justify-center ${selectedEmoji.color}`}>
+          <Icon className="h-12 w-12 text-white" />
+        </div>
+      );
+    }
+
+    if (avatarType === 'upload' && uploadedAvatarUrl) {
+      return (
+        <Avatar className="h-24 w-24" data-testid="profile-avatar">
+          <AvatarImage src={uploadedAvatarUrl} alt={`${formData.firstName} ${formData.lastName}`} />
+          <AvatarFallback className="bg-emerald-600 text-white text-2xl">
+            {formData.firstName?.[0]}{formData.lastName?.[0]}
+          </AvatarFallback>
+        </Avatar>
+      );
+    }
+
+    return (
+      <Avatar className="h-24 w-24" data-testid="profile-avatar">
+        <AvatarImage src={userData.avatarUrl} alt={`${formData.firstName} ${formData.lastName}`} />
+        <AvatarFallback className="bg-emerald-600 text-white text-2xl">
+          {formData.firstName?.[0]}{formData.lastName?.[0]}
+        </AvatarFallback>
+      </Avatar>
+    );
+  };
 
   // Loading state
   if (loading) {
@@ -177,8 +234,8 @@ const AccountDetails = () => {
         <p className="text-stone-600">Manage your personal information and account settings</p>
       </div>
 
-      {/* Profile Picture - HIDDEN FOR NOW */}
-      {/* <Card data-testid="profile-picture-section">
+      {/* Profile Picture */}
+      <Card data-testid="profile-picture-section">
         <CardHeader>
           <CardTitle>Profile Picture</CardTitle>
           <CardDescription>Choose an avatar or upload your own image</CardDescription>
@@ -188,15 +245,35 @@ const AccountDetails = () => {
             {getCurrentAvatar()}
             <div className="space-y-2">
               <p className="text-sm text-stone-600">Current avatar type: {avatarType === 'initials' ? 'Initials' : avatarType === 'emoji' ? 'Icon' : 'Custom upload'}</p>
-              <Button
-                onClick={handleUploadAvatar}
-                variant="outline"
-                className="gap-2"
-                data-testid="upload-avatar-btn"
-              >
-                <Upload className="h-4 w-4" />
-                Upload New Photo
-              </Button>
+              <div className="relative">
+                <input
+                  type="file"
+                  id="avatar-upload"
+                  className="hidden"
+                  accept="image/jpeg,image/jpg,image/png,image/gif,image/webp"
+                  onChange={handleUploadAvatar}
+                  disabled={avatarLoading}
+                />
+                <Button
+                  onClick={() => document.getElementById('avatar-upload').click()}
+                  variant="outline"
+                  className="gap-2"
+                  data-testid="upload-avatar-btn"
+                  disabled={avatarLoading}
+                >
+                  {avatarLoading ? (
+                    <>
+                      <Loader2 className="h-4 w-4 animate-spin" />
+                      Uploading...
+                    </>
+                  ) : (
+                    <>
+                      <Upload className="h-4 w-4" />
+                      Upload New Photo
+                    </>
+                  )}
+                </Button>
+              </div>
             </div>
           </div>
 
@@ -225,8 +302,29 @@ const AccountDetails = () => {
               })}
             </div>
           </div>
+
+          {/* Reset to Default Button - Only show if custom avatar is set */}
+          {(avatarType === 'emoji' || avatarType === 'upload') && (
+            <>
+              <Separator />
+              <div className="space-y-2">
+                <Label>Default Avatar</Label>
+                <p className="text-sm text-stone-600 mb-2">
+                  Reset to use your Gravatar or initials
+                </p>
+                <Button
+                  onClick={handleResetToDefault}
+                  variant="outline"
+                  className="gap-2"
+                  data-testid="reset-avatar-btn"
+                >
+                  Reset to Default
+                </Button>
+              </div>
+            </>
+          )}
         </CardContent>
-      </Card> */}
+      </Card>
 
       {/* Personal Information */}
       <Card data-testid="personal-info-section">

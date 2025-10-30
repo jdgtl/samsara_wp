@@ -156,9 +156,20 @@ const Subscriptions = () => {
           {filteredSubscriptions.length === 0 ? (
             <div className="text-center py-12" data-testid="empty-subscriptions">
               <p className="text-stone-600 mb-4">No active subscriptions.</p>
-              <Button variant="outline" data-testid="browse-plans-btn">
-                Browse training plans
-              </Button>
+              <div className="flex flex-col sm:flex-row gap-3 justify-center">
+                <Button
+                  className="bg-samsara-gold hover:bg-samsara-gold/90 text-samsara-black"
+                  onClick={() => window.location.href = 'https://samsaraexperience.com/athlete-team/'}
+                >
+                  Join Athlete Team
+                </Button>
+                <Button
+                  className="bg-samsara-gold hover:bg-samsara-gold/90 text-samsara-black"
+                  onClick={() => window.location.href = 'https://samsaraexperience.com/training-basecamp/'}
+                >
+                  Join Basecamp
+                </Button>
+              </div>
             </div>
           ) : (
             <div className="overflow-x-auto">

@@ -304,6 +304,48 @@ export const transformers = {
   },
 };
 
+/**
+ * Avatar API
+ */
+export const avatarApi = {
+  /**
+   * Upload avatar image
+   */
+  async uploadAvatar(file) {
+    const formData = new FormData();
+    formData.append('avatar', file);
+
+    const response = await fetch(`${window.samsaraMyAccount.apiUrl}samsara/v1/avatar/upload`, {
+      method: 'POST',
+      headers: {
+        'X-WP-Nonce': window.samsaraMyAccount.nonce,
+      },
+      body: formData,
+    });
+
+    if (!response.ok) {
+      const error = await response.json();
+      throw new Error(error.message || 'Failed to upload avatar');
+    }
+
+    return await response.json();
+  },
+
+  /**
+   * Get avatar preferences
+   */
+  async getPreferences() {
+    return await get('samsara/v1/avatar/preferences');
+  },
+
+  /**
+   * Save avatar preferences
+   */
+  async savePreferences(preferences) {
+    return await put('samsara/v1/avatar/preferences', preferences);
+  },
+};
+
 export default {
   orders: ordersApi,
   subscriptions: subscriptionsApi,
@@ -311,5 +353,6 @@ export default {
   paymentMethods: paymentMethodsApi,
   products: productsApi,
   stats: statsApi,
+  avatars: avatarApi,
   transformers,
 };

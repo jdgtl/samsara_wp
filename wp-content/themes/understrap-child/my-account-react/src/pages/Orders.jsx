@@ -216,14 +216,27 @@ const Orders = () => {
           {paginatedOrders.length === 0 ? (
             <div className="text-center py-12" data-testid="empty-orders">
               <p className="text-stone-600 mb-4">
-                {searchQuery || statusFilter !== 'all' 
+                {searchQuery || statusFilter !== 'all'
                   ? 'No orders found matching your criteria'
                   : "You haven't placed any orders yet."
                 }
               </p>
-              <Button variant="outline" data-testid="shop-offerings-btn">
-                Shop offerings
-              </Button>
+              {!searchQuery && statusFilter === 'all' && (
+                <div className="flex flex-col sm:flex-row gap-3 justify-center">
+                  <Button
+                    className="bg-samsara-gold hover:bg-samsara-gold/90 text-samsara-black"
+                    onClick={() => window.location.href = 'https://samsaraexperience.com/athlete-team/'}
+                  >
+                    Join Athlete Team
+                  </Button>
+                  <Button
+                    className="bg-samsara-gold hover:bg-samsara-gold/90 text-samsara-black"
+                    onClick={() => window.location.href = 'https://samsaraexperience.com/training-basecamp/'}
+                  >
+                    Join Basecamp
+                  </Button>
+                </div>
+              )}
             </div>
           ) : (
             <>

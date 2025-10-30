@@ -4,6 +4,8 @@ import { Avatar, AvatarFallback, AvatarImage } from './ui/avatar';
 import { Button } from './ui/button';
 import { Separator } from './ui/separator';
 import { Alert, AlertDescription } from './ui/alert';
+import AvatarDisplay from './AvatarDisplay';
+import { useAvatar } from '../contexts/AvatarContext';
 import {
   LayoutDashboard,
   ShoppingBag,
@@ -18,6 +20,7 @@ import {
 
 const Sidebar = ({ isOpen, onClose }) => {
   const location = useLocation();
+  const { avatarType, selectedEmoji, uploadedAvatarUrl, loading: avatarLoading } = useAvatar();
 
   // Get user data from WordPress global
   const userData = window.samsaraMyAccount?.userData || {
@@ -77,17 +80,20 @@ const Sidebar = ({ isOpen, onClose }) => {
     <>
       {/* Desktop Sidebar (≥ md / 768px) */}
       <aside
-        className="hidden md:flex md:sticky top-0 left-0 h-screen w-72 bg-stone-50 border-r border-stone-200 flex-col z-50"
+        className="hidden md:flex md:sticky top-16 left-0 h-[calc(100vh-4rem)] w-72 bg-stone-50 border-r border-stone-200 flex-col relative z-50"
         data-testid="sidebar-desktop"
       >
         {/* User Profile Section */}
         <div className="p-6 space-y-3 flex flex-col items-center text-center" data-testid="user-profile-section">
-          <Avatar className="h-20 w-20" data-testid="user-avatar">
-            <AvatarImage src={userData.avatarUrl} alt={userData.displayName} />
-            <AvatarFallback className="bg-samsara-gold text-samsara-black text-xl">
-              {userData.firstName?.[0]}{userData.lastName?.[0]}
-            </AvatarFallback>
-          </Avatar>
+          <AvatarDisplay
+            avatarType={avatarType}
+            selectedEmoji={selectedEmoji}
+            uploadedAvatarUrl={uploadedAvatarUrl}
+            userData={userData}
+            size="h-20 w-20"
+            textSize="text-xl"
+            loading={avatarLoading}
+          />
           <div>
             <h2 className="font-semibold text-lg text-stone-900" data-testid="user-name">
               {userData.displayName}
@@ -133,8 +139,8 @@ const Sidebar = ({ isOpen, onClose }) => {
           </>
         )}
 
-        {/* Navigation Items */}
-        <nav className="flex-1 p-4 space-y-1" data-testid="sidebar-nav">
+        {/* Navigation Items - Scrollable with padding for logout */}
+        <nav className="flex-1 overflow-y-auto p-4 pb-20 space-y-1" data-testid="sidebar-nav">
           {navItems.map((item) => {
             const Icon = item.icon;
             const active = isActive(item.path);
@@ -161,19 +167,19 @@ const Sidebar = ({ isOpen, onClose }) => {
           })}
         </nav>
 
-        <Separator className="bg-stone-200" />
-
-        {/* Logout Button */}
-        <div className="p-4">
-          <Button
-            variant="outline"
-            className="w-full justify-start gap-3 border-stone-300 text-stone-700 hover:bg-red-50 hover:text-red-700 hover:border-red-300"
-            onClick={handleLogout}
-            data-testid="logout-btn"
-          >
-            <LogOut className="h-5 w-5" />
-            <span>Logout</span>
-          </Button>
+        {/* Logout Button - Fixed at bottom */}
+        <div className="absolute bottom-0 left-0 right-0 border-t border-stone-200 bg-stone-50">
+          <div className="p-4">
+            <Button
+              variant="outline"
+              className="w-full justify-start gap-3 border-stone-300 text-stone-700 hover:bg-red-50 hover:text-red-700 hover:border-red-300"
+              onClick={handleLogout}
+              data-testid="logout-btn"
+            >
+              <LogOut className="h-5 w-5" />
+              <span>Logout</span>
+            </Button>
+          </div>
         </div>
       </aside>
 

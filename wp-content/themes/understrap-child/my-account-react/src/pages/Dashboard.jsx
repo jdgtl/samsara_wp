@@ -5,13 +5,13 @@ import { Button } from '../components/ui/button';
 import { Alert, AlertDescription } from '../components/ui/alert';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '../components/ui/table';
 import { Avatar, AvatarFallback, AvatarImage } from '../components/ui/avatar';
+import AvatarDisplay from '../components/AvatarDisplay';
+import { useAvatar } from '../contexts/AvatarContext';
 import {
-  ExternalLink,
   AlertTriangle,
-  Filter,
   Loader2,
-  ChevronDown,
-  ChevronUp
+  LayoutGrid,
+  List
 } from 'lucide-react';
 import { getDaysUntilExpiration } from '../lib/utils';
 import { useDashboard } from '../hooks/useDashboard';
@@ -21,7 +21,8 @@ const Dashboard = () => {
   const navigate = useNavigate();
   const [countdown, setCountdown] = useState({ days: 0 });
   const [membershipFilter, setMembershipFilter] = useState('all');
-  const [expandedMemberships, setExpandedMemberships] = useState({});
+  const [membershipViewMode, setMembershipViewMode] = useState('card'); // 'card' or 'list'
+  const { avatarType, selectedEmoji, uploadedAvatarUrl, loading: avatarLoading } = useAvatar();
 
   // Fetch live data
   const {
@@ -30,8 +31,7 @@ const Dashboard = () => {
     memberships,
     expiringCards,
     loading,
-    error,
-    refetch
+    error
   } = useDashboard();
 
   // Get user data from WordPress global
@@ -179,13 +179,16 @@ const Dashboard = () => {
       <div className="md:hidden" data-testid="mobile-welcome-section">
         <Card>
           <CardContent className="p-6">
-            <div className="flex items-center gap-4">
-              <Avatar className="h-16 w-16" data-testid="mobile-user-avatar">
-                <AvatarImage src={userData.avatarUrl} alt={userData.displayName} />
-                <AvatarFallback className="bg-samsara-gold text-samsara-black text-lg">
-                  {userData.firstName?.[0]}{userData.lastName?.[0]}
-                </AvatarFallback>
-              </Avatar>
+            <div className="flex items-end gap-4">
+              <AvatarDisplay
+                avatarType={avatarType}
+                selectedEmoji={selectedEmoji}
+                uploadedAvatarUrl={uploadedAvatarUrl}
+                userData={userData}
+                size="h-16 w-16"
+                textSize="text-lg"
+                loading={avatarLoading}
+              />
               <div className="flex-1">
                 <h1 className="text-2xl font-bold text-stone-900">
                   {userData.displayName}
@@ -194,6 +197,15 @@ const Dashboard = () => {
                   Member since {memberSinceFormatted}
                 </p>
               </div>
+              <Button
+                variant="outline"
+                size="sm"
+                className="border-stone-300 text-stone-700 hover:bg-red-50 hover:text-red-700 hover:border-red-300"
+                onClick={() => window.location.href = window.samsaraMyAccount?.logoutUrl || '/wp-login.php?action=logout'}
+                data-testid="mobile-logout-btn"
+              >
+                Logout
+              </Button>
             </div>
           </CardContent>
         </Card>
@@ -251,7 +263,7 @@ const Dashboard = () => {
       )}
 
       {/* Primary Subscription Card with Basecamp CTA side-by-side */}
-      <div className={`grid gap-6 ${hasBasecampAccess ? 'md:grid-cols-[1fr,400px]' : 'grid-cols-1'}`}>
+      <div className={`grid gap-6 ${hasBasecampAccess ? 'lg:grid-cols-2' : 'grid-cols-1'}`}>
         {/* Primary Subscription Card */}
         {primarySubscription ? (
           <Card className="border-2 border-emerald-200" data-testid="primary-subscription-card">
@@ -354,24 +366,16 @@ const Dashboard = () => {
                 backgroundPosition: 'center',
               }}
             />
-            <div className="absolute inset-0 bg-black/50" />
+            <div className="absolute inset-0 bg-gradient-to-t from-black to-transparent" />
 
-            {/* Content */}
-            <div className="relative z-10 p-6 flex flex-col h-full justify-between">
+            {/* Content - Bottom Aligned */}
+            <div className="relative z-10 p-6 flex flex-col h-full justify-end">
               <div className="space-y-2">
                 <h3 className="text-2xl font-bold text-white">
-                  Open Training Hub (Basecamp)
+                  Basecamp Training Hub
                 </h3>
                 <p className="text-stone-200">
-                  Access your content in Basecamp. Your dedicated training platform awaits.
-                </p>
-              </div>
-
-              {/* CTA Text at Bottom */}
-              <div className="mt-auto">
-                <p className="text-samsara-gold font-bold text-xl flex items-center gap-2">
-                  Enter Basecamp
-                  <ExternalLink className="h-5 w-5" />
+                  Click here to access your basecamp training hub
                 </p>
               </div>
             </div>
@@ -382,36 +386,68 @@ const Dashboard = () => {
       {/* Additional Memberships */}
       <Card data-testid="memberships-card">
         <CardHeader>
-          <div className="flex items-center justify-between">
-            <div>
-              <CardTitle className="text-xl text-stone-900">Additional Memberships</CardTitle>
-              <CardDescription>Legacy training programs and courses</CardDescription>
-            </div>
-            <div className="flex gap-2">
-              <Button 
-                size="sm" 
-                variant={membershipFilter === 'all' ? 'default' : 'outline'}
-                onClick={() => setMembershipFilter('all')}
-                data-testid="filter-all"
-              >
-                All
-              </Button>
-              <Button 
-                size="sm" 
-                variant={membershipFilter === 'active' ? 'default' : 'outline'}
-                onClick={() => setMembershipFilter('active')}
-                data-testid="filter-active"
-              >
-                Active
-              </Button>
-              <Button 
-                size="sm" 
-                variant={membershipFilter === 'inactive' ? 'default' : 'outline'}
-                onClick={() => setMembershipFilter('inactive')}
-                data-testid="filter-inactive"
-              >
-                Inactive
-              </Button>
+          <div className="space-y-4">
+            <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
+              <div>
+                <CardTitle className="text-xl text-stone-900">Additional Memberships</CardTitle>
+                <CardDescription>Legacy training programs and courses</CardDescription>
+              </div>
+              <div className="flex flex-col sm:flex-row items-start sm:items-center gap-3">
+                {/* Filter Buttons */}
+                <div className="flex gap-2">
+                  <Button
+                    size="sm"
+                    variant={membershipFilter === 'all' ? 'default' : 'outline'}
+                    onClick={() => setMembershipFilter('all')}
+                    data-testid="filter-all"
+                  >
+                    All
+                  </Button>
+                  <Button
+                    size="sm"
+                    variant={membershipFilter === 'active' ? 'default' : 'outline'}
+                    onClick={() => setMembershipFilter('active')}
+                    data-testid="filter-active"
+                  >
+                    Active
+                  </Button>
+                  <Button
+                    size="sm"
+                    variant={membershipFilter === 'inactive' ? 'default' : 'outline'}
+                    onClick={() => setMembershipFilter('inactive')}
+                    data-testid="filter-inactive"
+                  >
+                    Inactive
+                  </Button>
+                </div>
+                {/* View Toggle */}
+                <div className="flex items-center gap-1 bg-stone-100 rounded-lg p-1">
+                  <button
+                    onClick={() => setMembershipViewMode('card')}
+                    className={`p-2 rounded transition-colors ${
+                      membershipViewMode === 'card'
+                        ? 'bg-white shadow-sm text-samsara-gold'
+                        : 'text-stone-600 hover:text-stone-900'
+                    }`}
+                    aria-label="Card view"
+                    data-testid="membership-card-view-toggle"
+                  >
+                    <LayoutGrid className="h-4 w-4" />
+                  </button>
+                  <button
+                    onClick={() => setMembershipViewMode('list')}
+                    className={`p-2 rounded transition-colors ${
+                      membershipViewMode === 'list'
+                        ? 'bg-white shadow-sm text-samsara-gold'
+                        : 'text-stone-600 hover:text-stone-900'
+                    }`}
+                    aria-label="List view"
+                    data-testid="membership-list-view-toggle"
+                  >
+                    <List className="h-4 w-4" />
+                  </button>
+                </div>
+              </div>
             </div>
           </div>
         </CardHeader>
@@ -419,76 +455,158 @@ const Dashboard = () => {
           {filteredMemberships.length === 0 ? (
             <div className="text-center py-12" data-testid="empty-memberships">
               <p className="text-stone-600 mb-4">No additional memberships</p>
-              <Button variant="outline" data-testid="browse-plans-btn">
-                Browse our training plans
-              </Button>
+              <div className="flex flex-col sm:flex-row gap-3 justify-center">
+                <Button
+                  className="bg-samsara-gold hover:bg-samsara-gold/90 text-samsara-black"
+                  onClick={() => window.location.href = 'https://samsaraexperience.com/athlete-team/'}
+                >
+                  Join Athlete Team
+                </Button>
+                <Button
+                  className="bg-samsara-gold hover:bg-samsara-gold/90 text-samsara-black"
+                  onClick={() => window.location.href = 'https://samsaraexperience.com/training-basecamp/'}
+                >
+                  Join Basecamp
+                </Button>
+              </div>
             </div>
           ) : (
-            <div className="grid grid-cols-2 lg:grid-cols-3 gap-4">
-              {/* Show one card per program page, not per membership */}
-              {filteredMemberships.flatMap((membership) => {
-                const hasPages = membership.restrictedPages && membership.restrictedPages.length > 0;
+            <>
+              {/* List View */}
+              {membershipViewMode === 'list' && (
+                <div className="space-y-3">
+                  {filteredMemberships.flatMap((membership) => {
+                    const hasPages = membership.restrictedPages && membership.restrictedPages.length > 0;
+                    if (!hasPages) return [];
 
-                if (!hasPages) return [];
+                    return membership.restrictedPages.map((page) => {
+                      const imageUrl = page.featuredImage || null;
 
-                // Create one card for each program page
-                return membership.restrictedPages.map((page) => {
-                  const imageUrl = page.featuredImage || null;
+                      return (
+                        <div
+                          key={`${membership.id}-${page.id}`}
+                          className="flex items-center gap-4 p-4 border border-stone-200 rounded-lg hover:shadow-md transition-shadow cursor-pointer group"
+                          onClick={() => window.location.href = page.url}
+                          data-testid={`program-list-item-${page.id}`}
+                        >
+                          {/* Thumbnail */}
+                          {imageUrl ? (
+                            <div className="flex-shrink-0 w-24 h-16 overflow-hidden rounded bg-stone-200">
+                              <img
+                                src={imageUrl}
+                                alt={page.title}
+                                className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+                              />
+                            </div>
+                          ) : (
+                            <div className="flex-shrink-0 w-24 h-16 bg-gradient-to-br from-stone-100 to-stone-200 rounded flex items-center justify-center">
+                              <p className="text-xs text-stone-400 text-center px-2 line-clamp-2">
+                                {page.title}
+                              </p>
+                            </div>
+                          )}
 
-                  return (
-                    <Card
-                      key={`${membership.id}-${page.id}`}
-                      className="overflow-hidden hover:shadow-lg transition-shadow cursor-pointer group"
-                      onClick={() => window.location.href = page.url}
-                      data-testid={`program-card-${page.id}`}
-                    >
-                      {/* Featured Image */}
-                      {imageUrl ? (
-                        <div className="aspect-video overflow-hidden bg-stone-200">
-                          <img
-                            src={imageUrl}
-                            alt={page.title}
-                            className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
-                          />
-                        </div>
-                      ) : (
-                        <div className="aspect-video bg-gradient-to-br from-stone-100 to-stone-200 flex items-center justify-center">
-                          <div className="text-stone-400 text-center p-4">
-                            <p className="text-sm font-medium">{page.title}</p>
+                          {/* Content */}
+                          <div className="flex-1 min-w-0">
+                            <div className="flex items-start justify-between gap-2">
+                              <div className="flex-1 min-w-0">
+                                <h3 className="font-semibold text-sm text-stone-900 truncate">
+                                  {page.title}
+                                </h3>
+                                <p className="text-xs text-stone-500 mt-0.5">
+                                  {membership.name}
+                                </p>
+                              </div>
+                              {getStatusBadge(membership.status)}
+                            </div>
+
+                            {/* Expiration Date */}
+                            {membership.expiresAt && (
+                              <p className="text-xs text-stone-500 mt-2">
+                                Expires: {new Date(membership.expiresAt).toLocaleDateString('en-US', {
+                                  month: 'short',
+                                  day: 'numeric',
+                                  year: 'numeric'
+                                })}
+                              </p>
+                            )}
                           </div>
                         </div>
-                      )}
+                      );
+                    });
+                  })}
+                </div>
+              )}
 
-                      {/* Card Content */}
-                      <CardContent className="p-4">
-                        <div className="flex items-start justify-between mb-2">
-                          <h3 className="font-semibold text-sm line-clamp-2 flex-1">
-                            {page.title}
-                          </h3>
-                          {getStatusBadge(membership.status)}
-                        </div>
+              {/* Card View */}
+              {membershipViewMode === 'card' && (
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+                  {/* Show one card per program page, not per membership */}
+                  {filteredMemberships.flatMap((membership) => {
+                    const hasPages = membership.restrictedPages && membership.restrictedPages.length > 0;
 
-                        {/* Show membership name as subtitle */}
-                        <p className="text-xs text-stone-500 mt-1">
-                          {membership.name}
-                        </p>
+                    if (!hasPages) return [];
 
-                        {/* Show expired date if applicable */}
-                        {membership.expiresAt && (
-                          <p className="text-xs text-stone-500 mt-2">
-                            Expires: {new Date(membership.expiresAt).toLocaleDateString('en-US', {
-                              month: 'short',
-                              day: 'numeric',
-                              year: 'numeric'
-                            })}
-                          </p>
-                        )}
-                      </CardContent>
-                    </Card>
-                  );
-                });
-              })}
-            </div>
+                    // Create one card for each program page
+                    return membership.restrictedPages.map((page) => {
+                      const imageUrl = page.featuredImage || null;
+
+                      return (
+                        <Card
+                          key={`${membership.id}-${page.id}`}
+                          className="overflow-hidden hover:shadow-lg transition-shadow cursor-pointer group"
+                          onClick={() => window.location.href = page.url}
+                          data-testid={`program-card-${page.id}`}
+                        >
+                          {/* Featured Image */}
+                          {imageUrl ? (
+                            <div className="aspect-video overflow-hidden bg-stone-200">
+                              <img
+                                src={imageUrl}
+                                alt={page.title}
+                                className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+                              />
+                            </div>
+                          ) : (
+                            <div className="aspect-video bg-gradient-to-br from-stone-100 to-stone-200 flex items-center justify-center">
+                              <div className="text-stone-400 text-center p-4">
+                                <p className="text-sm font-medium">{page.title}</p>
+                              </div>
+                            </div>
+                          )}
+
+                          {/* Card Content */}
+                          <CardContent className="p-4">
+                            <div className="flex items-start justify-between mb-2">
+                              <h3 className="font-semibold text-sm line-clamp-2 flex-1">
+                                {page.title}
+                              </h3>
+                              {getStatusBadge(membership.status)}
+                            </div>
+
+                            {/* Show membership name as subtitle */}
+                            <p className="text-xs text-stone-500 mt-1">
+                              {membership.name}
+                            </p>
+
+                            {/* Show expired date if applicable */}
+                            {membership.expiresAt && (
+                              <p className="text-xs text-stone-500 mt-2">
+                                Expires: {new Date(membership.expiresAt).toLocaleDateString('en-US', {
+                                  month: 'short',
+                                  day: 'numeric',
+                                  year: 'numeric'
+                                })}
+                              </p>
+                            )}
+                          </CardContent>
+                        </Card>
+                      );
+                    });
+                  })}
+                </div>
+              )}
+            </>
           )}
         </CardContent>
       </Card>
