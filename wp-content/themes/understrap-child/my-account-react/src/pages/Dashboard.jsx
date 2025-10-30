@@ -352,7 +352,7 @@ const Dashboard = () => {
               <Button
                 size="lg"
                 onClick={handleOpenBasecamp}
-                className="bg-emerald-600 hover:bg-emerald-700 gap-2"
+                className="bg-samsara-gold hover:bg-samsara-gold/90 text-samsara-black gap-2"
                 data-testid="open-basecamp-btn"
               >
                 Open Basecamp
