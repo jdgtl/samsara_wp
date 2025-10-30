@@ -10,7 +10,7 @@ import {
   NavigationMenuTrigger,
 } from './ui/navigation-menu';
 import { Sheet, SheetContent, SheetTrigger } from './ui/sheet';
-import { ShoppingCart, Menu, ChevronDown } from 'lucide-react';
+import { Menu, ChevronDown } from 'lucide-react';
 
 const TopNavigation = () => {
   const location = useLocation();
@@ -129,7 +129,7 @@ const TopNavigation = () => {
                 className="px-3 py-2 text-white/80 hover:text-samsara-gold font-medium text-sm flex items-center gap-1 transition-colors"
                 data-testid={`nav-${item.label.toLowerCase().replace(/\s+/g, '-')}`}
               >
-                {item.label}
+                <span dangerouslySetInnerHTML={{ __html: item.label }} />
                 <ChevronDown className="h-3 w-3" />
               </button>
               <div className="absolute left-0 top-full opacity-0 pointer-events-none group-hover:opacity-100 group-hover:pointer-events-auto transition-all duration-200 z-[9999]">
@@ -140,9 +140,9 @@ const TopNavigation = () => {
                       href={subItem.href}
                       className="block px-4 py-2 text-sm text-stone-700 hover:bg-stone-50 hover:text-samsara-gold transition-colors"
                       data-testid={`nav-${subItem.label.toLowerCase().replace(/\s+/g, '-')}`}
-                    >
-                      {subItem.label}
-                    </a>
+                      dangerouslySetInnerHTML={{ __html: subItem.label }}
+                    />
+
                   ))}
                 </div>
               </div>
@@ -162,9 +162,8 @@ const TopNavigation = () => {
                   : 'text-white/80 hover:text-samsara-gold'
               }`}
               data-testid={`nav-${item.label.toLowerCase().replace(/\s+/g, '-')}`}
-            >
-              {item.label}
-            </Link>
+              dangerouslySetInnerHTML={{ __html: item.label }}
+            />
           );
         }
 
@@ -174,21 +173,10 @@ const TopNavigation = () => {
             href={item.href}
             className="px-3 py-2 text-white/80 hover:text-samsara-gold font-medium text-sm transition-colors"
             data-testid={`nav-${item.label.toLowerCase().replace(/\s+/g, '-')}`}
-          >
-            {item.label}
-          </a>
+            dangerouslySetInnerHTML={{ __html: item.label }}
+          />
         );
       })}
-
-      {/* Cart Icon */}
-      <a
-        href="https://samsaraexperience.com/cart/"
-        className="ml-2 p-2 text-white/80 hover:text-samsara-gold transition-colors"
-        aria-label="Shopping Cart"
-        data-testid="nav-cart"
-      >
-        <ShoppingCart className="h-5 w-5" />
-      </a>
     </div>
   );
 
@@ -220,7 +208,7 @@ const TopNavigation = () => {
                       className="w-full flex items-center justify-between px-4 py-3 text-stone-700 hover:bg-stone-50 font-medium text-sm transition-colors"
                       data-testid={`mobile-nav-${item.label.toLowerCase().replace(/\s+/g, '-')}`}
                     >
-                      {item.label}
+                      <span dangerouslySetInnerHTML={{ __html: item.label }} />
                       <ChevronDown
                         className={`h-4 w-4 transition-transform ${isExpanded ? 'rotate-180' : ''}`}
                       />
@@ -234,9 +222,8 @@ const TopNavigation = () => {
                             onClick={() => setMobileOpen(false)}
                             className="block px-8 py-2 text-sm text-stone-600 hover:text-samsara-gold"
                             data-testid={`mobile-nav-${subItem.label.toLowerCase().replace(/\s+/g, '-')}`}
-                          >
-                            {subItem.label}
-                          </a>
+                            dangerouslySetInnerHTML={{ __html: subItem.label }}
+                          />
                         ))}
                       </div>
                     )}
@@ -256,9 +243,8 @@ const TopNavigation = () => {
                         : 'text-stone-700 hover:bg-stone-50'
                     }`}
                     data-testid={`mobile-nav-${item.label.toLowerCase().replace(/\s+/g, '-')}`}
-                  >
-                    {item.label}
-                  </Link>
+                    dangerouslySetInnerHTML={{ __html: item.label }}
+                  />
                 );
               }
 
@@ -269,22 +255,10 @@ const TopNavigation = () => {
                   onClick={() => setMobileOpen(false)}
                   className="px-4 py-3 text-stone-700 hover:bg-stone-50 font-medium text-sm transition-colors"
                   data-testid={`mobile-nav-${item.label.toLowerCase().replace(/\s+/g, '-')}`}
-                >
-                  {item.label}
-                </a>
+                  dangerouslySetInnerHTML={{ __html: item.label }}
+                />
               );
             })}
-
-            {/* Cart in Mobile */}
-            <a
-              href="https://samsaraexperience.com/cart/"
-              onClick={() => setMobileOpen(false)}
-              className="px-4 py-3 text-stone-700 hover:bg-stone-50 font-medium text-sm transition-colors flex items-center gap-2"
-              data-testid="mobile-nav-cart"
-            >
-              <ShoppingCart className="h-4 w-4" />
-              Cart
-            </a>
           </nav>
         </SheetContent>
       </Sheet>
@@ -296,27 +270,19 @@ const TopNavigation = () => {
       <div className="px-4 sm:px-6 lg:px-8">
         <div className="flex h-16 items-center justify-between">
           {/* Logo */}
-          <Link to="/" className="flex items-center" data-testid="nav-logo">
+          <a href="https://samsaraexperience.com/" className="flex items-center" data-testid="nav-logo">
             <img
               src="https://customer-assets.emergentagent.com/job_quick-dash-6/artifacts/9sp1lhlg_samsara-logo-white-name.png"
               alt="Samsara"
               className="h-8 w-auto"
             />
-          </Link>
+          </a>
 
           {/* Desktop Navigation */}
           <DesktopNav />
 
           {/* Mobile Navigation */}
           <div className="flex items-center gap-2 lg:hidden">
-            <a
-              href="https://samsaraexperience.com/cart/"
-              className="p-2 text-white/80 hover:text-samsara-gold transition-colors"
-              aria-label="Shopping Cart"
-              data-testid="mobile-cart-icon"
-            >
-              <ShoppingCart className="h-5 w-5" />
-            </a>
             <MobileNav />
           </div>
         </div>
