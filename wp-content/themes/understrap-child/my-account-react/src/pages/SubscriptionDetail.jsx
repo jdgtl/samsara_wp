@@ -259,89 +259,69 @@ const SubscriptionDetail = () => {
         <CardContent>
           <div className="space-y-4">
             {subscription.status === 'active' && (
-              <>
-                <div className="flex flex-wrap gap-3">
-                  <Button
-                    variant="destructive"
-                    onClick={() => setShowCancelDialog(true)}
-                    disabled={!cancellationEligibility?.cancelable || eligibilityLoading}
-                    className="gap-2"
-                    data-testid="cancel-subscription-btn"
-                  >
-                    <XCircle className="h-4 w-4" />
-                    Cancel Subscription
-                  </Button>
-                </div>
+              <div className="flex flex-col md:flex-row gap-4 items-start">
+                {/* Cancel Button */}
+                <Button
+                  variant="destructive"
+                  onClick={() => setShowCancelDialog(true)}
+                  disabled={!cancellationEligibility?.cancelable || eligibilityLoading}
+                  className="gap-2 shrink-0"
+                  data-testid="cancel-subscription-btn"
+                >
+                  <XCircle className="h-4 w-4" />
+                  Cancel Subscription
+                </Button>
 
-                {/* Cancellation eligibility info */}
+                {/* Cancellation eligibility info - combined alert */}
                 {!eligibilityLoading && cancellationEligibility && (
-                  <>
-                    {/* Show alert when cancellation is disabled */}
-                    {!cancellationEligibility.cancelable && cancellationEligibility.reasons && (
-                      <Alert className="border-stone-300 bg-stone-50">
-                        <AlertCircle className="h-4 w-4 text-stone-600" />
-                        <AlertDescription className="ml-2">
-                          <div className="text-stone-700">
-                            <p className="font-medium text-sm mb-2">Cancellation is currently not available</p>
-                            <ul className="text-xs space-y-1 list-disc list-inside">
+                  <Alert className={`flex-1 ${
+                    cancellationEligibility.cancelable
+                      ? 'border-emerald-500 bg-emerald-50'
+                      : 'border-stone-300 bg-stone-50'
+                  }`}>
+                    {cancellationEligibility.cancelable ? (
+                      <Calendar className="h-4 w-4 text-emerald-600" />
+                    ) : (
+                      <AlertCircle className="h-4 w-4 text-stone-600" />
+                    )}
+                    <AlertDescription className="ml-2">
+                      <div className={cancellationEligibility.cancelable ? 'text-emerald-900' : 'text-stone-700'}>
+                        {/* Show reasons when not cancelable */}
+                        {!cancellationEligibility.cancelable && cancellationEligibility.reasons && (
+                          <div className="mb-2">
+                            <p className="font-semibold text-sm mb-1">Cancellation not available</p>
+                            <ul className="text-xs space-y-0.5 list-disc list-inside opacity-90">
                               {cancellationEligibility.reasons.map((reason, idx) => (
                                 <li key={idx}>{reason}</li>
                               ))}
                             </ul>
                           </div>
-                        </AlertDescription>
-                      </Alert>
-                    )}
+                        )}
 
-                    {/* Cancellation window info */}
-                    {cancellationEligibility.window?.start && (
-                      <Alert className={`${
-                        cancellationEligibility.cancelable
-                          ? 'border-emerald-500 bg-emerald-50'
-                          : 'border-amber-500 bg-amber-50'
-                      }`}>
-                        <Calendar className={`h-4 w-4 ${
-                          cancellationEligibility.cancelable ? 'text-emerald-600' : 'text-amber-600'
-                        }`} />
-                        <AlertDescription className="ml-2">
-                          <div className={
-                            cancellationEligibility.cancelable ? 'text-emerald-900' : 'text-amber-900'
-                          }>
+                        {/* Show window info */}
+                        {cancellationEligibility.window?.start && (
+                          <div className={!cancellationEligibility.cancelable && cancellationEligibility.reasons ? 'pt-2 border-t border-stone-200' : ''}>
                             <p className="font-semibold text-sm mb-1">
                               {cancellationEligibility.cancelable ? '✓ ' : ''}Cancellation Window
                             </p>
                             {cancellationEligibility.window.end ? (
-                              <>
-                                <p className="text-sm font-medium">
-                                  {cancellationEligibility.window.start} to {cancellationEligibility.window.end}
-                                </p>
-                                <p className="text-xs mt-1 opacity-90">
-                                  {cancellationEligibility.cancelable
-                                    ? 'You can cancel your subscription anytime within this window.'
-                                    : 'You will be able to cancel your subscription during this period.'
-                                  }
-                                </p>
-                              </>
+                              <p className="text-xs">
+                                <span className="font-medium">{cancellationEligibility.window.start}</span>
+                                {' to '}
+                                <span className="font-medium">{cancellationEligibility.window.end}</span>
+                              </p>
                             ) : (
-                              <>
-                                <p className="text-sm font-medium">
-                                  Available from {cancellationEligibility.window.start} onwards
-                                </p>
-                                <p className="text-xs mt-1 opacity-90">
-                                  {cancellationEligibility.cancelable
-                                    ? 'You can cancel your subscription anytime.'
-                                    : 'You will be able to cancel your subscription starting from this date.'
-                                  }
-                                </p>
-                              </>
+                              <p className="text-xs">
+                                From <span className="font-medium">{cancellationEligibility.window.start}</span> onwards
+                              </p>
                             )}
                           </div>
-                        </AlertDescription>
-                      </Alert>
-                    )}
-                  </>
+                        )}
+                      </div>
+                    </AlertDescription>
+                  </Alert>
                 )}
-              </>
+              </div>
             )}
 
             {subscription.status === 'canceled' && (
