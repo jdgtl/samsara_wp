@@ -259,69 +259,56 @@ const SubscriptionDetail = () => {
         <CardContent>
           <div className="space-y-4">
             {subscription.status === 'active' && (
-              <div className="flex flex-col md:flex-row gap-4 items-start">
+              <>
                 {/* Cancel Button */}
                 <Button
                   variant="destructive"
                   onClick={() => setShowCancelDialog(true)}
                   disabled={!cancellationEligibility?.cancelable || eligibilityLoading}
-                  className="gap-2 shrink-0"
+                  className="gap-2"
                   data-testid="cancel-subscription-btn"
                 >
                   <XCircle className="h-4 w-4" />
                   Cancel Subscription
                 </Button>
 
-                {/* Cancellation eligibility info - combined alert */}
+                {/* Cancellation eligibility info - two column layout */}
                 {!eligibilityLoading && cancellationEligibility && (
-                  <Alert className={`flex-1 ${
-                    cancellationEligibility.cancelable
-                      ? 'border-emerald-500 bg-emerald-50'
-                      : 'border-stone-300 bg-stone-50'
-                  }`}>
-                    {cancellationEligibility.cancelable ? (
-                      <Calendar className="h-4 w-4 text-emerald-600" />
-                    ) : (
-                      <AlertCircle className="h-4 w-4 text-stone-600" />
+                  <div className="grid md:grid-cols-2 gap-4 pt-2 text-sm">
+                    {/* Left: Reasons */}
+                    {!cancellationEligibility.cancelable && cancellationEligibility.reasons && (
+                      <div className="text-stone-700">
+                        <p className="font-semibold mb-1">Cancellation not available</p>
+                        <ul className="text-xs space-y-0.5 list-disc list-inside text-stone-600">
+                          {cancellationEligibility.reasons.map((reason, idx) => (
+                            <li key={idx}>{reason}</li>
+                          ))}
+                        </ul>
+                      </div>
                     )}
-                    <AlertDescription className="ml-2">
-                      <div className={cancellationEligibility.cancelable ? 'text-emerald-900' : 'text-stone-700'}>
-                        {/* Show reasons when not cancelable */}
-                        {!cancellationEligibility.cancelable && cancellationEligibility.reasons && (
-                          <div className="mb-2">
-                            <p className="font-semibold text-sm mb-1">Cancellation not available</p>
-                            <ul className="text-xs space-y-0.5 list-disc list-inside opacity-90">
-                              {cancellationEligibility.reasons.map((reason, idx) => (
-                                <li key={idx}>{reason}</li>
-                              ))}
-                            </ul>
-                          </div>
-                        )}
 
-                        {/* Show window info */}
-                        {cancellationEligibility.window?.start && (
-                          <div className={!cancellationEligibility.cancelable && cancellationEligibility.reasons ? 'pt-2 border-t border-stone-200' : ''}>
-                            <p className="font-semibold text-sm mb-1">
-                              {cancellationEligibility.cancelable ? '✓ ' : ''}Cancellation Window
-                            </p>
-                            {cancellationEligibility.window.end ? (
-                              <p className="text-xs">
-                                <span className="font-medium">{cancellationEligibility.window.start}</span>
-                                {' to '}
-                                <span className="font-medium">{cancellationEligibility.window.end}</span>
-                              </p>
-                            ) : (
-                              <p className="text-xs">
-                                From <span className="font-medium">{cancellationEligibility.window.start}</span> onwards
-                              </p>
-                            )}
-                          </div>
+                    {/* Right: Window Info */}
+                    {cancellationEligibility.window?.start && (
+                      <div className={`${cancellationEligibility.cancelable ? 'text-emerald-700 md:col-span-2' : 'text-stone-700'}`}>
+                        <p className="font-semibold mb-1">
+                          {cancellationEligibility.cancelable ? '✓ ' : ''}Cancellation Window
+                        </p>
+                        {cancellationEligibility.window.end ? (
+                          <p className="text-xs text-stone-600">
+                            From <span className="font-medium">{cancellationEligibility.window.start}</span>
+                            {' to '}
+                            <span className="font-medium">{cancellationEligibility.window.end}</span>
+                          </p>
+                        ) : (
+                          <p className="text-xs text-stone-600">
+                            From <span className="font-medium">{cancellationEligibility.window.start}</span> onwards
+                          </p>
                         )}
                       </div>
-                    </AlertDescription>
-                  </Alert>
+                    )}
+                  </div>
                 )}
-              </div>
+              </>
             )}
 
             {subscription.status === 'canceled' && (
