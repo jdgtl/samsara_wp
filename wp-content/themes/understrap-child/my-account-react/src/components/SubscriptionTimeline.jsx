@@ -12,8 +12,11 @@ const SubscriptionTimeline = ({ eligibility, subscription }) => {
   const { payment_count } = current;
   const { minimum_period, rolling_cycle } = rules;
 
-  // Calculate total payments to show (at least show next cycle)
-  const totalPaymentsToShow = Math.max(minimum_period + 1, rolling_cycle || minimum_period);
+  // Limit total payments shown to avoid overcrowding
+  // Show either: minimum + 3 buffer, or up to 15 payments max (whichever is smaller)
+  const maxPaymentsToShow = 15;
+  const idealPaymentsToShow = minimum_period + 3;
+  const totalPaymentsToShow = Math.min(idealPaymentsToShow, maxPaymentsToShow);
 
   // Determine cancellation window positions
   const windowStartPayment = minimum_period;
@@ -23,9 +26,9 @@ const SubscriptionTimeline = ({ eligibility, subscription }) => {
   const paymentNodes = [];
   for (let i = 1; i <= totalPaymentsToShow; i++) {
     const isCompleted = i <= payment_count;
-    const isCurrent = i === payment_count;
-    const isInWindow = i >= windowStartPayment && i < windowEndPayment;
-    const isCycleLock = rolling_cycle && i === rolling_cycle + 1;
+    const isCurrent = i === payment_count + 1; // Next upcoming payment after current
+    const isInWindow = i >= windowStartPayment && i <= windowEndPayment;
+    const isCycleLock = rolling_cycle && i === rolling_cycle + 1 && i <= totalPaymentsToShow;
 
     paymentNodes.push({
       number: i,
@@ -50,67 +53,71 @@ const SubscriptionTimeline = ({ eligibility, subscription }) => {
       </div>
 
       {/* Timeline Visualization */}
-      <div className="relative py-8">
-        {/* Progress Line */}
-        <div className="absolute top-1/2 left-0 right-0 h-1 bg-stone-200 -translate-y-1/2" />
+      <div className="relative py-8 overflow-x-auto">
+        <div className="relative min-w-max px-4">
+          {/* Progress Line */}
+          <div className="absolute top-1/2 left-0 right-0 h-1 bg-stone-200 -translate-y-1/2" />
 
-        {/* Cancellation Window Highlight */}
-        {window?.start && (
-          <div
-            className={`absolute top-1/2 h-2 -translate-y-1/2 rounded ${
-              inCancellationWindow ? 'bg-emerald-500' : 'bg-amber-500'
-            } opacity-30`}
-            style={{
-              left: `${((windowStartPayment - 0.5) / totalPaymentsToShow) * 100}%`,
-              width: `${((windowEndPayment - windowStartPayment) / totalPaymentsToShow) * 100}%`,
-            }}
-          />
-        )}
+          {/* Cancellation Window Highlight */}
+          {window?.start && (
+            <div
+              className={`absolute top-1/2 h-2 -translate-y-1/2 rounded ${
+                inCancellationWindow ? 'bg-emerald-500' : 'bg-amber-500'
+              } opacity-30`}
+              style={{
+                left: `${((windowStartPayment - 0.5) / totalPaymentsToShow) * 100}%`,
+                width: `${((windowEndPayment - windowStartPayment) / totalPaymentsToShow) * 100}%`,
+              }}
+            />
+          )}
 
-        {/* Payment Nodes */}
-        <div className="relative flex justify-between items-center">
-          {paymentNodes.map((node) => (
-            <div key={node.number} className="flex flex-col items-center" style={{ flex: 1 }}>
-              {/* Node Icon */}
-              <div className="relative z-10 mb-2">
-                {node.isCycleLock ? (
-                  <div className="w-10 h-10 rounded-full bg-red-100 border-2 border-red-500 flex items-center justify-center">
-                    <Lock className="w-5 h-5 text-red-600" />
-                  </div>
-                ) : node.isCompleted ? (
-                  <div className="w-10 h-10 rounded-full bg-emerald-100 border-2 border-emerald-500 flex items-center justify-center">
-                    <CheckCircle2 className="w-5 h-5 text-emerald-600" />
-                  </div>
-                ) : node.isCurrent ? (
-                  <div className="w-12 h-12 rounded-full bg-blue-100 border-4 border-blue-500 flex items-center justify-center animate-pulse">
-                    <div className="w-3 h-3 rounded-full bg-blue-600" />
-                  </div>
-                ) : (
-                  <div className="w-10 h-10 rounded-full bg-stone-100 border-2 border-stone-300 flex items-center justify-center">
-                    <Circle className="w-5 h-5 text-stone-400" />
-                  </div>
-                )}
-              </div>
-
-              {/* Node Label */}
-              <div className="text-center">
-                <div className={`text-xs font-medium ${
-                  node.isCompleted ? 'text-emerald-700' :
-                  node.isCurrent ? 'text-blue-700' :
-                  node.isCycleLock ? 'text-red-700' :
-                  'text-stone-500'
-                }`}>
-                  {node.isCycleLock ? 'Cycle Resets' : `Payment ${node.number}`}
+          {/* Payment Nodes */}
+          <div className="relative flex items-center gap-4 md:gap-8">
+            {paymentNodes.map((node) => (
+              <div key={node.number} className="flex flex-col items-center min-w-[60px]">
+                {/* Node Icon */}
+                <div className="relative z-10 mb-2">
+                  {node.isCycleLock ? (
+                    <div className="w-10 h-10 rounded-full bg-red-100 border-2 border-red-500 flex items-center justify-center">
+                      <Lock className="w-5 h-5 text-red-600" />
+                    </div>
+                  ) : node.isCompleted ? (
+                    <div className="w-10 h-10 rounded-full bg-emerald-100 border-2 border-emerald-500 flex items-center justify-center">
+                      <CheckCircle2 className="w-5 h-5 text-emerald-600" />
+                    </div>
+                  ) : node.isCurrent ? (
+                    <div className="w-12 h-12 rounded-full bg-blue-100 border-4 border-blue-500 flex items-center justify-center animate-pulse">
+                      <div className="w-3 h-3 rounded-full bg-blue-600" />
+                    </div>
+                  ) : (
+                    <div className="w-10 h-10 rounded-full bg-stone-100 border-2 border-stone-300 flex items-center justify-center">
+                      <Circle className="w-5 h-5 text-stone-400" />
+                    </div>
+                  )}
                 </div>
-                {node.isCurrent && (
-                  <div className="text-xs font-bold text-blue-700 mt-1">YOU ARE HERE</div>
-                )}
-                {node.number === windowStartPayment && window?.start && (
-                  <div className="text-xs text-amber-700 mt-1 font-medium">Window Opens</div>
-                )}
+
+                {/* Node Label */}
+                <div className="text-center w-full">
+                  <div className={`text-xs font-medium whitespace-nowrap ${
+                    node.isCompleted ? 'text-emerald-700' :
+                    node.isCurrent ? 'text-blue-700' :
+                    node.isCycleLock ? 'text-red-700' :
+                    'text-stone-500'
+                  }`}>
+                    {node.isCycleLock ? 'Cycle Resets' : `#${node.number}`}
+                  </div>
+                  {node.isCurrent && (
+                    <div className="text-[10px] font-bold text-white bg-blue-600 rounded px-1 py-0.5 mt-1 whitespace-nowrap">
+                      NEXT
+                    </div>
+                  )}
+                  {node.number === windowStartPayment && window?.start && !node.isCurrent && (
+                    <div className="text-[10px] text-amber-700 mt-1 font-semibold whitespace-nowrap">Opens</div>
+                  )}
+                </div>
               </div>
-            </div>
-          ))}
+            ))}
+          </div>
         </div>
       </div>
 
