@@ -250,118 +250,134 @@ const Dashboard = () => {
         </Alert>
       )}
 
-      {/* Primary Subscription Card */}
-      {primarySubscription ? (
-        <Card className="border-2 border-emerald-200" data-testid="primary-subscription-card">
-        <CardHeader>
-          <div className="flex items-start justify-between">
-            <div>
-              <CardTitle className="text-2xl text-stone-900">
-                {primarySubscription.planName}
-              </CardTitle>
-              <CardDescription className="mt-1">
-                Your primary membership
-              </CardDescription>
+      {/* Primary Subscription Card with Basecamp CTA side-by-side */}
+      <div className={`grid gap-6 ${hasBasecampAccess ? 'md:grid-cols-[1fr,400px]' : 'grid-cols-1'}`}>
+        {/* Primary Subscription Card */}
+        {primarySubscription ? (
+          <Card className="border-2 border-emerald-200" data-testid="primary-subscription-card">
+          <CardHeader>
+            <div className="flex items-start justify-between">
+              <div>
+                <CardTitle className="text-2xl text-stone-900">
+                  {primarySubscription.planName}
+                </CardTitle>
+                <CardDescription className="mt-1">
+                  Your primary membership
+                </CardDescription>
+              </div>
+              {getStatusBadge(primarySubscription.status)}
             </div>
-            {getStatusBadge(primarySubscription.status)}
-          </div>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          {/* Only show billing info if this is a subscription (not a manually-added membership) */}
-          {!primarySubscription.isMembership && primarySubscription.nextPaymentDate ? (
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          </CardHeader>
+          <CardContent className="space-y-4">
+            {/* Only show billing info if this is a subscription (not a manually-added membership) */}
+            {!primarySubscription.isMembership && primarySubscription.nextPaymentDate ? (
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="space-y-1">
+                  <p className="text-sm text-stone-600">Next billing date</p>
+                  <p className="text-lg font-semibold text-stone-900" data-testid="next-billing-date">
+                    {new Date(primarySubscription.nextPaymentDate).toLocaleDateString('en-US', {
+                      month: 'long',
+                      day: 'numeric',
+                      year: 'numeric'
+                    })}
+                  </p>
+                  <p className="text-sm text-emerald-700 font-medium" data-testid="countdown">
+                    in {countdown.days} days
+                  </p>
+                </div>
+                <div className="space-y-1">
+                  <p className="text-sm text-stone-600">Amount</p>
+                  <p className="text-lg font-semibold text-stone-900" data-testid="subscription-amount">
+                    ${primarySubscription.nextPaymentAmount.toFixed(2)} / {primarySubscription.billingInterval}
+                  </p>
+                </div>
+              </div>
+            ) : (
               <div className="space-y-1">
-                <p className="text-sm text-stone-600">Next billing date</p>
-                <p className="text-lg font-semibold text-stone-900" data-testid="next-billing-date">
-                  {new Date(primarySubscription.nextPaymentDate).toLocaleDateString('en-US', {
-                    month: 'long',
-                    day: 'numeric',
-                    year: 'numeric'
-                  })}
-                </p>
-                <p className="text-sm text-emerald-700 font-medium" data-testid="countdown">
-                  in {countdown.days} days
+                <p className="text-sm text-stone-600">Status</p>
+                <p className="text-lg font-semibold text-emerald-700">Active Membership</p>
+                <p className="text-sm text-stone-600">
+                  This membership was granted directly and has no billing associated with it.
                 </p>
               </div>
-              <div className="space-y-1">
-                <p className="text-sm text-stone-600">Amount</p>
-                <p className="text-lg font-semibold text-stone-900" data-testid="subscription-amount">
-                  ${primarySubscription.nextPaymentAmount.toFixed(2)} / {primarySubscription.billingInterval}
-                </p>
-              </div>
-            </div>
-          ) : (
-            <div className="space-y-1">
-              <p className="text-sm text-stone-600">Status</p>
-              <p className="text-lg font-semibold text-emerald-700">Active Membership</p>
-              <p className="text-sm text-stone-600">
-                This membership was granted directly and has no billing associated with it.
-              </p>
-            </div>
-          )}
-
-          <div className="flex flex-wrap gap-2 pt-2">
-            {/* Only show Manage button for actual subscriptions, not manually-added memberships */}
-            {!primarySubscription.isMembership && (
-              <Button
-                onClick={handleManageSubscription}
-                className="bg-samsara-gold hover:bg-samsara-gold/90 text-samsara-black"
-                data-testid="manage-subscription-btn"
-              >
-                Manage Subscription
-              </Button>
             )}
-          </div>
-        </CardContent>
-      </Card>
-      ) : (
-        <Card className="border-2 border-stone-200" data-testid="no-subscription-card">
-          <CardContent className="p-12 text-center">
-            <p className="text-stone-600 mb-4">No active recurring subscription</p>
-            <div className="flex flex-col sm:flex-row gap-3 justify-center">
-              <Button
-                className="bg-samsara-gold hover:bg-samsara-gold/90 text-samsara-black"
-                onClick={() => window.location.href = 'https://samsaraexperience.com/athlete-team/'}
-              >
-                Join Athlete Team
-              </Button>
-              <Button
-                className="bg-samsara-gold hover:bg-samsara-gold/90 text-samsara-black"
-                onClick={() => window.location.href = 'https://samsaraexperience.com/training-basecamp/'}
-              >
-                Join Basecamp
-              </Button>
+
+            <div className="flex flex-wrap gap-2 pt-2">
+              {/* Only show Manage button for actual subscriptions, not manually-added memberships */}
+              {!primarySubscription.isMembership && (
+                <Button
+                  onClick={handleManageSubscription}
+                  className="bg-samsara-gold hover:bg-samsara-gold/90 text-samsara-black"
+                  data-testid="manage-subscription-btn"
+                >
+                  Manage Subscription
+                </Button>
+              )}
             </div>
           </CardContent>
         </Card>
-      )}
+        ) : (
+          <Card className="border-2 border-stone-200" data-testid="no-subscription-card">
+            <CardContent className="p-12 text-center">
+              <p className="text-stone-600 mb-4">No active recurring subscription</p>
+              <div className="flex flex-col sm:flex-row gap-3 justify-center">
+                <Button
+                  className="bg-samsara-gold hover:bg-samsara-gold/90 text-samsara-black"
+                  onClick={() => window.location.href = 'https://samsaraexperience.com/athlete-team/'}
+                >
+                  Join Athlete Team
+                </Button>
+                <Button
+                  className="bg-samsara-gold hover:bg-samsara-gold/90 text-samsara-black"
+                  onClick={() => window.location.href = 'https://samsaraexperience.com/training-basecamp/'}
+                >
+                  Join Basecamp
+                </Button>
+              </div>
+            </CardContent>
+          </Card>
+        )}
 
-      {/* Training Hub / Basecamp CTA - Only show if user has Basecamp access */}
-      {hasBasecampAccess && (
-        <Card className="bg-gradient-to-br from-emerald-50 to-teal-50 border-emerald-300" data-testid="basecamp-cta-card">
-          <CardContent className="p-6">
-            <div className="flex items-center justify-between">
+        {/* Training Hub / Basecamp CTA - Only show if user has Basecamp access */}
+        {hasBasecampAccess && (
+          <div
+            onClick={handleOpenBasecamp}
+            className="relative overflow-hidden rounded-lg border-2 border-samsara-gold cursor-pointer group h-full min-h-[400px] flex flex-col"
+            data-testid="basecamp-cta-card"
+          >
+            {/* Background Image with Overlay */}
+            <div
+              className="absolute inset-0 bg-black transition-transform duration-300 group-hover:scale-105"
+              style={{
+                backgroundImage: 'url(https://samsara-media.s3.us-west-2.amazonaws.com/wp-content/uploads/2025/05/17093636/5-_LUC6012-1-1024x1024.jpg)',
+                backgroundSize: 'cover',
+                backgroundPosition: 'center',
+              }}
+            />
+            <div className="absolute inset-0 bg-black/50" />
+
+            {/* Content */}
+            <div className="relative z-10 p-6 flex flex-col h-full justify-between">
               <div className="space-y-2">
-                <h3 className="text-xl font-bold text-stone-900">
+                <h3 className="text-2xl font-bold text-white">
                   Open Training Hub (Basecamp)
                 </h3>
-                <p className="text-stone-700">
+                <p className="text-stone-200">
                   Access your content in Basecamp. Your dedicated training platform awaits.
                 </p>
               </div>
-              <Button
-                size="lg"
-                onClick={handleOpenBasecamp}
-                className="bg-samsara-gold hover:bg-samsara-gold/90 text-samsara-black gap-2"
-                data-testid="open-basecamp-btn"
-              >
-                Open Basecamp
-                <ExternalLink className="h-4 w-4" />
-              </Button>
+
+              {/* CTA Text at Bottom */}
+              <div className="mt-auto">
+                <p className="text-samsara-gold font-bold text-xl flex items-center gap-2">
+                  Enter Basecamp
+                  <ExternalLink className="h-5 w-5" />
+                </p>
+              </div>
             </div>
-          </CardContent>
-        </Card>
-      )}
+          </div>
+        )}
+      </div>
 
       {/* Additional Memberships */}
       <Card data-testid="memberships-card">
