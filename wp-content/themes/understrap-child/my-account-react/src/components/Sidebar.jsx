@@ -75,34 +75,11 @@ const Sidebar = ({ isOpen, onClose }) => {
 
   return (
     <>
-      {/* Mobile overlay */}
-      {isOpen && (
-        <div
-          className="fixed inset-0 bg-black/50 z-40 lg:hidden"
-          onClick={onClose}
-          data-testid="sidebar-overlay"
-        />
-      )}
-
-      {/* Sidebar */}
+      {/* Desktop Sidebar (≥ md / 768px) */}
       <aside
-        className={`
-          fixed lg:sticky top-0 left-0 h-screen w-72 bg-stone-50 border-r border-stone-200
-          flex flex-col z-50 transition-transform duration-300
-          ${isOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'}
-        `}
-        data-testid="sidebar"
+        className="hidden md:flex md:sticky top-0 left-0 h-screen w-72 bg-stone-50 border-r border-stone-200 flex-col z-50"
+        data-testid="sidebar-desktop"
       >
-        {/* Close button for mobile */}
-        <button
-          onClick={onClose}
-          className="absolute top-4 right-4 lg:hidden text-stone-600 hover:text-stone-900"
-          aria-label="Close sidebar"
-          data-testid="close-sidebar-btn"
-        >
-          <X className="h-5 w-5" />
-        </button>
-
         {/* User Profile Section */}
         <div className="p-6 space-y-3 flex flex-col items-center text-center" data-testid="user-profile-section">
           <Avatar className="h-20 w-20" data-testid="user-avatar">
@@ -161,17 +138,16 @@ const Sidebar = ({ isOpen, onClose }) => {
           {navItems.map((item) => {
             const Icon = item.icon;
             const active = isActive(item.path);
-            
+
             return (
               <Link
                 key={item.path}
                 to={item.path}
-                onClick={onClose}
                 className={`
                   flex items-center gap-3 px-4 py-3 rounded-lg transition-colors
                   focus:outline-none focus:ring-2 focus:ring-samsara-gold focus:ring-offset-2
-                  ${active 
-                    ? 'bg-samsara-gold text-samsara-black' 
+                  ${active
+                    ? 'bg-samsara-gold text-samsara-black'
                     : 'text-stone-700 hover:bg-stone-200'
                   }
                 `}
@@ -200,6 +176,40 @@ const Sidebar = ({ isOpen, onClose }) => {
           </Button>
         </div>
       </aside>
+
+      {/* Mobile Bottom Navigation (< md / 768px) */}
+      <nav
+        className="md:hidden fixed bottom-0 left-0 right-0 bg-white border-t border-stone-200 z-50 safe-area-inset-bottom"
+        data-testid="bottom-nav-mobile"
+      >
+        <div className="flex items-center justify-around px-2 py-2">
+          {navItems.map((item) => {
+            const Icon = item.icon;
+            const active = isActive(item.path);
+
+            return (
+              <Link
+                key={item.path}
+                to={item.path}
+                className={`
+                  flex flex-col items-center justify-center gap-1 px-3 py-2 rounded-lg transition-colors flex-1 min-w-0
+                  ${active
+                    ? 'text-samsara-gold'
+                    : 'text-stone-600'
+                  }
+                `}
+                data-testid={`bottom-nav-${item.label.toLowerCase()}`}
+                aria-current={active ? 'page' : undefined}
+              >
+                <Icon className={`h-6 w-6 ${active ? 'stroke-[2.5]' : 'stroke-2'}`} />
+                <span className={`text-xs ${active ? 'font-semibold' : 'font-medium'}`}>
+                  {item.label}
+                </span>
+              </Link>
+            );
+          })}
+        </div>
+      </nav>
     </>
   );
 };

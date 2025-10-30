@@ -33,6 +33,12 @@ This React application replaces the default WooCommerce My Account pages with a 
 **Status:** 95% Complete - All core features migrated to live WordPress/WooCommerce. Payment method management functional on production, troubleshooting test mode save issue on staging.
 
 **Recent Updates (2025):**
+- **Mobile-First Navigation:** Implemented app-style bottom navigation bar for mobile devices (< 768px)
+  - Fixed bottom navigation with 5 nav items displayed horizontally
+  - Gold active states, clean icon + label design
+  - Desktop (≥ 768px) maintains full sidebar with user profile
+  - Removed hamburger menu in favor of persistent bottom nav
+- **Dashboard Welcome Section:** User profile (avatar, name, member since) now appears in Dashboard on mobile
 - Changed dashboard URL from `/athlete/` to `/account/` with redirects for backward compatibility
 - Updated brand styling: Gold (#E2B72D) primary CTAs, black navigation, green for success states only
 - Implemented card-based grid layout for membership content (2x2 mobile, 3 columns desktop)
@@ -84,8 +90,8 @@ my-account-react/
 │   ├── components/           # React components
 │   │   ├── ui/              # Reusable UI components (shadcn/ui)
 │   │   ├── Layout.jsx       # Main layout wrapper
-│   │   ├── Sidebar.jsx      # Navigation sidebar
-│   │   └── TopNavigation.jsx # Mobile header
+│   │   ├── Sidebar.jsx      # Responsive navigation (sidebar on desktop, bottom nav on mobile)
+│   │   └── TopNavigation.jsx # Public site navigation header
 │   │
 │   ├── pages/               # Page components (routes)
 │   │   ├── Dashboard.jsx
@@ -284,6 +290,36 @@ Reusable components from shadcn/ui:
 - Styled with Tailwind CSS
 - Accessible by default
 - Customizable via `className`
+
+#### 5. Responsive Navigation Pattern
+
+The app uses a mobile-first navigation approach with different patterns based on screen size:
+
+**Mobile (< 768px / md breakpoint):**
+- **Bottom Navigation Bar** - Fixed to bottom of screen (app-style)
+  - 5 navigation items displayed horizontally
+  - Icon + label layout (vertical stack)
+  - Gold color for active state (#E2B72D)
+  - Stone color for inactive state
+  - Always visible (no hamburger menu)
+- **User Profile in Dashboard** - Avatar, name, and "Member since" appear at top of Dashboard page
+- **Content Padding** - Bottom padding (pb-24) prevents content from being hidden behind nav
+
+**Desktop (≥ 768px / md breakpoint):**
+- **Full Left Sidebar** - Sticky positioned with full height
+  - User profile at top (avatar, name, member since)
+  - Navigation items in vertical list
+  - Logout button at bottom
+  - Gold background for active state
+- **Dashboard Welcome Header** - Simple text-based welcome
+
+**Implementation:**
+- `Sidebar.jsx` contains both navigation patterns with responsive classes
+- Desktop sidebar: `hidden md:flex` - Hidden on mobile, flex layout on desktop
+- Mobile bottom nav: `md:hidden` - Visible on mobile, hidden on desktop
+- `Layout.jsx` provides consistent padding across all pages
+
+**Breakpoint:** 768px (Tailwind's `md` breakpoint)
 
 ---
 

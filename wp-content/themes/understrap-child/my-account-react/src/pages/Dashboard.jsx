@@ -5,6 +5,7 @@ import { Button } from '../components/ui/button';
 import { Alert, AlertDescription } from '../components/ui/alert';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '../components/ui/alert-dialog';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '../components/ui/table';
+import { Avatar, AvatarFallback, AvatarImage } from '../components/ui/avatar';
 import {
   ExternalLink,
   Pause,
@@ -48,8 +49,17 @@ const Dashboard = () => {
     firstName: 'User',
     lastName: '',
     displayName: 'User',
-    email: ''
+    email: '',
+    memberSince: null,
+    avatarUrl: null
   };
+
+  const memberSinceFormatted = userData.memberSince
+    ? new Date(userData.memberSince).toLocaleDateString('en-US', {
+        month: 'short',
+        year: 'numeric'
+      })
+    : 'Recently';
 
   // Calculate countdown for next payment
   useEffect(() => {
@@ -217,8 +227,32 @@ const Dashboard = () => {
 
   return (
     <div className="max-w-7xl mx-auto space-y-6" data-testid="dashboard-page">
-      {/* Welcome Header */}
-      <div className="space-y-2" data-testid="welcome-section">
+      {/* Welcome Header with User Profile (visible on mobile, replaces sidebar profile) */}
+      <div className="md:hidden" data-testid="mobile-welcome-section">
+        <Card>
+          <CardContent className="p-6">
+            <div className="flex items-center gap-4">
+              <Avatar className="h-16 w-16" data-testid="mobile-user-avatar">
+                <AvatarImage src={userData.avatarUrl} alt={userData.displayName} />
+                <AvatarFallback className="bg-samsara-gold text-samsara-black text-lg">
+                  {userData.firstName?.[0]}{userData.lastName?.[0]}
+                </AvatarFallback>
+              </Avatar>
+              <div className="flex-1">
+                <h1 className="text-2xl font-bold text-stone-900">
+                  {userData.displayName}
+                </h1>
+                <p className="text-sm text-stone-600">
+                  Member since {memberSinceFormatted}
+                </p>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+
+      {/* Desktop Welcome Header (hidden on mobile) */}
+      <div className="hidden md:block space-y-2" data-testid="desktop-welcome-section">
         <h1 className="text-3xl font-bold text-stone-900">
           Welcome back, {userData.firstName}
         </h1>
