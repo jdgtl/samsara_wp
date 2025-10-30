@@ -20,7 +20,11 @@ const TopNavigation = () => {
     return location.pathname.startsWith(path);
   };
 
-  const navItems = [
+  // Get menu from WordPress or use fallback
+  const wpMenu = window.samsaraMyAccount?.topNavMenu || [];
+
+  // Fallback menu if WordPress menu is not set
+  const fallbackMenu = [
     {
       label: 'Online Training',
       href: 'https://samsaraexperience.com/training-basecamp/',
@@ -63,6 +67,16 @@ const TopNavigation = () => {
       href: 'https://samsaraexperience.com/shop/',
     },
   ];
+
+  // Use WordPress menu if available, otherwise use fallback
+  const navItems = wpMenu.length > 0 ? wpMenu.map(item => {
+    // Check if this is an internal link (account-related)
+    const isInternal = item.href && (item.href.includes('/account') || item.href.startsWith('/account'));
+    return {
+      ...item,
+      isInternal
+    };
+  }) : fallbackMenu;
 
   // Desktop Navigation
   const DesktopNav = () => (

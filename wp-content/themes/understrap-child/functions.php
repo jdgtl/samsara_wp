@@ -1036,6 +1036,70 @@ add_action('after_switch_theme', 'samsara_flush_rewrite_rules_once');
 add_action('admin_init', 'samsara_flush_rewrite_rules_once');
 
 /**
+ * Get and format WordPress menu for React
+ * Converts WP menu structure to format expected by React TopNavigation component
+ */
+function samsara_get_react_menu_data($location = 'react_top_nav') {
+    if (!has_nav_menu($location)) {
+        return array();
+    }
+
+    $locations = get_nav_menu_locations();
+    $menu_id = isset($locations[$location]) ? $locations[$location] : 0;
+
+    if (!$menu_id) {
+        return array();
+    }
+
+    $menu_items = wp_get_nav_menu_items($menu_id);
+
+    if (!$menu_items) {
+        return array();
+    }
+
+    // Build hierarchical structure
+    $menu_data = array();
+    $submenu_items = array();
+
+    // First pass: collect all parent items and identify submenu items
+    foreach ($menu_items as $item) {
+        if ($item->menu_item_parent == 0) {
+            $menu_data[$item->ID] = array(
+                'label' => $item->title,
+                'href' => $item->url,
+                'items' => array(),
+            );
+        } else {
+            if (!isset($submenu_items[$item->menu_item_parent])) {
+                $submenu_items[$item->menu_item_parent] = array();
+            }
+            $submenu_items[$item->menu_item_parent][] = array(
+                'label' => $item->title,
+                'href' => $item->url,
+            );
+        }
+    }
+
+    // Second pass: attach submenu items to parents
+    foreach ($submenu_items as $parent_id => $items) {
+        if (isset($menu_data[$parent_id])) {
+            $menu_data[$parent_id]['items'] = $items;
+        }
+    }
+
+    // Convert to indexed array and clean up empty items arrays
+    $formatted_menu = array();
+    foreach ($menu_data as $item) {
+        if (empty($item['items'])) {
+            unset($item['items']);
+        }
+        $formatted_menu[] = $item;
+    }
+
+    return $formatted_menu;
+}
+
+/**
  * Enqueue React My Account App
  * Only loads on the React My Account template
  */
@@ -1135,6 +1199,7 @@ function samsara_enqueue_react_my_account() {
             'originalUser' => $original_user,
             'switchBackUrl' => $switch_back_url,
         ),
+        'topNavMenu' => samsara_get_react_menu_data('react_top_nav'),
     ));
 }
 add_action('wp_enqueue_scripts', 'samsara_enqueue_react_my_account');
