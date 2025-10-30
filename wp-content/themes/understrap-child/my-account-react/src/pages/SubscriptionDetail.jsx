@@ -279,11 +279,11 @@ const SubscriptionDetail = () => {
                     {!cancellationEligibility.cancelable && cancellationEligibility.reasons && (
                       <div className="text-stone-700">
                         <p className="font-semibold mb-1">Cancellation not available</p>
-                        <ul className="text-xs space-y-0.5 list-disc list-inside text-stone-600">
+                        <div className="text-xs space-y-0.5 text-stone-600">
                           {cancellationEligibility.reasons.map((reason, idx) => (
-                            <li key={idx}>{reason}</li>
+                            <p key={idx}>{reason}</p>
                           ))}
-                        </ul>
+                        </div>
                       </div>
                     )}
 
