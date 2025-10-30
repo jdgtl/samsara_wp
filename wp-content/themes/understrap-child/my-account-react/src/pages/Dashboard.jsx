@@ -3,14 +3,10 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../co
 import { Badge } from '../components/ui/badge';
 import { Button } from '../components/ui/button';
 import { Alert, AlertDescription } from '../components/ui/alert';
-import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '../components/ui/alert-dialog';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '../components/ui/table';
 import { Avatar, AvatarFallback, AvatarImage } from '../components/ui/avatar';
 import {
   ExternalLink,
-  Pause,
-  Play,
-  XCircle,
   AlertTriangle,
   Filter,
   Loader2,
@@ -19,15 +15,12 @@ import {
 } from 'lucide-react';
 import { getDaysUntilExpiration } from '../lib/utils';
 import { useDashboard } from '../hooks/useDashboard';
-import { useSubscriptionActions } from '../hooks/useSubscriptions';
 import { useNavigate } from 'react-router-dom';
 
 const Dashboard = () => {
   const navigate = useNavigate();
   const [countdown, setCountdown] = useState({ days: 0, hours: 0 });
   const [membershipFilter, setMembershipFilter] = useState('all');
-  const [showCancelDialog, setShowCancelDialog] = useState(false);
-  const [showPauseDialog, setShowPauseDialog] = useState(false);
   const [expandedMemberships, setExpandedMemberships] = useState({});
 
   // Fetch live data
@@ -40,9 +33,6 @@ const Dashboard = () => {
     error,
     refetch
   } = useDashboard();
-
-  // Subscription actions
-  const { cancelSubscription, pauseSubscription, resumeSubscription, actionLoading } = useSubscriptionActions();
 
   // Get user data from WordPress global
   const userData = window.samsaraMyAccount?.userData || {
@@ -100,47 +90,6 @@ const Dashboard = () => {
 
   const handleManageSubscription = () => {
     navigate(`/subscriptions/${primarySubscription.id}`);
-  };
-
-  const handlePauseClick = () => {
-    if (primarySubscription.status === 'paused') {
-      handleResume();
-    } else {
-      setShowPauseDialog(true);
-    }
-  };
-
-  const handlePause = async () => {
-    setShowPauseDialog(false);
-    const result = await pauseSubscription(primarySubscription.id);
-    if (result.success) {
-      refetch(); // Refresh dashboard data
-    } else {
-      alert(`Failed to pause subscription: ${result.error}`);
-    }
-  };
-
-  const handleResume = async () => {
-    const result = await resumeSubscription(primarySubscription.id);
-    if (result.success) {
-      refetch(); // Refresh dashboard data
-    } else {
-      alert(`Failed to resume subscription: ${result.error}`);
-    }
-  };
-
-  const handleCancelClick = () => {
-    setShowCancelDialog(true);
-  };
-
-  const handleCancel = async () => {
-    setShowCancelDialog(false);
-    const result = await cancelSubscription(primarySubscription.id);
-    if (result.success) {
-      refetch(); // Refresh dashboard data
-    } else {
-      alert(`Failed to cancel subscription: ${result.error}`);
-    }
   };
 
   const handleOpenBasecamp = () => {
@@ -355,51 +304,13 @@ const Dashboard = () => {
           <div className="flex flex-wrap gap-2 pt-2">
             {/* Only show Manage button for actual subscriptions, not manually-added memberships */}
             {!primarySubscription.isMembership && (
-              <>
-                <Button
-                  onClick={handleManageSubscription}
-                  className="bg-samsara-gold hover:bg-samsara-gold/90 text-samsara-black"
-                  data-testid="manage-subscription-btn"
-                >
-                  Manage
-                </Button>
-
-                {primarySubscription.status === 'active' && (
-                  <Button
-                    variant="outline"
-                    onClick={handlePauseClick}
-                    disabled={actionLoading}
-                    data-testid="pause-btn"
-                  >
-                    <Pause className="h-4 w-4 mr-2" />
-                    Pause
-                  </Button>
-                )}
-
-                {primarySubscription.status === 'paused' && (
-                  <Button
-                    onClick={handlePauseClick}
-                    disabled={actionLoading}
-                    className="bg-samsara-gold hover:bg-samsara-gold/90 text-samsara-black"
-                    data-testid="resume-btn"
-                  >
-                    <Play className="h-4 w-4 mr-2" />
-                    Resume
-                  </Button>
-                )}
-
-                {(primarySubscription.status === 'active' || primarySubscription.status === 'paused') && (
-                  <Button
-                    variant="destructive"
-                    onClick={handleCancelClick}
-                    disabled={actionLoading}
-                    data-testid="cancel-subscription-btn"
-                  >
-                    <XCircle className="h-4 w-4 mr-2" />
-                    Cancel
-                  </Button>
-                )}
-              </>
+              <Button
+                onClick={handleManageSubscription}
+                className="bg-samsara-gold hover:bg-samsara-gold/90 text-samsara-black"
+                data-testid="manage-subscription-btn"
+              >
+                Manage Subscription
+              </Button>
             )}
           </div>
         </CardContent>
