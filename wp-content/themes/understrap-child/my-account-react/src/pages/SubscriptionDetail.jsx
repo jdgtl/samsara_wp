@@ -6,10 +6,9 @@ import { Button } from '../components/ui/button';
 import { Separator } from '../components/ui/separator';
 import { Alert, AlertDescription } from '../components/ui/alert';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '../components/ui/alert-dialog';
-import { ArrowLeft, XCircle, FileText, Loader2, AlertTriangle, AlertCircle } from 'lucide-react';
+import { ArrowLeft, XCircle, FileText, Loader2, AlertTriangle, AlertCircle, Calendar } from 'lucide-react';
 import { useSubscription, useSubscriptionActions, useSubscriptionOrders } from '../hooks/useSubscriptions';
 import { subscriptionsApi } from '../services/woocommerce';
-import SubscriptionTimeline from '../components/SubscriptionTimeline';
 
 const SubscriptionDetail = () => {
   const { subId } = useParams();
@@ -251,22 +250,6 @@ const SubscriptionDetail = () => {
         </CardContent>
       </Card>
 
-      {/* Payment Timeline & Cancellation Window */}
-      {cancellationEligibility && subscription.status === 'active' && (
-        <Card data-testid="cancellation-timeline-section">
-          <CardHeader>
-            <CardTitle>Subscription Timeline</CardTitle>
-            <CardDescription>Track your payment progress and cancellation window</CardDescription>
-          </CardHeader>
-          <CardContent>
-            <SubscriptionTimeline
-              eligibility={cancellationEligibility}
-              subscription={subscription}
-            />
-          </CardContent>
-        </Card>
-      )}
-
       {/* Actions */}
       <Card data-testid="subscription-actions-section">
         <CardHeader>
@@ -290,27 +273,73 @@ const SubscriptionDetail = () => {
                   </Button>
                 </div>
 
-                {/* Visual feedback when cancel is disabled */}
-                {!eligibilityLoading && !cancellationEligibility?.cancelable && cancellationEligibility?.reasons && (
-                  <Alert className="border-stone-300 bg-stone-50">
-                    <AlertCircle className="h-4 w-4 text-stone-600" />
-                    <AlertDescription className="ml-2">
-                      <div className="text-stone-700">
-                        <p className="font-medium text-sm mb-2">Cancellation is currently disabled</p>
-                        <ul className="text-xs space-y-1 list-disc list-inside">
-                          {cancellationEligibility.reasons.map((reason, idx) => (
-                            <li key={idx}>{reason}</li>
-                          ))}
-                        </ul>
-                        {cancellationEligibility.window?.start && (
-                          <p className="text-xs mt-2 font-medium text-emerald-700">
-                            ✓ Cancellation will be available: {cancellationEligibility.window.start}
-                            {cancellationEligibility.window.end && ` to ${cancellationEligibility.window.end}`}
-                          </p>
-                        )}
-                      </div>
-                    </AlertDescription>
-                  </Alert>
+                {/* Cancellation eligibility info */}
+                {!eligibilityLoading && cancellationEligibility && (
+                  <>
+                    {/* Show alert when cancellation is disabled */}
+                    {!cancellationEligibility.cancelable && cancellationEligibility.reasons && (
+                      <Alert className="border-stone-300 bg-stone-50">
+                        <AlertCircle className="h-4 w-4 text-stone-600" />
+                        <AlertDescription className="ml-2">
+                          <div className="text-stone-700">
+                            <p className="font-medium text-sm mb-2">Cancellation is currently not available</p>
+                            <ul className="text-xs space-y-1 list-disc list-inside">
+                              {cancellationEligibility.reasons.map((reason, idx) => (
+                                <li key={idx}>{reason}</li>
+                              ))}
+                            </ul>
+                          </div>
+                        </AlertDescription>
+                      </Alert>
+                    )}
+
+                    {/* Cancellation window info */}
+                    {cancellationEligibility.window?.start && (
+                      <Alert className={`${
+                        cancellationEligibility.cancelable
+                          ? 'border-emerald-500 bg-emerald-50'
+                          : 'border-amber-500 bg-amber-50'
+                      }`}>
+                        <Calendar className={`h-4 w-4 ${
+                          cancellationEligibility.cancelable ? 'text-emerald-600' : 'text-amber-600'
+                        }`} />
+                        <AlertDescription className="ml-2">
+                          <div className={
+                            cancellationEligibility.cancelable ? 'text-emerald-900' : 'text-amber-900'
+                          }>
+                            <p className="font-semibold text-sm mb-1">
+                              {cancellationEligibility.cancelable ? '✓ ' : ''}Cancellation Window
+                            </p>
+                            {cancellationEligibility.window.end ? (
+                              <>
+                                <p className="text-sm font-medium">
+                                  {cancellationEligibility.window.start} to {cancellationEligibility.window.end}
+                                </p>
+                                <p className="text-xs mt-1 opacity-90">
+                                  {cancellationEligibility.cancelable
+                                    ? 'You can cancel your subscription anytime within this window.'
+                                    : 'You will be able to cancel your subscription during this period.'
+                                  }
+                                </p>
+                              </>
+                            ) : (
+                              <>
+                                <p className="text-sm font-medium">
+                                  Available from {cancellationEligibility.window.start} onwards
+                                </p>
+                                <p className="text-xs mt-1 opacity-90">
+                                  {cancellationEligibility.cancelable
+                                    ? 'You can cancel your subscription anytime.'
+                                    : 'You will be able to cancel your subscription starting from this date.'
+                                  }
+                                </p>
+                              </>
+                            )}
+                          </div>
+                        </AlertDescription>
+                      </Alert>
+                    )}
+                  </>
                 )}
               </>
             )}
