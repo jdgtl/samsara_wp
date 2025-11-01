@@ -6,6 +6,8 @@ import Orders from "./pages/Orders";
 import OrderDetail from "./pages/OrderDetail";
 import Subscriptions from "./pages/Subscriptions";
 import SubscriptionDetail from "./pages/SubscriptionDetail";
+import GiftCards from "./pages/GiftCards";
+import GiftCardDetail from "./pages/GiftCardDetail";
 import Payments from "./pages/Payments";
 import AccountDetails from "./pages/AccountDetails";
 import { Toaster } from "./components/ui/sonner";
@@ -24,6 +26,8 @@ function App() {
               <Route path="orders/:orderId" element={<OrderDetail />} />
               <Route path="subscriptions" element={<Subscriptions />} />
               <Route path="subscriptions/:subId" element={<SubscriptionDetail />} />
+              <Route path="gift-cards" element={<GiftCards />} />
+              <Route path="gift-cards/:cardId" element={<GiftCardDetail />} />
               <Route path="payments" element={<Payments />} />
               <Route path="details" element={<AccountDetails />} />
             </Route>

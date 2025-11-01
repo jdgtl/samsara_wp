@@ -25,6 +25,7 @@ This React application replaces the default WooCommerce My Account pages with a 
 - Real-time subscription management (pause, resume, cancel)
 - Order history and detailed tracking
 - Payment method management (add, edit, delete)
+- Gift card management and redemption
 - Account details editing (profile, addresses)
 - Dashboard with subscription and membership overview
 - Membership content access via visual card grid with featured images
@@ -32,7 +33,32 @@ This React application replaces the default WooCommerce My Account pages with a 
 
 **Status:** 98% Complete - All core features migrated to live WordPress/WooCommerce with enhanced user experience.
 
-**Recent Updates (January 2025):**
+**Recent Updates (November 2025):**
+
+### Gift Cards Feature (November 1, 2025)
+- **Full Gift Card Management** - Complete integration with WooCommerce Gift Cards plugin
+  - View all gift cards (received and purchased) in unified list
+  - Filter by status (All, Active, Used, Expired)
+  - Search by gift card code
+  - Detailed transaction history for each card
+  - Visual differentiation: Gift icon for received, Shopping cart for purchased
+- **Gift Card Redemption** - Add gift cards to account balance for checkout
+  - "Add to Account Balance" button on unredeemed gift cards
+  - One-click redemption links gift card to user ID
+  - Automatic balance application at checkout
+  - Status badges: "In Account" (blue) vs "Ready to Redeem" (amber)
+  - CTA hidden once redeemed to prevent confusion
+- **Balance Checking** - Public gift card balance lookup
+  - Check any gift card balance without login
+  - Shows remaining balance, expiry date, and status
+  - Validates gift card codes
+- **Transaction History** - Detailed activity tracking
+  - All transactions: issued, used, credited, refunded, redeemed
+  - Visual formatting: Green +amount for credits, Red -amount for debits
+  - Chronological display with dates and notes
+  - Integrated with WooCommerce Gift Cards activity log
+
+**Previous Updates (January 2025):**
 
 ### User Experience Enhancements
 - **Semantic Navigation Links:** Full implementation of proper HTML link semantics (January 30, 2025)
@@ -132,6 +158,7 @@ This React application replaces the default WooCommerce My Account pages with a 
 - **WooCommerce REST API** - E-commerce data
 - **WooCommerce Subscriptions** - Subscription management
 - **WooCommerce Memberships** - Legacy membership content access
+- **WooCommerce Gift Cards** - Gift card management and redemption (by SomewhereWarm)
 - **Stripe Payment Gateway** - Payment method management
 - **Custom REST Endpoints** - Extended functionality
 
@@ -156,6 +183,8 @@ my-account-react/
 │   │   ├── Subscriptions.jsx
 │   │   ├── SubscriptionDetail.jsx
 │   │   ├── Payments.jsx
+│   │   ├── GiftCards.jsx
+│   │   ├── GiftCardDetail.jsx
 │   │   └── AccountDetails.jsx
 │   │
 │   ├── contexts/            # React Context providers
@@ -171,6 +200,7 @@ my-account-react/
 │   │   ├── useCustomer.js
 │   │   ├── usePaymentMethods.js
 │   │   ├── useMemberships.js
+│   │   ├── useGiftCards.js
 │   │   └── useDashboard.js
 │   │
 │   ├── lib/                 # Utility functions
@@ -203,6 +233,7 @@ my-account-react/
 - WordPress 5.8+ with WooCommerce installed
 - WooCommerce Subscriptions plugin (for subscription management)
 - WooCommerce Memberships plugin (for legacy membership content)
+- WooCommerce Gift Cards plugin v2.7.1+ by SomewhereWarm (for gift card features)
 - WooCommerce Stripe Payment Gateway plugin (for payment methods)
 - Local WP or similar WordPress development environment
 
@@ -434,6 +465,11 @@ PUT    /wp-json/samsara/v1/customer-addresses       # Update addresses
 POST   /wp-json/samsara/v1/avatar/upload            # Upload custom avatar image (max 5MB, validates type)
 GET    /wp-json/samsara/v1/avatar/preferences       # Get user's saved avatar preferences
 PUT    /wp-json/samsara/v1/avatar/preferences       # Save avatar type and selection
+GET    /wp-json/samsara/v1/gift-cards               # Get user's gift cards (received and purchased)
+GET    /wp-json/samsara/v1/gift-cards/{id}          # Get single gift card details with transaction history
+GET    /wp-json/samsara/v1/gift-cards/balance/{code} # Check gift card balance by code (public)
+POST   /wp-json/samsara/v1/gift-cards/{id}/redeem   # Redeem gift card to account for checkout use
+GET    /wp-json/samsara/v1/orders/{id}/gift-cards   # Get gift cards purchased in specific order
 ```
 
 ### Authentication

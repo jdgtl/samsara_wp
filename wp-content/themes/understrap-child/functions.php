@@ -20,6 +20,11 @@ require get_stylesheet_directory() . '/inc/nav.php';
 require get_stylesheet_directory() . '/inc/widgets.php';
 require get_stylesheet_directory() . '/inc/sidebars.php';
 require get_stylesheet_directory() . '/inc/cancellation-eligibility-endpoint.php';
+require get_stylesheet_directory() . '/inc/gift-cards-endpoints.php';
+require get_stylesheet_directory() . '/inc/gift-card-balance-checker-shortcode.php';
+require get_stylesheet_directory() . '/inc/gift-card-modal.php';
+require get_stylesheet_directory() . '/inc/gift-card-debug.php';
+require get_stylesheet_directory() . '/inc/fix-gift-card-option.php';
 
 require_once get_stylesheet_directory() . '/inc/Mobile_Detect.php';
 global $detect;
@@ -1427,6 +1432,53 @@ function samsara_register_custom_api_routes() {
         'methods' => 'PUT',
         'callback' => 'samsara_save_avatar_preferences',
         'permission_callback' => 'samsara_check_authentication',
+    ));
+
+    // Gift Cards endpoints
+    register_rest_route('samsara/v1', '/gift-cards', array(
+        'methods' => 'GET',
+        'callback' => 'samsara_get_user_gift_cards',
+        'permission_callback' => 'samsara_check_authentication',
+    ));
+
+    register_rest_route('samsara/v1', '/gift-cards/(?P<id>\d+)', array(
+        'methods' => 'GET',
+        'callback' => 'samsara_get_gift_card',
+        'permission_callback' => 'samsara_check_authentication',
+    ));
+
+    register_rest_route('samsara/v1', '/gift-cards/balance/(?P<code>[a-zA-Z0-9-]+)', array(
+        'methods' => 'GET',
+        'callback' => 'samsara_check_gift_card_balance',
+        'permission_callback' => 'samsara_check_authentication',
+    ));
+
+    // Get gift cards for a specific order
+    register_rest_route('samsara/v1', '/orders/(?P<id>\d+)/gift-cards', array(
+        'methods' => 'GET',
+        'callback' => 'samsara_get_order_gift_cards',
+        'permission_callback' => 'samsara_check_authentication',
+        'args' => array(
+            'id' => array(
+                'validate_callback' => function($param, $request, $key) {
+                    return is_numeric($param);
+                }
+            ),
+        ),
+    ));
+
+    // Redeem gift card to account
+    register_rest_route('samsara/v1', '/gift-cards/(?P<id>\d+)/redeem', array(
+        'methods' => 'POST',
+        'callback' => 'samsara_redeem_gift_card_to_account',
+        'permission_callback' => 'samsara_check_authentication',
+        'args' => array(
+            'id' => array(
+                'validate_callback' => function($param, $request, $key) {
+                    return is_numeric($param);
+                }
+            ),
+        ),
     ));
 }
 add_action('rest_api_init', 'samsara_register_custom_api_routes');

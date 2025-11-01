@@ -15,7 +15,10 @@ import {
   LogOut,
   X,
   UserCog,
-  ArrowLeft
+  ArrowLeft,
+  Gift,
+  HelpCircle,
+  ExternalLink
 } from 'lucide-react';
 
 const Sidebar = ({ isOpen, onClose }) => {
@@ -60,7 +63,9 @@ const Sidebar = ({ isOpen, onClose }) => {
     { icon: ShoppingBag, label: 'Orders', path: '/orders' },
     { icon: Repeat, label: 'Subscriptions', path: '/subscriptions' },
     { icon: CreditCard, label: 'Payments', path: '/payments' },
+    { icon: Gift, label: 'Gift Cards', path: '/gift-cards' },
     { icon: User, label: 'Account', path: '/details' },
+    { icon: HelpCircle, label: 'Support', path: '/support', external: true, url: 'mailto:info@samsaraexperience.com' },
   ];
 
   const isActive = (path) => {
@@ -80,7 +85,7 @@ const Sidebar = ({ isOpen, onClose }) => {
     <>
       {/* Desktop Sidebar (≥ md / 768px) */}
       <aside
-        className="hidden md:flex md:sticky top-16 left-0 h-[calc(100vh-4rem)] w-72 bg-stone-50 border-r border-stone-200 flex-col relative z-50"
+        className="hidden md:flex w-72 bg-stone-50 border-r border-stone-200 flex-col"
         data-testid="sidebar-desktop"
       >
         {/* User Profile Section */}
@@ -139,12 +144,31 @@ const Sidebar = ({ isOpen, onClose }) => {
           </>
         )}
 
-        {/* Navigation Items - Scrollable with padding for logout */}
-        <nav className="flex-1 overflow-y-auto p-4 pb-20 space-y-1" data-testid="sidebar-nav">
+        {/* Navigation Items */}
+        <nav className="p-4 space-y-1" data-testid="sidebar-nav">
           {navItems.map((item) => {
             const Icon = item.icon;
             const active = isActive(item.path);
 
+            // Render external link
+            if (item.external) {
+              return (
+                <a
+                  key={item.path}
+                  href={item.url}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="group flex items-center gap-3 px-4 py-3 rounded-lg transition-colors text-stone-700 hover:bg-stone-200 focus:outline-none focus:ring-2 focus:ring-samsara-gold focus:ring-offset-2"
+                  data-testid={`nav-${item.label.toLowerCase()}`}
+                >
+                  <Icon className="h-5 w-5" />
+                  <span className="font-medium flex-1">{item.label}</span>
+                  <ExternalLink className="h-4 w-4 opacity-0 group-hover:opacity-100 transition-opacity text-stone-400 drop-shadow-[0_1px_1px_rgba(255,255,255,0.8)]" style={{ filter: 'invert(0.1)' }} />
+                </a>
+              );
+            }
+
+            // Render internal link
             return (
               <Link
                 key={item.path}
@@ -167,19 +191,20 @@ const Sidebar = ({ isOpen, onClose }) => {
           })}
         </nav>
 
-        {/* Logout Button - Fixed at bottom */}
-        <div className="absolute bottom-0 left-0 right-0 border-t border-stone-200 bg-stone-50">
-          <div className="p-4">
-            <Button
-              variant="outline"
-              className="w-full justify-start gap-3 border-stone-300 text-stone-700 hover:bg-red-50 hover:text-red-700 hover:border-red-300"
-              onClick={handleLogout}
-              data-testid="logout-btn"
-            >
-              <LogOut className="h-5 w-5" />
-              <span>Logout</span>
-            </Button>
-          </div>
+        {/* Logout Button - Spacer for fixed positioning */}
+        <div className="h-20"></div>
+
+        {/* Logout Button - Fixed */}
+        <div className="p-4 fixed bottom-0 w-72 left-0 bg-stone-50 border-t border-stone-200 border-r border-stone-200">
+          <Button
+            variant="outline"
+            className="w-full justify-start gap-3 border-stone-300 text-stone-700 hover:bg-red-50 hover:text-red-700 hover:border-red-300"
+            onClick={handleLogout}
+            data-testid="logout-btn"
+          >
+            <LogOut className="h-5 w-5" />
+            <span>Logout</span>
+          </Button>
         </div>
       </aside>
 
@@ -189,7 +214,7 @@ const Sidebar = ({ isOpen, onClose }) => {
         data-testid="bottom-nav-mobile"
       >
         <div className="flex items-center justify-around px-2 py-2">
-          {navItems.map((item) => {
+          {navItems.filter(item => !item.external).map((item) => {
             const Icon = item.icon;
             const active = isActive(item.path);
 

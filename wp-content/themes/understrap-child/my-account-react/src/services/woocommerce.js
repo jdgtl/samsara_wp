@@ -305,6 +305,39 @@ export const transformers = {
 };
 
 /**
+ * Gift Cards API
+ */
+export const giftCardsApi = {
+  /**
+   * Get all gift cards for current user
+   */
+  async getGiftCards(params = {}) {
+    return await get('samsara/v1/gift-cards', params);
+  },
+
+  /**
+   * Get single gift card by ID
+   */
+  async getGiftCard(cardId) {
+    return await get(`samsara/v1/gift-cards/${cardId}`);
+  },
+
+  /**
+   * Check gift card balance by code
+   */
+  async checkBalance(code) {
+    return await get(`samsara/v1/gift-cards/balance/${code}`);
+  },
+
+  /**
+   * Redeem gift card to account for checkout use
+   */
+  async redeemToAccount(cardId) {
+    return await post(`samsara/v1/gift-cards/${cardId}/redeem`);
+  },
+};
+
+/**
  * Avatar API
  */
 export const avatarApi = {
@@ -353,6 +386,7 @@ export default {
   paymentMethods: paymentMethodsApi,
   products: productsApi,
   stats: statsApi,
+  giftCards: giftCardsApi,
   avatars: avatarApi,
   transformers,
 };

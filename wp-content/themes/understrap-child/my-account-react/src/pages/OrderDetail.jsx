@@ -6,7 +6,7 @@ import { Button } from '../components/ui/button';
 import { Separator } from '../components/ui/separator';
 import { Alert, AlertDescription } from '../components/ui/alert';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '../components/ui/dialog';
-import { ArrowLeft, Loader2, AlertTriangle, Repeat } from 'lucide-react';
+import { ArrowLeft, Loader2, AlertTriangle, Repeat, Gift } from 'lucide-react';
 import { useOrder } from '../hooks/useOrders';
 import { get } from '../services/api';
 
@@ -20,6 +20,10 @@ const OrderDetail = () => {
   // Fetch subscription info for this order
   const [subscriptionInfo, setSubscriptionInfo] = useState(null);
   const [subscriptionLoading, setSubscriptionLoading] = useState(false);
+
+  // Fetch gift cards for this order
+  const [giftCards, setGiftCards] = useState([]);
+  const [giftCardsLoading, setGiftCardsLoading] = useState(false);
 
   useEffect(() => {
     const fetchSubscriptionInfo = async () => {
@@ -37,7 +41,28 @@ const OrderDetail = () => {
       }
     };
 
+    const fetchGiftCards = async () => {
+      if (!orderId) return;
+
+      try {
+        setGiftCardsLoading(true);
+        const data = await get(`samsara/v1/orders/${orderId}/gift-cards`);
+        console.log('🎁 Gift cards API response for order', orderId, ':', data);
+        console.log('🎁 Is array?', Array.isArray(data));
+        console.log('🎁 Length:', data?.length);
+        console.log('🎁 Type:', typeof data);
+        // Ensure we always set an array, even if API returns null or empty string
+        setGiftCards(Array.isArray(data) ? data : []);
+      } catch (err) {
+        console.error('Error fetching gift cards:', err);
+        setGiftCards([]);
+      } finally {
+        setGiftCardsLoading(false);
+      }
+    };
+
     fetchSubscriptionInfo();
+    fetchGiftCards();
   }, [orderId]);
 
   // Loading state
@@ -130,6 +155,31 @@ const OrderDetail = () => {
         {displayName}
       </Badge>
     );
+  };
+
+  const getGiftCardStatusBadge = (status) => {
+    const variants = {
+      active: { variant: 'default', className: 'bg-emerald-100 text-emerald-800 hover:bg-emerald-100' },
+      used: { variant: 'secondary', className: 'bg-stone-200 text-stone-700 hover:bg-stone-200' },
+      expired: { variant: 'outline', className: 'bg-red-100 text-red-800 hover:bg-red-100' },
+      inactive: { variant: 'outline', className: 'bg-amber-100 text-amber-800 hover:bg-amber-100' },
+    };
+
+    const config = variants[status] || { variant: 'outline', className: 'bg-stone-100 text-stone-800 hover:bg-stone-100' };
+    const displayName = status.charAt(0).toUpperCase() + status.slice(1);
+
+    return (
+      <Badge variant={config.variant} className={config.className}>
+        {displayName}
+      </Badge>
+    );
+  };
+
+  const formatCurrency = (amount) => {
+    return new Intl.NumberFormat('en-US', {
+      style: 'currency',
+      currency: 'USD',
+    }).format(amount);
   };
 
   return (
@@ -228,7 +278,9 @@ const OrderDetail = () => {
           <CardTitle>Payment Method</CardTitle>
         </CardHeader>
         <CardContent>
-          <p className="text-stone-900" data-testid="payment-method">{order.paymentMethod}</p>
+          <p className="text-stone-900" data-testid="payment-method">
+            {order.paymentMethod || (order.total === 0 ? 'Gift Card (Paid in full)' : 'Not specified')}
+          </p>
         </CardContent>
       </Card>
 
@@ -267,6 +319,53 @@ const OrderDetail = () => {
                 View
               </Button>
             </Link>
+          </CardContent>
+        </Card>
+      )}
+
+      {/* Related Gift Cards */}
+      {giftCards && giftCards.length > 0 && (
+        <Card data-testid="gift-cards-section">
+          <CardHeader>
+            <CardTitle>Gift Cards</CardTitle>
+            <CardDescription>
+              {giftCards.length === 1
+                ? 'This order includes 1 gift card'
+                : `This order includes ${giftCards.length} gift cards`}
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <div className="space-y-3">
+              {giftCards.map((giftCard) => (
+                <Link
+                  key={giftCard.id}
+                  to={`/gift-cards/${giftCard.id}`}
+                  className="flex justify-between items-center p-4 border border-stone-200 rounded-lg hover:bg-stone-50 cursor-pointer transition-colors no-underline hover:no-underline"
+                  data-testid={`gift-card-${giftCard.id}`}
+                >
+                  <div className="flex items-center gap-3">
+                    <Gift className="h-5 w-5 text-amber-600" />
+                    <div>
+                      <p className="font-medium text-stone-900 font-mono">{giftCard.code}</p>
+                      <p className="text-sm text-stone-600">
+                        {formatCurrency(giftCard.remaining)} remaining • To: {giftCard.recipient}
+                      </p>
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-3">
+                    {getGiftCardStatusBadge(giftCard.status)}
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      className="gap-2"
+                      data-testid={`view-gift-card-btn-${giftCard.id}`}
+                    >
+                      View
+                    </Button>
+                  </div>
+                </Link>
+              ))}
+            </div>
           </CardContent>
         </Card>
       )}

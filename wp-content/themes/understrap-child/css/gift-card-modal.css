@@ -1,0 +1,434 @@
+/**
+ * Gift Card Balance Checker Modal Styles
+ */
+
+/* Modal Overlay */
+.gc-modal {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    z-index: 99999;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.gc-modal-overlay {
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background-color: rgba(0, 0, 0, 0.75);
+    backdrop-filter: blur(4px);
+}
+
+/* Modal Container */
+.gc-modal-container {
+    position: relative;
+    z-index: 100000;
+    width: 90%;
+    max-width: 500px;
+    margin: 1rem;
+    animation: modalSlideIn 0.3s ease-out;
+}
+
+@keyframes modalSlideIn {
+    from {
+        opacity: 0;
+        transform: translateY(-20px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+/* Modal Content */
+.gc-modal-content {
+    background: #ffffff;
+    border-radius: 16px;
+    box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
+    max-height: 90vh;
+    overflow-y: auto;
+}
+
+/* Modal Header */
+.gc-modal-header {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    padding: 1.5rem 1.5rem 1rem 1.5rem;
+    border-bottom: 1px solid #e5e7eb;
+}
+
+.gc-modal-title {
+    display: flex;
+    align-items: flex-start;
+    gap: 0.75rem;
+    font-size: 1.75rem !important;
+    font-weight: 700;
+    color: #1c1917;
+    margin: 0;
+    line-height: 1.2;
+    flex: 1;
+    padding-right: 1rem;
+}
+
+.gc-modal-title svg {
+    color: #d4af37;
+    flex-shrink: 0;
+    margin-top: 0.125rem;
+}
+
+.gc-modal-close {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 2.5rem;
+    height: 2.5rem;
+    padding: 0;
+    background: transparent;
+    border: none;
+    border-radius: 8px;
+    cursor: pointer;
+    color: #57534e;
+    transition: all 0.2s ease;
+}
+
+.gc-modal-close:hover {
+    background-color: #f5f5f4;
+    color: #1c1917;
+}
+
+/* Modal Body */
+.gc-modal-body {
+    padding: 1.5rem;
+}
+
+.gc-modal-description {
+    font-size: 0.875rem;
+    color: #57534e;
+    margin: 0 0 1.5rem 0;
+    line-height: 1.5;
+}
+
+/* Form Styles */
+.gc-form {
+    margin-bottom: 1rem;
+}
+
+.gc-form-group {
+    margin-bottom: 1rem;
+}
+
+.gc-label {
+    display: block;
+    font-size: 0.875rem;
+    font-weight: 600;
+    color: #1c1917;
+    margin-bottom: 0.5rem;
+}
+
+.gc-input {
+    width: 100%;
+    padding: 0.75rem 1rem;
+    font-size: 1rem;
+    font-family: 'Courier New', Courier, monospace;
+    color: #1c1917;
+    background-color: #ffffff;
+    border: 2px solid #d6d3d1;
+    border-radius: 8px;
+    outline: none;
+    transition: all 0.2s ease;
+}
+
+.gc-input:focus {
+    border-color: #d4af37;
+    box-shadow: 0 0 0 3px rgba(212, 175, 55, 0.1);
+}
+
+.gc-input::placeholder {
+    color: #a8a29e;
+}
+
+.gc-submit-btn {
+    width: 100%;
+    padding: 0.875rem 1.5rem;
+    font-size: 1rem;
+    font-weight: 600;
+    color: #1c1917;
+    background-color: #d4af37;
+    border: none;
+    border-radius: 8px;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.gc-submit-btn:hover:not(:disabled) {
+    background-color: #c09d2f;
+    transform: translateY(-1px);
+    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+}
+
+.gc-submit-btn:active:not(:disabled) {
+    transform: translateY(0);
+}
+
+.gc-submit-btn:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+}
+
+.gc-btn-loading {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.gc-spinner {
+    display: inline-block;
+    width: 16px;
+    height: 16px;
+    border: 2px solid rgba(28, 25, 23, 0.3);
+    border-top-color: #1c1917;
+    border-radius: 50%;
+    animation: spin 0.6s linear infinite;
+}
+
+@keyframes spin {
+    to { transform: rotate(360deg); }
+}
+
+/* Results Styles */
+.gc-results {
+    margin-top: 1.5rem;
+    padding-top: 1.5rem;
+    border-top: 1px solid #e5e7eb;
+}
+
+/* Success Result */
+.gc-success {
+    animation: fadeIn 0.3s ease-in;
+}
+
+@keyframes fadeIn {
+    from { opacity: 0; }
+    to { opacity: 1; }
+}
+
+.gc-success-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 1rem;
+    padding-bottom: 1rem;
+    border-bottom: 1px solid #d1fae5;
+}
+
+.gc-success-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    font-size: 0.875rem;
+    font-weight: 600;
+    color: #166534;
+}
+
+.gc-success-badge svg {
+    color: #16a34a;
+}
+
+.gc-status-badge {
+    display: inline-block;
+    padding: 0.25rem 0.75rem;
+    font-size: 0.75rem;
+    font-weight: 600;
+    border-radius: 9999px;
+}
+
+.gc-status-active {
+    background-color: #d1fae5;
+    color: #065f46;
+}
+
+.gc-status-inactive {
+    background-color: #fef3c7;
+    color: #92400e;
+}
+
+.gc-status-used {
+    background-color: #e5e7eb;
+    color: #44403c;
+}
+
+.gc-code-display {
+    margin-bottom: 1.5rem;
+    padding: 1rem;
+    background-color: #f0fdf4;
+    border-radius: 8px;
+    text-align: center;
+}
+
+.gc-code-label {
+    display: block;
+    font-size: 0.75rem;
+    font-weight: 600;
+    color: #166534;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    margin-bottom: 0.25rem;
+}
+
+.gc-code-display code {
+    font-size: 1.25rem;
+    font-weight: 700;
+    color: #14532d;
+    font-family: 'Courier New', Courier, monospace;
+    letter-spacing: 0.05em;
+}
+
+.gc-details-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 1rem;
+    margin-bottom: 1.5rem;
+}
+
+.gc-detail-card {
+    padding: 1rem;
+    background-color: #fafaf9;
+    border: 1px solid #e7e5e4;
+    border-radius: 8px;
+    text-align: center;
+}
+
+.gc-detail-label {
+    display: block;
+    font-size: 0.75rem;
+    font-weight: 500;
+    color: #57534e;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    margin-bottom: 0.5rem;
+}
+
+.gc-detail-value {
+    display: block;
+    font-size: 1.125rem;
+    font-weight: 700;
+    color: #1c1917;
+}
+
+.gc-balance {
+    font-size: 1.5rem;
+    color: #15803d;
+}
+
+/* Error Result */
+.gc-error {
+    text-align: center;
+    animation: fadeIn 0.3s ease-in;
+}
+
+.gc-error-icon {
+    display: flex;
+    justify-content: center;
+    margin-bottom: 1rem;
+}
+
+.gc-error-icon svg {
+    color: #dc2626;
+}
+
+.gc-error-message {
+    font-size: 0.875rem;
+    color: #991b1b;
+    font-weight: 500;
+    margin: 0 0 1.5rem 0;
+    padding: 1rem;
+    background-color: #fef2f2;
+    border: 1px solid #fecaca;
+    border-radius: 8px;
+}
+
+/* Reset Button */
+.gc-reset-btn {
+    width: 100%;
+    padding: 0.75rem 1rem;
+    font-size: 0.875rem;
+    font-weight: 600;
+    color: #57534e;
+    background-color: #ffffff;
+    border: 1px solid #d6d3d1;
+    border-radius: 8px;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.gc-reset-btn:hover {
+    background-color: #f5f5f4;
+    border-color: #a8a29e;
+}
+
+/* Mobile Responsive */
+@media (max-width: 640px) {
+    .gc-modal-container {
+        width: 95%;
+        margin: 0.5rem;
+    }
+
+    .gc-modal-content {
+        max-height: 95vh;
+    }
+
+    .gc-modal-header {
+        padding: 1.25rem 1.25rem 0.75rem 1.25rem;
+    }
+
+    .gc-modal-title {
+        font-size: 1.125rem;
+        gap: 0.5rem;
+    }
+
+    .gc-modal-title svg {
+        width: 20px;
+        height: 20px;
+    }
+
+    .gc-modal-body {
+        padding: 1.25rem;
+    }
+
+    .gc-details-grid {
+        grid-template-columns: 1fr;
+    }
+
+    .gc-code-display code {
+        font-size: 1rem;
+    }
+
+    .gc-modal-close {
+        width: 2rem;
+        height: 2rem;
+    }
+}
+
+/* Accessibility */
+.gc-modal:focus {
+    outline: none;
+}
+
+.gc-modal-close:focus,
+.gc-submit-btn:focus,
+.gc-reset-btn:focus {
+    outline: 2px solid #d4af37;
+    outline-offset: 2px;
+}
+
+/* Prevent body scroll when modal is open */
+body.gc-modal-open {
+    overflow: hidden;
+}
