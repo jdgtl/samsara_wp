@@ -3215,3 +3215,14 @@ require get_stylesheet_directory() . '/query-athlete-subscribers.php';
  * Grant memberships script for athlete team subscribers
  */
 require get_stylesheet_directory() . '/grant-athlete-team-memberships.php';
+
+
+/**
+ * Debug payment methods for user 843
+ */
+require get_stylesheet_directory() . '/debug-payment-methods-843.php';
+
+/**
+ * Cleanup duplicate payment methods script
+ */
+require get_stylesheet_directory() . '/cleanup-duplicate-payment-methods.php';

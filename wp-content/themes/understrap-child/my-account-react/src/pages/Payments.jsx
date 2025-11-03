@@ -242,7 +242,7 @@ const Payments = () => {
                 data-testid="add-payment-method-btn"
               >
                 <Plus className="h-4 w-4" />
-                Add Card
+                Card
               </Button>
             </div>
           </div>
