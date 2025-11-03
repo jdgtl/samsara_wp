@@ -1113,7 +1113,7 @@ function samsara_enqueue_react_my_account() {
     if (!is_page_template('template-my-account.php')) {
         return;
     }
-    
+
     // Enqueue Stripe.js FIRST for payment methods
     wp_enqueue_script(
         'stripe-js',
@@ -1156,7 +1156,7 @@ function samsara_enqueue_react_my_account() {
         array(),
         filemtime(get_stylesheet_directory() . '/my-account-react/build/css/my-account.css')
     );
-    
+
     // Check if User Switching plugin is active and user is switched
     $is_switched = false;
     $original_user = null;
@@ -3186,17 +3186,17 @@ function samsara_save_avatar_preferences($request) {
  */
 function samsara_add_membership_plans_menu() {
     add_menu_page(
-        'Theme Options',           // Page title
-        'Theme Options',           // Menu title
+        'Membership Options',           // Page title
+        'Membership Optionss',           // Menu title
         'manage_options',          // Capability
-        'samsara-theme-options',   // Menu slug
+        'membership-options',   // Menu slug
         '',                        // Function (empty since this is just a parent)
         'dashicons-admin-generic', // Icon
         59                         // Position
     );
-    
+
     add_submenu_page(
-        'samsara-theme-options',                        // Parent slug
+        'membership-options',                        // Parent slug
         'Membership Plans',                             // Page title
         'Membership Plans',                             // Menu title
         'manage_options',                               // Capability
@@ -3205,3 +3205,13 @@ function samsara_add_membership_plans_menu() {
     );
 }
 add_action('admin_menu', 'samsara_add_membership_plans_menu');
+
+/**
+ * Query script for athlete team subscribers
+ */
+require get_stylesheet_directory() . '/query-athlete-subscribers.php';
+
+/**
+ * Grant memberships script for athlete team subscribers
+ */
+require get_stylesheet_directory() . '/grant-athlete-team-memberships.php';
