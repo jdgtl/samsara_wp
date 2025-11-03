@@ -3180,3 +3180,28 @@ function samsara_save_avatar_preferences($request) {
         'message' => 'Avatar preferences saved successfully',
     ), 200);
 }
+
+/**
+ * Add Membership Plans link to admin menu
+ */
+function samsara_add_membership_plans_menu() {
+    add_menu_page(
+        'Theme Options',           // Page title
+        'Theme Options',           // Menu title
+        'manage_options',          // Capability
+        'samsara-theme-options',   // Menu slug
+        '',                        // Function (empty since this is just a parent)
+        'dashicons-admin-generic', // Icon
+        59                         // Position
+    );
+    
+    add_submenu_page(
+        'samsara-theme-options',                        // Parent slug
+        'Membership Plans',                             // Page title
+        'Membership Plans',                             // Menu title
+        'manage_options',                               // Capability
+        'edit.php?post_type=wc_membership_plan',       // Menu slug (redirect URL)
+        ''                                              // Function (empty for redirect)
+    );
+}
+add_action('admin_menu', 'samsara_add_membership_plans_menu');
