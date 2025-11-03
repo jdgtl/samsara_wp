@@ -89,47 +89,66 @@ const Dashboard = () => {
 
   const basecampUrl = window.samsaraMyAccount?.basecampUrl || 'https://videos.samsaraexperience.com';
 
-  // Check if user has Basecamp access based on memberships OR subscriptions
+  // Check if user has Basecamp access
+  // Users with Athlete Team (Mandala, Momentum, Matrix, Alumni, Recon) or Basecamp subscriptions/memberships get Basecamp access
   // First check memberships
   const hasBasecampMembership = (memberships || []).some(membership => {
     const slug = membership.slug?.toLowerCase() || '';
     const name = membership.name?.toLowerCase() || '';
     const isActive = membership.status === 'active';
 
-    return isActive && (
-      slug.includes('basecamp') ||
-      slug.includes('athlete-team') ||
-      name.includes('basecamp') ||
-      name.includes('athlete team')
+    // Check for specific team names or basecamp
+    const hasAthleteTeam = (
+      slug.includes('mandala') || name.includes('mandala') ||
+      slug.includes('momentum') || name.includes('momentum') ||
+      slug.includes('matrix') || name.includes('matrix') ||
+      slug.includes('alumni') || name.includes('alumni') ||
+      slug.includes('recon') || name.includes('recon') ||
+      slug.includes('athlete-team') || slug.includes('athlete_team')
     );
+    const hasBasecamp = slug.includes('basecamp') || name.includes('basecamp');
+
+    return isActive && (hasAthleteTeam || hasBasecamp);
   });
 
-  // Also check if they have an active subscription (subscriptions may grant access even without explicit membership)
-  // Check subscription product names for Basecamp-granting products
+  // Also check if they have an active subscription
+  // Athlete Team (Mandala, Momentum, Matrix, Alumni, Recon) or Basecamp subscriptions grant Basecamp access
   const hasBasecampSubscription = (subscriptions || []).some(subscription => {
     const planName = subscription.planName?.toLowerCase() || '';
     const isActive = subscription.status === 'active';
 
-    return isActive && (
-      planName.includes('athlete team') ||
-      planName.includes('basecamp')
+    // Check for specific team names or basecamp
+    const hasAthleteTeam = (
+      planName.includes('mandala') ||
+      planName.includes('momentum') ||
+      planName.includes('matrix') ||
+      planName.includes('alumni') ||
+      planName.includes('recon')
     );
+    const hasBasecamp = planName.includes('basecamp');
+
+    return isActive && (hasAthleteTeam || hasBasecamp);
   });
 
   const hasBasecampAccess = hasBasecampMembership || hasBasecampSubscription;
 
-  // Filter memberships: exclude Athlete Team and Basecamp (they show in primary card)
+  // Filter memberships: exclude Athlete Team (Mandala, Momentum, Matrix, Alumni, Recon) and Basecamp (they show in primary card)
   // and apply the status filter
   const filteredMemberships = (memberships || []).filter(m => {
     const slug = m.slug?.toLowerCase() || '';
     const name = m.name?.toLowerCase() || '';
 
-    // Exclude Athlete Team and Basecamp memberships
-    const isAthleteTeamOrBasecamp =
-      slug.includes('athlete-team') ||
-      slug.includes('basecamp') ||
-      name.includes('athlete team') ||
-      name.includes('basecamp');
+    // Exclude Athlete Team memberships (by team name) and Basecamp memberships
+    const hasAthleteTeam = (
+      slug.includes('mandala') || name.includes('mandala') ||
+      slug.includes('momentum') || name.includes('momentum') ||
+      slug.includes('matrix') || name.includes('matrix') ||
+      slug.includes('alumni') || name.includes('alumni') ||
+      slug.includes('recon') || name.includes('recon') ||
+      slug.includes('athlete-team') || slug.includes('athlete_team')
+    );
+    const hasBasecamp = slug.includes('basecamp') || name.includes('basecamp');
+    const isAthleteTeamOrBasecamp = hasAthleteTeam || hasBasecamp;
 
     if (isAthleteTeamOrBasecamp) return false;
 

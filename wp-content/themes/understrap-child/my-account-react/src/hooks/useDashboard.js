@@ -19,33 +19,48 @@ export const useDashboard = () => {
   const { paymentMethods, loading: paymentsLoading, error: paymentsError, refetch: refetchPayments } = usePaymentMethods();
 
   // Calculate derived data
-  // Prioritize Athlete Team FIRST, then Basecamp as primary subscription/membership
+  // Prioritize Athlete Team FIRST, then Basecamp, then any active subscription/membership
   // Check both subscriptions AND manually-added memberships
-  // Only show Athlete Team or Basecamp at the top - nothing else
   const primarySubscription = (() => {
     // DEBUG: Log what data we're working with
     console.log('DEBUG - All Subscriptions:', subscriptions);
     console.log('DEBUG - All Memberships:', memberships);
 
-    // First priority: Active Athlete Team subscription
+    // First priority: Active Athlete Team subscription (Mandala, Momentum, Matrix, Alumni, Recon)
     const athleteTeamSub = subscriptions.find(sub => {
       const planName = sub.planName?.toLowerCase() || '';
-      return sub.status === 'active' && planName.includes('athlete team');
+      const isActive = sub.status === 'active';
+      // Check for specific team names
+      const isAthleteTeam = (
+        planName.includes('mandala') ||
+        planName.includes('momentum') ||
+        planName.includes('matrix') ||
+        planName.includes('alumni') ||
+        planName.includes('recon')
+      );
+      return isActive && isAthleteTeam;
     });
     if (athleteTeamSub) {
       console.log('DEBUG - Found Athlete Team subscription:', athleteTeamSub);
       return athleteTeamSub;
     }
 
-    // Second priority: Active Athlete Team membership (manually added, no subscription)
+    // Second priority: Active Athlete Team membership (Mandala, Momentum, Matrix, Alumni, Recon)
     const athleteTeamMembership = memberships.find(m => {
       const slug = m.slug?.toLowerCase() || '';
       const name = m.name?.toLowerCase() || '';
       console.log('DEBUG - Checking membership:', { name: m.name, slug: m.slug, status: m.status });
-      return m.status === 'active' && (
-        slug.includes('athlete-team') ||
-        name.includes('athlete team')
+      const isActive = m.status === 'active';
+      // Check for specific team names in slug or name
+      const isAthleteTeam = (
+        slug.includes('mandala') || name.includes('mandala') ||
+        slug.includes('momentum') || name.includes('momentum') ||
+        slug.includes('matrix') || name.includes('matrix') ||
+        slug.includes('alumni') || name.includes('alumni') ||
+        slug.includes('recon') || name.includes('recon') ||
+        slug.includes('athlete-team') || slug.includes('athlete_team')
       );
+      return isActive && isAthleteTeam;
     });
     if (athleteTeamMembership) {
       console.log('DEBUG - Found Athlete Team membership:', athleteTeamMembership);
@@ -67,7 +82,10 @@ export const useDashboard = () => {
       const planName = sub.planName?.toLowerCase() || '';
       return sub.status === 'active' && planName.includes('basecamp');
     });
-    if (basecampSub) return basecampSub;
+    if (basecampSub) {
+      console.log('DEBUG - Found Basecamp subscription:', basecampSub);
+      return basecampSub;
+    }
 
     // Fourth priority: Active Basecamp membership (manually added, no subscription)
     const basecampMembership = memberships.find(m => {
@@ -79,6 +97,7 @@ export const useDashboard = () => {
       );
     });
     if (basecampMembership) {
+      console.log('DEBUG - Found Basecamp membership:', basecampMembership);
       // Convert membership to subscription-like format for display
       return {
         id: `membership-${basecampMembership.id}`,
@@ -92,7 +111,32 @@ export const useDashboard = () => {
       };
     }
 
-    // If no Athlete Team or Basecamp, don't show anything as primary
+    // Fifth priority: ANY active subscription (fallback for other subscription types)
+    const anyActiveSub = subscriptions.find(sub => sub.status === 'active');
+    if (anyActiveSub) {
+      console.log('DEBUG - Found any active subscription:', anyActiveSub);
+      return anyActiveSub;
+    }
+
+    // Sixth priority: ANY active membership (fallback for manually-added memberships)
+    const anyActiveMembership = memberships.find(m => m.status === 'active');
+    if (anyActiveMembership) {
+      console.log('DEBUG - Found any active membership:', anyActiveMembership);
+      // Convert membership to subscription-like format for display
+      return {
+        id: `membership-${anyActiveMembership.id}`,
+        planName: anyActiveMembership.name,
+        status: anyActiveMembership.status,
+        startDate: anyActiveMembership.startedAt,
+        nextPaymentDate: null,
+        nextPaymentAmount: null,
+        billingInterval: null,
+        isMembership: true, // Flag to indicate this is a membership, not subscription
+      };
+    }
+
+    // No active subscriptions or memberships found
+    console.log('DEBUG - No active subscription or membership found');
     return null;
   })();
 

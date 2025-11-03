@@ -10,10 +10,9 @@
  * happen. When this occurs the version of the template file will be bumped and
  * the readme will list any important changes.
  *
- * @see     https://docs.woocommerce.com/document/template-structure/
- * @author  WooThemes
- * @package WooCommerce/Templates
- * @version 3.6.1
+ * @see         https://woocommerce.com/document/template-structure/
+ * @package     WooCommerce\Templates
+ * @version     9.2.0
  */
 
 if ( ! defined( 'ABSPATH' ) ) {
@@ -22,11 +21,14 @@ if ( ! defined( 'ABSPATH' ) ) {
 
 global $product;
 
-echo apply_filters( // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped
-	'woocommerce_loop_add_to_cart_link',
+$aria_describedby = isset( $args['aria-describedby_text'] ) ? sprintf( 'aria-describedby="woocommerce_loop_add_to_cart_link_describedby_%s"', esc_attr( $product->get_id() ) ) : '';
+
+echo apply_filters(
+	'woocommerce_loop_add_to_cart_link', // WPCS: XSS ok.
 	sprintf(
-		'<div class="add-to-cart-container"><a href="%s" data-quantity="%s" class="%s product_type_%s single_add_to_cart_button btn btn-outline-primary btn-block %s" %s> %s</a></div>',
+		'<div class="add-to-cart-container"><a href="%s" %s data-quantity="%s" class="%s product_type_%s single_add_to_cart_button btn btn-outline-primary btn-block %s" %s>%s</a></div>',
 		esc_url( $product->add_to_cart_url() ),
+		$aria_describedby,
 		esc_attr( isset( $args['quantity'] ) ? $args['quantity'] : 1 ),
 		$product->is_purchasable() && $product->is_in_stock() ? 'add_to_cart_button' : '',
 		esc_attr( $product->get_type() ),
@@ -37,3 +39,9 @@ echo apply_filters( // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEsc
 	$product,
 	$args
 );
+?>
+<?php if ( isset( $args['aria-describedby_text'] ) ) : ?>
+	<span id="woocommerce_loop_add_to_cart_link_describedby_<?php echo esc_attr( $product->get_id() ); ?>" class="screen-reader-text">
+		<?php echo esc_html( $args['aria-describedby_text'] ); ?>
+	</span>
+<?php endif; ?>

@@ -6,6 +6,7 @@ import { Separator } from './ui/separator';
 import { Alert, AlertDescription } from './ui/alert';
 import AvatarDisplay from './AvatarDisplay';
 import { useAvatar } from '../contexts/AvatarContext';
+import { useDashboard } from '../hooks/useDashboard';
 import {
   LayoutDashboard,
   ShoppingBag,
@@ -24,6 +25,7 @@ import {
 const Sidebar = ({ isOpen, onClose }) => {
   const location = useLocation();
   const { avatarType, selectedEmoji, uploadedAvatarUrl, loading: avatarLoading } = useAvatar();
+  const { subscriptions, memberships } = useDashboard();
 
   // Get user data from WordPress global
   const userData = window.samsaraMyAccount?.userData || {
@@ -47,6 +49,68 @@ const Sidebar = ({ isOpen, onClose }) => {
         year: 'numeric'
       })
     : 'Recently';
+
+  // Determine athlete team and color
+  const getAthleteTeamInfo = () => {
+    // Team colors from brand guidelines
+    const teamConfig = {
+      mandala: { name: 'Mandala', color: '#2D9554' },
+      momentum: { name: 'Momentum', color: '#D4A127' },
+      matrix: { name: 'Matrix', color: '#BA4A52' },
+      alumni: { name: 'Alumni', color: '#0C000A' },
+      recon: { name: 'Recon+', color: '#0C000A' } // Same black as Alumni
+    };
+
+    // Check subscriptions first
+    const activeSubscription = (subscriptions || []).find(sub => {
+      const planName = sub.planName?.toLowerCase() || '';
+      const isActive = sub.status === 'active';
+      return isActive && (
+        planName.includes('mandala') ||
+        planName.includes('momentum') ||
+        planName.includes('matrix') ||
+        planName.includes('alumni') ||
+        planName.includes('recon')
+      );
+    });
+
+    if (activeSubscription) {
+      const planName = activeSubscription.planName.toLowerCase();
+      for (const [key, config] of Object.entries(teamConfig)) {
+        if (planName.includes(key)) {
+          return config;
+        }
+      }
+    }
+
+    // Check memberships if no subscription found
+    const activeMembership = (memberships || []).find(m => {
+      const slug = m.slug?.toLowerCase() || '';
+      const name = m.name?.toLowerCase() || '';
+      const isActive = m.status === 'active';
+      return isActive && (
+        slug.includes('mandala') || name.includes('mandala') ||
+        slug.includes('momentum') || name.includes('momentum') ||
+        slug.includes('matrix') || name.includes('matrix') ||
+        slug.includes('alumni') || name.includes('alumni') ||
+        slug.includes('recon') || name.includes('recon')
+      );
+    });
+
+    if (activeMembership) {
+      const slug = activeMembership.slug?.toLowerCase() || '';
+      const name = activeMembership.name?.toLowerCase() || '';
+      for (const [key, config] of Object.entries(teamConfig)) {
+        if (slug.includes(key) || name.includes(key)) {
+          return config;
+        }
+      }
+    }
+
+    return null; // Not an athlete team member
+  };
+
+  const athleteTeam = getAthleteTeamInfo();
 
   const handleSwitchBack = () => {
     if (userSwitching.switchBackUrl) {
@@ -103,9 +167,24 @@ const Sidebar = ({ isOpen, onClose }) => {
             <h2 className="font-semibold text-lg text-stone-900" data-testid="user-name">
               {userData.displayName}
             </h2>
-            <p className="text-sm text-stone-600" data-testid="member-since">
-              Member since {memberSinceFormatted}
-            </p>
+            {athleteTeam ? (
+              <>
+                <p
+                  className="text-sm"
+                  style={{ color: athleteTeam.color, fontWeight: 200 }}
+                  data-testid="athlete-team-badge"
+                >
+                  {athleteTeam.name} Athlete Team
+                </p>
+                <p className="text-xs text-stone-600 mt-0.5" style={{ fontWeight: 200 }} data-testid="member-since">
+                  {memberSinceFormatted}
+                </p>
+              </>
+            ) : (
+              <p className="text-sm text-stone-600" data-testid="member-since">
+                Member since {memberSinceFormatted}
+              </p>
+            )}
           </div>
         </div>
 

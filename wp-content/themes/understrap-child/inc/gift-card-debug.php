@@ -6,18 +6,27 @@
 
 // Try multiple hooks to see when WC_GC becomes available
 add_action('wp', function() {
+    // Skip in admin area - WooCommerce sessions don't exist there
+    if (is_admin()) {
+        return;
+    }
+
     error_log('🔍 DEBUG wp hook - WC_GC() function exists: ' . (function_exists('WC_GC') ? 'YES' : 'NO'));
     error_log('🔍 DEBUG wp hook - WC_Gift_Cards class exists: ' . (class_exists('WC_Gift_Cards') ? 'YES' : 'NO'));
     if (function_exists('WC_GC')) {
         $wc_gc = WC_GC();
         error_log('🔍 DEBUG wp hook - WC_GC()->account exists: ' . (isset($wc_gc->account) ? 'YES' : 'NO'));
         if (isset($wc_gc->account)) {
-            $has_balance = $wc_gc->account->has_balance();
-            $balance = $wc_gc->account->get_balance();
-            $active_cards = $wc_gc->account->get_active_giftcards(get_current_user_id());
-            error_log('🔍 DEBUG wp hook - WC_GC()->account->has_balance(): ' . ($has_balance ? 'YES' : 'NO'));
-            error_log('🔍 DEBUG wp hook - WC_GC()->account->get_balance(): ' . $balance);
-            error_log('🔍 DEBUG wp hook - Active gift cards count: ' . count($active_cards));
+            try {
+                $has_balance = $wc_gc->account->has_balance();
+                $balance = $wc_gc->account->get_balance();
+                $active_cards = $wc_gc->account->get_active_giftcards(get_current_user_id());
+                error_log('🔍 DEBUG wp hook - WC_GC()->account->has_balance(): ' . ($has_balance ? 'YES' : 'NO'));
+                error_log('🔍 DEBUG wp hook - WC_GC()->account->get_balance(): ' . $balance);
+                error_log('🔍 DEBUG wp hook - Active gift cards count: ' . count($active_cards));
+            } catch (Exception $e) {
+                error_log('🔍 DEBUG wp hook - Error accessing gift card account: ' . $e->getMessage());
+            }
         }
     }
     error_log('🔍 DEBUG wp hook - get_option woocommerce_enable_gc_account: ' . get_option('woocommerce_enable_gc_account', 'not set'));
