@@ -2635,53 +2635,13 @@ function samsara_get_subscription_orders($request) {
  */
 
 /**
- * Rewrite URLs to hide /programs/ from user-facing URLs
- * Structure: /programs/page-slug/ becomes /page-slug/
+ * REMOVED: Greedy rewrite rules that were breaking the site
+ *
+ * The previous implementation tried to catch ALL top-level URLs and route them through /programs/
+ * This broke standalone pages and required constant exclusion list maintenance.
+ *
+ * Canonical URLs should be /programs/whatever (no clean URLs for now)
  */
-add_action('init', 'samsara_programs_rewrite_rules');
-function samsara_programs_rewrite_rules() {
-    // Match any top-level URL that isn't a WordPress or WooCommerce endpoint
-    // Exclude: programs page itself, shop, cart, checkout, my-account, account, standalone pages
-    add_rewrite_rule(
-        '^(?!programs$|shop|cart|checkout|my-account|account|athlete-team|training-basecamp|wp-admin|wp-content|wp-includes)([^/]+)/?$',
-        'index.php?pagename=programs/$matches[1]',
-        'top'
-    );
-
-    // Also handle pagination if needed
-    add_rewrite_rule(
-        '^(?!programs$|shop|cart|checkout|my-account|account|athlete-team|training-basecamp)([^/]+)/page/?([0-9]{1,})/?$',
-        'index.php?pagename=programs/$matches[1]&paged=$matches[2]',
-        'top'
-    );
-}
-
-/**
- * Filter permalinks to remove /programs/ from URLs
- * This makes get_permalink() return clean URLs
- */
-add_filter('page_link', 'samsara_remove_programs_from_permalink', 10, 2);
-function samsara_remove_programs_from_permalink($permalink, $post) {
-    // Get post object if we received an ID
-    if (is_numeric($post)) {
-        $post = get_post($post);
-    }
-
-    // Safety check - ensure we have a valid post object
-    if (!$post || !is_object($post)) {
-        return $permalink;
-    }
-
-    // Only modify pages that are children of the "programs" page
-    if ($post->post_type === 'page' && $post->post_parent) {
-        $parent = get_post($post->post_parent);
-        if ($parent && $parent->post_name === 'programs') {
-            // Remove /programs/ from the URL
-            $permalink = str_replace('/programs/', '/', $permalink);
-        }
-    }
-    return $permalink;
-}
 
 /**
  * Prevent WordPress from loading the "account" page
@@ -2734,24 +2694,16 @@ function samsara_redirect_legacy_my_account_urls() {
         exit;
     }
 
-    // Redirect /programs/* to clean top-level URLs (prevent duplicate content)
-    if (preg_match('#^/programs/([^/]+)/?$#', $request_uri, $matches)) {
-        $slug = $matches[1];
-        // Don't redirect the /programs/ page itself
-        if ($slug !== '' && $slug !== 'programs') {
-            wp_redirect(home_url('/' . $slug . '/'), 301);
+    // Redirect old /my-account/* URLs to /programs/* for backward compatibility
+    // Examples: /my-account/mandala → /programs/mandala
+    if (preg_match('#^/my-account/([^/]+)/?$#', $request_uri, $matches)) {
+        $subroute = $matches[1];
+        // Only redirect if there's a subroute (don't redirect bare /my-account)
+        if ($subroute !== '') {
+            wp_redirect(home_url('/programs/' . $subroute . '/'), 301);
             exit;
         }
     }
-
-    // TEMPORARILY DISABLED: Allow both /my-account and /account to work for client comparison
-    // TODO: Re-enable after client approval
-    // Redirect ALL /my-account/* URLs to /account/* (React app replaces WooCommerce My Account)
-    // if (preg_match('#^/my-account/?(.*)$#', $request_uri, $matches)) {
-    //     $subroute = $matches[1];
-    //     wp_redirect(home_url('/account/' . $subroute), 301);
-    //     exit;
-    // }
 
     // Redirect old /athlete/* URLs to new /account/* URL (backward compatibility)
     // Fixed: Only match /athlete/ with trailing slash to avoid matching /athlete-team page
@@ -2771,14 +2723,8 @@ function samsara_redirect_legacy_my_account_urls() {
 }
 
 /**
- * Flush rewrite rules on theme activation
- * This ensures the custom rewrite rules are registered
+ * REMOVED: Flush rewrite function (no longer needed without custom rewrite rules)
  */
-add_action('after_switch_theme', 'samsara_flush_rewrite_rules');
-function samsara_flush_rewrite_rules() {
-    samsara_programs_rewrite_rules();
-    flush_rewrite_rules();
-}
 
 /**
  * Analyze all subscriptions for switching eligibility
