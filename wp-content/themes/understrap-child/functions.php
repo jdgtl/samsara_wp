@@ -2705,19 +2705,10 @@ function samsara_redirect_legacy_my_account_urls() {
         }
     }
 
-    // Redirect old /athlete/* URLs to new /account/* URL (backward compatibility)
-    // Fixed: Only match /athlete/ with trailing slash to avoid matching /athlete-team page
-    if (preg_match('#^/athlete(/.*)?$#', $request_uri, $matches)) {
-        $subroute = isset($matches[1]) ? $matches[1] : '';
-        wp_redirect(home_url('/account/' . $subroute), 301);
-        exit;
-    }
-
     // Redirect old /account-dashboard/* to new /account/* URL (backward compatibility)
-    // Fixed: Only match /account-dashboard/ with trailing slash to avoid matching similar pages
-    if (preg_match('#^/account-dashboard(/.*)?$#', $request_uri, $matches)) {
-        $subroute = isset($matches[1]) ? $matches[1] : '';
-        wp_redirect(home_url('/account/' . $subroute), 301);
+    if (preg_match('#^/account-dashboard(/|$)#', $request_uri)) {
+        $subroute = preg_replace('#^/account-dashboard/?#', '', $request_uri);
+        wp_redirect(home_url('/account/' . ($subroute ? '/' . $subroute : '')), 301);
         exit;
     }
 }
