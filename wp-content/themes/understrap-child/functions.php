@@ -2641,16 +2641,16 @@ function samsara_get_subscription_orders($request) {
 add_action('init', 'samsara_programs_rewrite_rules');
 function samsara_programs_rewrite_rules() {
     // Match any top-level URL that isn't a WordPress or WooCommerce endpoint
-    // Exclude: programs page itself, shop, cart, checkout, my-account, account
+    // Exclude: programs page itself, shop, cart, checkout, my-account, account, standalone pages
     add_rewrite_rule(
-        '^(?!programs$|shop|cart|checkout|my-account|account|wp-admin|wp-content|wp-includes)([^/]+)/?$',
+        '^(?!programs$|shop|cart|checkout|my-account|account|athlete-team|training-basecamp|wp-admin|wp-content|wp-includes)([^/]+)/?$',
         'index.php?pagename=programs/$matches[1]',
         'top'
     );
 
     // Also handle pagination if needed
     add_rewrite_rule(
-        '^(?!programs$|shop|cart|checkout|my-account|account)([^/]+)/page/?([0-9]{1,})/?$',
+        '^(?!programs$|shop|cart|checkout|my-account|account|athlete-team|training-basecamp)([^/]+)/page/?([0-9]{1,})/?$',
         'index.php?pagename=programs/$matches[1]&paged=$matches[2]',
         'top'
     );
@@ -2754,15 +2754,17 @@ function samsara_redirect_legacy_my_account_urls() {
     // }
 
     // Redirect old /athlete/* URLs to new /account/* URL (backward compatibility)
-    if (preg_match('#^/athlete/?(.*)$#', $request_uri, $matches)) {
-        $subroute = $matches[1];
+    // Fixed: Only match /athlete/ with trailing slash to avoid matching /athlete-team page
+    if (preg_match('#^/athlete(/.*)?$#', $request_uri, $matches)) {
+        $subroute = isset($matches[1]) ? $matches[1] : '';
         wp_redirect(home_url('/account/' . $subroute), 301);
         exit;
     }
 
     // Redirect old /account-dashboard/* to new /account/* URL (backward compatibility)
-    if (preg_match('#^/account-dashboard/?(.*)$#', $request_uri, $matches)) {
-        $subroute = $matches[1];
+    // Fixed: Only match /account-dashboard/ with trailing slash to avoid matching similar pages
+    if (preg_match('#^/account-dashboard(/.*)?$#', $request_uri, $matches)) {
+        $subroute = isset($matches[1]) ? $matches[1] : '';
         wp_redirect(home_url('/account/' . $subroute), 301);
         exit;
     }
