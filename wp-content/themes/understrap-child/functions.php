@@ -2694,17 +2694,6 @@ function samsara_redirect_legacy_my_account_urls() {
         exit;
     }
 
-    // Redirect old /my-account/* URLs to /programs/* for backward compatibility
-    // Examples: /my-account/mandala → /programs/mandala
-    if (preg_match('#^/my-account/([^/]+)/?$#', $request_uri, $matches)) {
-        $subroute = $matches[1];
-        // Only redirect if there's a subroute (don't redirect bare /my-account)
-        if ($subroute !== '') {
-            wp_redirect(home_url('/programs/' . $subroute . '/'), 301);
-            exit;
-        }
-    }
-
     // Redirect old /account-dashboard/* to new /account/* URL (backward compatibility)
     if (preg_match('#^/account-dashboard(/|$)#', $request_uri)) {
         $subroute = preg_replace('#^/account-dashboard/?#', '', $request_uri);
