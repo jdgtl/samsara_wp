@@ -2744,12 +2744,14 @@ function samsara_redirect_legacy_my_account_urls() {
         }
     }
 
+    // TEMPORARILY DISABLED: Allow both /my-account and /account to work for client comparison
+    // TODO: Re-enable after client approval
     // Redirect ALL /my-account/* URLs to /account/* (React app replaces WooCommerce My Account)
-    if (preg_match('#^/my-account/?(.*)$#', $request_uri, $matches)) {
-        $subroute = $matches[1];
-        wp_redirect(home_url('/account/' . $subroute), 301);
-        exit;
-    }
+    // if (preg_match('#^/my-account/?(.*)$#', $request_uri, $matches)) {
+    //     $subroute = $matches[1];
+    //     wp_redirect(home_url('/account/' . $subroute), 301);
+    //     exit;
+    // }
 
     // Redirect old /athlete/* URLs to new /account/* URL (backward compatibility)
     if (preg_match('#^/athlete/?(.*)$#', $request_uri, $matches)) {
