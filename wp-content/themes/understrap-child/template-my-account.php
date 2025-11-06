@@ -8,7 +8,8 @@
 
 // Redirect to login if not logged in
 if (!is_user_logged_in()) {
-    wp_redirect(wp_login_url());
+    // Pass current URL as redirect parameter so user returns here after login
+    wp_redirect(wp_login_url(home_url('/account/')));
     exit;
 }
 ?>

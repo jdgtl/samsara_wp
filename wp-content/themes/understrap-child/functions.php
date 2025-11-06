@@ -463,6 +463,19 @@ function send_trial_end_subscription_to_server($subscription_id) {
 }
 
 /**
+ * Redirect WooCommerce login to React dashboard instead of My Account
+ */
+add_filter('woocommerce_login_redirect', 'samsara_redirect_login_to_account', 10, 2);
+function samsara_redirect_login_to_account($redirect, $user) {
+    // If WooCommerce would redirect to /my-account, redirect to /account instead
+    $my_account_url = wc_get_page_permalink('myaccount');
+    if ($redirect === $my_account_url) {
+        return home_url('/account/');
+    }
+    return $redirect;
+}
+
+/**
  * Samsara Experience - Checkout Terms with Modal Functionality
  */
 
