@@ -126,7 +126,7 @@ const TopNavigation = () => {
           return (
             <div key={item.label} className="relative group">
               <button
-                className="px-3 py-2 text-white/80 hover:text-samsara-gold font-medium text-sm uppercase flex items-center gap-1 transition-colors"
+                className="px-3 py-2 text-white/80 hover:text-samsara-gold font-medium text-[1.1rem] flex items-center gap-1 transition-colors"
                 data-testid={`nav-${item.label.toLowerCase().replace(/\s+/g, '-')}`}
               >
                 <span dangerouslySetInnerHTML={{ __html: item.label }} />
@@ -156,7 +156,7 @@ const TopNavigation = () => {
             <Link
               key={item.label}
               to={item.href}
-              className={`px-3 py-2 font-medium text-sm uppercase transition-colors ${
+              className={`px-3 py-2 font-medium text-[1.1rem] transition-colors ${
                 isActive('/account')
                   ? 'text-samsara-gold font-semibold'
                   : 'text-white/80 hover:text-samsara-gold'
@@ -171,7 +171,7 @@ const TopNavigation = () => {
           <a
             key={item.label}
             href={item.href}
-            className="px-3 py-2 text-white/80 hover:text-samsara-gold font-medium text-sm uppercase transition-colors"
+            className="px-3 py-2 text-white/80 hover:text-samsara-gold font-medium text-[1.1rem] transition-colors"
             data-testid={`nav-${item.label.toLowerCase().replace(/\s+/g, '-')}`}
             dangerouslySetInnerHTML={{ __html: item.label }}
           />
@@ -205,7 +205,7 @@ const TopNavigation = () => {
                   <div key={item.label}>
                     <button
                       onClick={() => setExpandedItem(isExpanded ? null : item.label)}
-                      className="w-full flex items-center justify-between px-4 py-3 text-stone-700 hover:bg-stone-50 font-medium text-sm uppercase transition-colors"
+                      className="w-full flex items-center justify-between px-4 py-3 text-stone-700 hover:bg-stone-50 font-medium text-[1.1rem] transition-colors"
                       data-testid={`mobile-nav-${item.label.toLowerCase().replace(/\s+/g, '-')}`}
                     >
                       <span dangerouslySetInnerHTML={{ __html: item.label }} />
@@ -237,7 +237,7 @@ const TopNavigation = () => {
                     key={item.label}
                     to={item.href}
                     onClick={() => setMobileOpen(false)}
-                    className={`px-4 py-3 font-medium text-sm uppercase transition-colors ${
+                    className={`px-4 py-3 font-medium text-[1.1rem] transition-colors ${
                       isActive('/account')
                         ? 'text-samsara-gold bg-samsara-gold/10 font-semibold'
                         : 'text-stone-700 hover:bg-stone-50'
@@ -253,7 +253,7 @@ const TopNavigation = () => {
                   key={item.label}
                   href={item.href}
                   onClick={() => setMobileOpen(false)}
-                  className="px-4 py-3 text-stone-700 hover:bg-stone-50 font-medium text-sm uppercase transition-colors"
+                  className="px-4 py-3 text-stone-700 hover:bg-stone-50 font-medium text-[1.1rem] transition-colors"
                   data-testid={`mobile-nav-${item.label.toLowerCase().replace(/\s+/g, '-')}`}
                   dangerouslySetInnerHTML={{ __html: item.label }}
                 />
@@ -274,7 +274,7 @@ const TopNavigation = () => {
             <img
               src="https://customer-assets.emergentagent.com/job_quick-dash-6/artifacts/9sp1lhlg_samsara-logo-white-name.png"
               alt="Samsara"
-              className="h-8 w-auto"
+              className="h-[60px] w-auto"
             />
           </a>
 
