@@ -126,7 +126,7 @@ const TopNavigation = () => {
           return (
             <div key={item.label} className="relative group">
               <button
-                className="px-3 py-2 text-white/80 hover:text-samsara-gold font-medium text-[1.1rem] flex items-center gap-1 transition-colors"
+                className="px-[26px] py-2 text-white/80 hover:text-samsara-gold font-medium text-[1.1rem] flex items-center gap-1 transition-colors"
                 data-testid={`nav-${item.label.toLowerCase().replace(/\s+/g, '-')}`}
               >
                 <span dangerouslySetInnerHTML={{ __html: item.label }} />
@@ -156,7 +156,7 @@ const TopNavigation = () => {
             <Link
               key={item.label}
               to={item.href}
-              className={`px-3 py-2 font-medium text-[1.1rem] transition-colors ${
+              className={`px-[26px] py-2 font-medium text-[1.1rem] transition-colors ${
                 isActive('/account')
                   ? 'text-samsara-gold font-semibold'
                   : 'text-white/80 hover:text-samsara-gold'
@@ -171,7 +171,7 @@ const TopNavigation = () => {
           <a
             key={item.label}
             href={item.href}
-            className="px-3 py-2 text-white/80 hover:text-samsara-gold font-medium text-[1.1rem] transition-colors"
+            className="px-[26px] py-2 text-white/80 hover:text-samsara-gold font-medium text-[1.1rem] transition-colors"
             data-testid={`nav-${item.label.toLowerCase().replace(/\s+/g, '-')}`}
             dangerouslySetInnerHTML={{ __html: item.label }}
           />
