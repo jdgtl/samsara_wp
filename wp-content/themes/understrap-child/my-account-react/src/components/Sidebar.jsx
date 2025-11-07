@@ -293,10 +293,30 @@ const Sidebar = ({ isOpen, onClose }) => {
         data-testid="bottom-nav-mobile"
       >
         <div className="flex items-center gap-1 px-2 py-2 overflow-x-auto scrollbar-hide">
-          {navItems.filter(item => !item.external).map((item) => {
+          {navItems.map((item) => {
             const Icon = item.icon;
             const active = isActive(item.path);
 
+            // Render external link
+            if (item.external) {
+              return (
+                <a
+                  key={item.path}
+                  href={item.url}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="flex flex-col items-center justify-center gap-1 px-3 py-2 rounded-lg transition-colors flex-shrink-0 text-stone-600"
+                  data-testid={`bottom-nav-${item.label.toLowerCase()}`}
+                >
+                  <Icon className="h-6 w-6 stroke-2" />
+                  <span className="text-xs whitespace-nowrap font-medium">
+                    {item.label}
+                  </span>
+                </a>
+              );
+            }
+
+            // Render internal link
             return (
               <Link
                 key={item.path}
