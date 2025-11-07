@@ -274,7 +274,7 @@ const Orders = () => {
                         </TableCell>
                         <TableCell>{getStatusBadge(order.status)}</TableCell>
                         <TableCell>
-                          <div className="max-w-xs">
+                          <div className="max-w-lg whitespace-nowrap">
                             {order.items.slice(0, 2).join(', ')}
                             {order.items.length > 2 && (
                               <span className="text-stone-500"> +{order.items.length - 2} more</span>
