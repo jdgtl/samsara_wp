@@ -119,7 +119,7 @@ const TopNavigation = () => {
 
   // Desktop Navigation
   const DesktopNav = () => (
-    <div className="hidden lg:flex items-center gap-1 overflow-x-auto scrollbar-hide flex-nowrap">
+    <div className="hidden lg:flex items-center gap-1">
       {navItems.map((item) => {
         if (item.items) {
           // Dropdown menu

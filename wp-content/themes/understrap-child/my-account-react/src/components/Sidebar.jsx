@@ -292,7 +292,7 @@ const Sidebar = ({ isOpen, onClose }) => {
         className="md:hidden fixed bottom-0 left-0 right-0 bg-white border-t border-stone-200 z-50 safe-area-inset-bottom"
         data-testid="bottom-nav-mobile"
       >
-        <div className="flex items-center justify-around px-2 py-2">
+        <div className="flex items-center gap-1 px-2 py-2 overflow-x-auto scrollbar-hide">
           {navItems.filter(item => !item.external).map((item) => {
             const Icon = item.icon;
             const active = isActive(item.path);
@@ -302,7 +302,7 @@ const Sidebar = ({ isOpen, onClose }) => {
                 key={item.path}
                 to={item.path}
                 className={`
-                  flex flex-col items-center justify-center gap-1 px-3 py-2 rounded-lg transition-colors flex-1 min-w-0
+                  flex flex-col items-center justify-center gap-1 px-3 py-2 rounded-lg transition-colors flex-shrink-0
                   ${active
                     ? 'text-samsara-gold'
                     : 'text-stone-600'
@@ -312,7 +312,7 @@ const Sidebar = ({ isOpen, onClose }) => {
                 aria-current={active ? 'page' : undefined}
               >
                 <Icon className={`h-6 w-6 ${active ? 'stroke-[2.5]' : 'stroke-2'}`} />
-                <span className={`text-xs ${active ? 'font-semibold' : 'font-medium'}`}>
+                <span className={`text-xs whitespace-nowrap ${active ? 'font-semibold' : 'font-medium'}`}>
                   {item.label}
                 </span>
               </Link>
