@@ -190,7 +190,7 @@ const TopNavigation = () => {
           <Button
             variant="ghost"
             size="icon"
-            className="lg:hidden"
+            className="lg:hidden text-white hover:text-samsara-gold"
             data-testid="mobile-nav-trigger"
           >
             <Menu className="h-6 w-6" />
