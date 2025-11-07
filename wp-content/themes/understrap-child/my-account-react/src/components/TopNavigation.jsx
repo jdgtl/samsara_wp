@@ -268,7 +268,7 @@ const TopNavigation = () => {
   return (
     <header className="w-full bg-samsara-black">
       <div className="px-4 sm:px-6 lg:px-8">
-        <div className="flex h-16 items-center justify-between">
+        <div className="flex h-[97px] items-center justify-between">
           {/* Logo */}
           <a href="https://samsaraexperience.com/" className="flex items-center" data-testid="nav-logo">
             <img
