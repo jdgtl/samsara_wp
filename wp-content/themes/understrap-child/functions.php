@@ -981,21 +981,9 @@ function samsara_add_my_account_endpoints() {
         return;
     }
 
-    add_rewrite_endpoint( 'training-programs', EP_ROOT | EP_PAGES );
+    // Old training-programs endpoint removed - now handled by React dashboard
 }
 add_action( 'init', 'samsara_add_my_account_endpoints', 20 ); // Run after WooCommerce
-
-// UNCHANGED: Handle the training programs endpoint content
-function samsara_training_programs_content() {
-    // Include the same active memberships content
-    $child_memberships_file = get_stylesheet_directory() . '/includes/active-memberships.php';
-    if ( file_exists( $child_memberships_file ) ) {
-        include $child_memberships_file;
-    } else {
-        echo '<p>Training programs content not found.</p>';
-    }
-}
-add_action( 'woocommerce_account_training-programs_endpoint', 'samsara_training_programs_content' );
 
 
 // NEW: Ensure WooCommerce endpoints are properly registered
@@ -2635,25 +2623,16 @@ function samsara_get_subscription_orders($request) {
 
 /**
  * ========================================
- * PROGRAMS URL STRUCTURE & REDIRECTS
+ * URL STRUCTURE & REDIRECTS
  * ========================================
  *
- * This section handles:
- * 1. Hiding /programs/ from user-facing URLs
- * 2. Redirecting old /my-account/ URLs to new structure
+ * Current URL structure:
+ * - Membership programs: /programs/page-slug/
+ * - Account dashboard: /account/ (React dashboard)
+ * - My Account redirects: /my-account/* → /account/*
+ * - Account Dashboard redirects: /account-dashboard/* → /account/*
  *
- * WordPress Structure: /programs/page-slug/
- * User-Facing URLs: /page-slug/
- * Old URLs: /my-account/page-slug/ → /page-slug/
- */
-
-/**
- * REMOVED: Greedy rewrite rules that were breaking the site
- *
- * The previous implementation tried to catch ALL top-level URLs and route them through /programs/
- * This broke standalone pages and required constant exclusion list maintenance.
- *
- * Canonical URLs should be /programs/whatever (no clean URLs for now)
+ * No clean URL rewriting - keeps /programs/ in URLs to avoid greedy rewrites
  */
 
 /**
