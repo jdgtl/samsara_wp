@@ -76,14 +76,11 @@ module.exports = {
       },
       fontFamily: {
         sans: [
+          '"Montserrat"',
           "-apple-system",
           "BlinkMacSystemFont",
           '"Segoe UI"',
           "Roboto",
-          "Oxygen",
-          "Ubuntu",
-          "Cantarell",
-          '"Helvetica Neue"',
           "sans-serif",
         ],
       },
