@@ -111,32 +111,10 @@ export const useDashboard = () => {
       };
     }
 
-    // Fifth priority: ANY active subscription (fallback for other subscription types)
-    const anyActiveSub = subscriptions.find(sub => sub.status === 'active');
-    if (anyActiveSub) {
-      console.log('DEBUG - Found any active subscription:', anyActiveSub);
-      return anyActiveSub;
-    }
-
-    // Sixth priority: ANY active membership (fallback for manually-added memberships)
-    const anyActiveMembership = memberships.find(m => m.status === 'active');
-    if (anyActiveMembership) {
-      console.log('DEBUG - Found any active membership:', anyActiveMembership);
-      // Convert membership to subscription-like format for display
-      return {
-        id: `membership-${anyActiveMembership.id}`,
-        planName: anyActiveMembership.name,
-        status: anyActiveMembership.status,
-        startDate: anyActiveMembership.startedAt,
-        nextPaymentDate: null,
-        nextPaymentAmount: null,
-        billingInterval: null,
-        isMembership: true, // Flag to indicate this is a membership, not subscription
-      };
-    }
-
-    // No active subscriptions or memberships found
-    console.log('DEBUG - No active subscription or membership found');
+    // REMOVED FALLBACK: Only Athlete Team or Basecamp should show as primary
+    // Other memberships (like Bodyweight Programs) should ONLY appear in "Additional Memberships"
+    // If no Athlete Team/Basecamp, return null to show CTA buttons
+    console.log('DEBUG - No Athlete Team or Basecamp subscription/membership found');
     return null;
   })();
 

@@ -17,10 +17,69 @@ import { getDaysUntilExpiration } from '../lib/utils';
 import { useDashboard } from '../hooks/useDashboard';
 import { useNavigate, Link } from 'react-router-dom';
 
+// Active statuses: Users CAN access content
+const ACTIVE_MEMBERSHIP_STATUSES = new Set([
+  'active',
+  'complimentary',
+  'pending-cancel',
+  'pending_cancellation',
+  'pending_cancelled',
+  'trial',
+  'trialing'
+]);
+
+// Inactive statuses: Users CANNOT access content
+const INACTIVE_MEMBERSHIP_STATUSES = new Set([
+  'delayed',
+  'paused',
+  'expired',
+  'canceled',
+  'cancelled',
+  'inactive',
+  'on-hold',
+  'ended'
+]);
+
+const getMembershipStatusCategory = (status = '') => {
+  const normalizedStatus = status.toLowerCase();
+
+  if (ACTIVE_MEMBERSHIP_STATUSES.has(normalizedStatus)) {
+    return 'active';
+  }
+
+  if (INACTIVE_MEMBERSHIP_STATUSES.has(normalizedStatus)) {
+    return 'inactive';
+  }
+
+  return normalizedStatus || 'inactive';
+};
+
+const membershipMatchesFilter = (membership, filter) => {
+  // Only Active and Inactive filters - no "All" option
+  return getMembershipStatusCategory(membership.status) === filter;
+};
+
+const sortMemberships = (memberships = []) => {
+  return [...memberships].sort((a, b) => {
+    const statusRank = (status) => (getMembershipStatusCategory(status) === 'active' ? 0 : 1);
+    const statusDiff = statusRank(a.status) - statusRank(b.status);
+
+    if (statusDiff !== 0) {
+      return statusDiff;
+    }
+
+    return (a.name || '').localeCompare(b.name || '');
+  });
+};
+
+const canAccessMembershipContent = (membership) => (
+  getMembershipStatusCategory(membership.status) === 'active'
+);
+
 const Dashboard = () => {
   const navigate = useNavigate();
   const [countdown, setCountdown] = useState({ days: 0 });
-  const [membershipFilter, setMembershipFilter] = useState('all');
+  const [membershipFilter, setMembershipFilter] = useState('active'); // Default to active
   const [membershipViewMode, setMembershipViewMode] = useState('card'); // 'card' or 'list'
   const { avatarType, selectedEmoji, uploadedAvatarUrl, loading: avatarLoading } = useAvatar();
 
@@ -72,17 +131,33 @@ const Dashboard = () => {
   }, [primarySubscription]);
 
   const getStatusBadge = (status) => {
-    const variants = {
-      active: 'default',
-      trial: 'secondary',
-      paused: 'outline',
-      canceled: 'destructive',
-      inactive: 'secondary'
+    const normalizedStatus = status.toLowerCase();
+
+    const badges = {
+      active: { variant: 'default', text: 'Active', className: 'bg-emerald-600 text-white hover:bg-emerald-700' },
+      complimentary: { variant: 'secondary', text: 'Complimentary', className: 'bg-blue-600 text-white hover:bg-blue-700' },
+      'pending-cancel': { variant: 'outline', text: 'Ending Soon', className: 'border-amber-600 text-amber-700 bg-amber-50' },
+      pending_cancellation: { variant: 'outline', text: 'Ending Soon', className: 'border-amber-600 text-amber-700 bg-amber-50' },
+      pending_cancelled: { variant: 'outline', text: 'Ending Soon', className: 'border-amber-600 text-amber-700 bg-amber-50' },
+      trial: { variant: 'secondary', text: 'Trial', className: 'bg-purple-600 text-white hover:bg-purple-700' },
+      trialing: { variant: 'secondary', text: 'Trial', className: 'bg-purple-600 text-white hover:bg-purple-700' },
+      delayed: { variant: 'secondary', text: 'Not Started', className: 'bg-stone-400 text-white' },
+      paused: { variant: 'secondary', text: 'Paused', className: 'bg-stone-400 text-white' },
+      expired: { variant: 'destructive', text: 'Expired', className: 'bg-red-600 text-white hover:bg-red-700' },
+      canceled: { variant: 'destructive', text: 'Cancelled', className: 'bg-red-600 text-white hover:bg-red-700' },
+      cancelled: { variant: 'destructive', text: 'Cancelled', className: 'bg-red-600 text-white hover:bg-red-700' },
+      inactive: { variant: 'secondary', text: 'Inactive', className: 'bg-stone-400 text-white' },
+    };
+
+    const badgeConfig = badges[normalizedStatus] || {
+      variant: 'secondary',
+      text: status.charAt(0).toUpperCase() + status.slice(1),
+      className: 'bg-stone-400 text-white'
     };
 
     return (
-      <Badge variant={variants[status] || 'default'} data-testid={`status-badge-${status}`}>
-        {status.charAt(0).toUpperCase() + status.slice(1)}
+      <Badge variant={badgeConfig.variant} className={badgeConfig.className} data-testid={`status-badge-${status}`}>
+        {badgeConfig.text}
       </Badge>
     );
   };
@@ -134,7 +209,7 @@ const Dashboard = () => {
 
   // Filter memberships: exclude Athlete Team (Mandala, Momentum, Matrix, Alumni, Recon) and Basecamp (they show in primary card)
   // and apply the status filter
-  const filteredMemberships = (memberships || []).filter(m => {
+  const filteredMemberships = sortMemberships((memberships || []).filter(m => {
     const slug = m.slug?.toLowerCase() || '';
     const name = m.name?.toLowerCase() || '';
 
@@ -153,8 +228,8 @@ const Dashboard = () => {
     if (isAthleteTeamOrBasecamp) return false;
 
     // Apply status filter
-    return membershipFilter === 'all' ? true : m.status === membershipFilter;
-  });
+    return membershipMatchesFilter(m, membershipFilter);
+  }));
 
   // Loading state
   if (loading) {
@@ -408,20 +483,13 @@ const Dashboard = () => {
                 <CardDescription>Legacy training programs and courses</CardDescription>
               </div>
               <div className="flex flex-col sm:flex-row items-start sm:items-center gap-3">
-                {/* Filter Buttons */}
+                {/* Filter Buttons - Active/Inactive only */}
                 <div className="flex gap-2">
-                  <Button
-                    size="sm"
-                    variant={membershipFilter === 'all' ? 'default' : 'outline'}
-                    onClick={() => setMembershipFilter('all')}
-                    data-testid="filter-all"
-                  >
-                    All
-                  </Button>
                   <Button
                     size="sm"
                     variant={membershipFilter === 'active' ? 'default' : 'outline'}
                     onClick={() => setMembershipFilter('active')}
+                    className={membershipFilter === 'active' ? 'bg-samsara-gold hover:bg-samsara-gold/90 text-samsara-black' : ''}
                     data-testid="filter-active"
                   >
                     Active
@@ -430,6 +498,7 @@ const Dashboard = () => {
                     size="sm"
                     variant={membershipFilter === 'inactive' ? 'default' : 'outline'}
                     onClick={() => setMembershipFilter('inactive')}
+                    className={membershipFilter === 'inactive' ? 'bg-samsara-gold hover:bg-samsara-gold/90 text-samsara-black' : ''}
                     data-testid="filter-inactive"
                   >
                     Inactive
@@ -496,14 +565,14 @@ const Dashboard = () => {
 
                     return membership.restrictedPages.map((page) => {
                       const imageUrl = page.featuredImage || null;
+                      const isActiveMembership = canAccessMembershipContent(membership);
+                      const baseClasses = 'flex items-center gap-4 p-4 border border-stone-200 rounded-lg transition-shadow group no-underline hover:no-underline';
+                      const stateClasses = isActiveMembership
+                        ? 'cursor-pointer hover:shadow-md'
+                        : 'cursor-not-allowed opacity-60 hover:shadow-none bg-stone-50';
 
-                      return (
-                        <a
-                          key={`${membership.id}-${page.id}`}
-                          href={page.url}
-                          className="flex items-center gap-4 p-4 border border-stone-200 rounded-lg hover:shadow-md transition-shadow cursor-pointer group no-underline hover:no-underline"
-                          data-testid={`program-list-item-${page.id}`}
-                        >
+                      const sharedContent = (
+                        <>
                           {/* Thumbnail */}
                           {imageUrl ? (
                             <div className="flex-shrink-0 w-24 h-16 overflow-hidden rounded bg-stone-200">
@@ -545,8 +614,53 @@ const Dashboard = () => {
                                 })}
                               </p>
                             )}
+
+                            {/* Status-specific messages for inactive memberships */}
+                            {!isActiveMembership && (
+                              <p className="text-xs text-stone-500 mt-2">
+                                {membership.status === 'delayed' && '⏳ Membership has not started yet.'}
+                                {membership.status === 'paused' && '⏸️ Membership is temporarily paused.'}
+                                {membership.status === 'expired' && '🔒 Membership has expired.'}
+                                {(membership.status === 'canceled' || membership.status === 'cancelled') && '🔒 Membership has been cancelled.'}
+                                {membership.status === 'inactive' && '🔒 Membership is inactive.'}
+                                {!['delayed', 'paused', 'expired', 'canceled', 'cancelled', 'inactive'].includes(membership.status) && '🔒 Access is no longer available.'}
+                              </p>
+                            )}
+
+                            {/* Warning message for memberships ending soon */}
+                            {isActiveMembership && (membership.status === 'pending-cancel' || membership.status === 'pending_cancellation' || membership.status === 'pending_cancelled') && (
+                              <p className="text-xs text-amber-700 mt-2 flex items-start gap-1">
+                                <span>⚠️</span>
+                                <span>This membership will end on {membership.expiresAt ? new Date(membership.expiresAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) : 'the next billing date'}.</span>
+                              </p>
+                            )}
                           </div>
-                        </a>
+                        </>
+                      );
+
+                      if (isActiveMembership) {
+                        return (
+                          <a
+                            key={`${membership.id}-${page.id}`}
+                            href={page.url}
+                            className={`${baseClasses} ${stateClasses}`}
+                            data-testid={`program-list-item-${page.id}`}
+                          >
+                            {sharedContent}
+                          </a>
+                        );
+                      }
+
+                      return (
+                        <div
+                          key={`${membership.id}-${page.id}`}
+                          className={`${baseClasses} ${stateClasses}`}
+                          data-testid={`program-list-item-${page.id}`}
+                          aria-disabled="true"
+                          tabIndex={-1}
+                        >
+                          {sharedContent}
+                        </div>
                       );
                     });
                   })}
@@ -565,15 +679,13 @@ const Dashboard = () => {
                     // Create one card for each program page
                     return membership.restrictedPages.map((page) => {
                       const imageUrl = page.featuredImage || null;
-
-                      return (
-                        <a
-                          key={`${membership.id}-${page.id}`}
-                          href={page.url}
-                          className="block no-underline hover:no-underline"
-                          data-testid={`program-card-${page.id}`}
+                      const isActiveMembership = canAccessMembershipContent(membership);
+                      const card = (
+                        <Card
+                          className={`overflow-hidden transition-shadow group ${
+                            isActiveMembership ? 'hover:shadow-lg cursor-pointer' : 'opacity-60 cursor-not-allowed bg-stone-50'
+                          }`}
                         >
-                          <Card className="overflow-hidden hover:shadow-lg transition-shadow cursor-pointer group">
                           {/* Featured Image */}
                           {imageUrl ? (
                             <div className="aspect-video overflow-hidden bg-stone-200">
@@ -615,9 +727,53 @@ const Dashboard = () => {
                                 })}
                               </p>
                             )}
+
+                            {/* Status-specific messages for inactive memberships */}
+                            {!isActiveMembership && (
+                              <p className="text-xs text-stone-500 mt-2">
+                                {membership.status === 'delayed' && '⏳ Membership has not started yet.'}
+                                {membership.status === 'paused' && '⏸️ Membership is temporarily paused.'}
+                                {membership.status === 'expired' && '🔒 Membership has expired.'}
+                                {(membership.status === 'canceled' || membership.status === 'cancelled') && '🔒 Membership has been cancelled.'}
+                                {membership.status === 'inactive' && '🔒 Membership is inactive.'}
+                                {!['delayed', 'paused', 'expired', 'canceled', 'cancelled', 'inactive'].includes(membership.status) && '🔒 Access is no longer available.'}
+                              </p>
+                            )}
+
+                            {/* Warning message for memberships ending soon */}
+                            {isActiveMembership && (membership.status === 'pending-cancel' || membership.status === 'pending_cancellation' || membership.status === 'pending_cancelled') && (
+                              <p className="text-xs text-amber-700 mt-2 flex items-start gap-1">
+                                <span>⚠️</span>
+                                <span>This membership will end on {membership.expiresAt ? new Date(membership.expiresAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) : 'the next billing date'}.</span>
+                              </p>
+                            )}
                           </CardContent>
                         </Card>
-                        </a>
+                      );
+
+                      if (isActiveMembership) {
+                        return (
+                          <a
+                            key={`${membership.id}-${page.id}`}
+                            href={page.url}
+                            className="block no-underline hover:no-underline"
+                            data-testid={`program-card-${page.id}`}
+                          >
+                            {card}
+                          </a>
+                        );
+                      }
+
+                      return (
+                        <div
+                          key={`${membership.id}-${page.id}`}
+                          className="block"
+                          data-testid={`program-card-${page.id}`}
+                          aria-disabled="true"
+                          tabIndex={-1}
+                        >
+                          {card}
+                        </div>
                       );
                     });
                   })}

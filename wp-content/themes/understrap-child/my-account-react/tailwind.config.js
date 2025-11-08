@@ -6,6 +6,9 @@ module.exports = {
   ],
   theme: {
     extend: {
+      screens: {
+        'xs': '547px', // Custom breakpoint for avatar grid
+      },
       colors: {
         // Samsara Brand Colors - Based on samsaraexperience.com
         background: "hsl(40, 10%, 97%)", // Light stone/beige

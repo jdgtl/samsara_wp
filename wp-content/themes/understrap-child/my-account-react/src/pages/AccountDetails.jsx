@@ -158,7 +158,7 @@ const AccountDetails = () => {
     if (avatarType === 'emoji' && selectedEmoji) {
       const Icon = selectedEmoji.icon;
       return (
-        <div className={`h-24 w-24 rounded-full flex items-center justify-center ${selectedEmoji.color}`}>
+        <div className={`h-24 w-24 rounded-full flex items-center justify-center flex-shrink-0 ${selectedEmoji.color}`}>
           <Icon className="h-12 w-12 text-white" />
         </div>
       );
@@ -166,8 +166,12 @@ const AccountDetails = () => {
 
     if (avatarType === 'upload' && uploadedAvatarUrl) {
       return (
-        <Avatar className="h-24 w-24" data-testid="profile-avatar">
-          <AvatarImage src={uploadedAvatarUrl} alt={`${formData.firstName} ${formData.lastName}`} />
+        <Avatar className="h-24 w-24 flex-shrink-0" data-testid="profile-avatar">
+          <AvatarImage
+            src={uploadedAvatarUrl}
+            alt={`${formData.firstName} ${formData.lastName}`}
+            className="object-cover"
+          />
           <AvatarFallback className="bg-emerald-600 text-white text-2xl">
             {formData.firstName?.[0]}{formData.lastName?.[0]}
           </AvatarFallback>
@@ -176,8 +180,12 @@ const AccountDetails = () => {
     }
 
     return (
-      <Avatar className="h-24 w-24" data-testid="profile-avatar">
-        <AvatarImage src={userData.avatarUrl} alt={`${formData.firstName} ${formData.lastName}`} />
+      <Avatar className="h-24 w-24 flex-shrink-0" data-testid="profile-avatar">
+        <AvatarImage
+          src={userData.avatarUrl}
+          alt={`${formData.firstName} ${formData.lastName}`}
+          className="object-cover"
+        />
         <AvatarFallback className="bg-emerald-600 text-white text-2xl">
           {formData.firstName?.[0]}{formData.lastName?.[0]}
         </AvatarFallback>
@@ -241,10 +249,20 @@ const AccountDetails = () => {
           <CardDescription>Choose an avatar or upload your own image</CardDescription>
         </CardHeader>
         <CardContent className="space-y-6">
-          <div className="flex items-center gap-6">
-            {getCurrentAvatar()}
-            <div className="space-y-2">
-              <p className="text-sm text-stone-600">Current avatar type: {avatarType === 'initials' ? 'Initials' : avatarType === 'emoji' ? 'Icon' : 'Custom upload'}</p>
+          <div className="flex flex-col sm:flex-row items-center sm:items-start gap-4 sm:gap-6">
+            <div className="flex-shrink-0">
+              {getCurrentAvatar()}
+            </div>
+            <div className="space-y-3 flex-1 w-full sm:w-auto text-center sm:text-left">
+              <p className="text-sm text-stone-600">
+                Current avatar type: {
+                  avatarType === 'upload' ? 'Custom upload' :
+                  avatarType === 'emoji' ? 'Icon' :
+                  uploadedAvatarUrl ? 'Custom upload' :
+                  userData.avatarUrl && userData.avatarUrl.includes('gravatar') ? 'Gravatar' :
+                  'Initials'
+                }
+              </p>
               <div className="relative">
                 <input
                   type="file"
@@ -257,7 +275,7 @@ const AccountDetails = () => {
                 <Button
                   onClick={() => document.getElementById('avatar-upload').click()}
                   variant="outline"
-                  className="gap-2"
+                  className="gap-2 w-full sm:w-auto"
                   data-testid="upload-avatar-btn"
                   disabled={avatarLoading}
                 >
@@ -281,7 +299,7 @@ const AccountDetails = () => {
 
           <div className="space-y-3">
             <Label>Or choose a custom style</Label>
-            <div className="grid grid-cols-6 gap-3">
+            <div className="grid grid-cols-3 xs:grid-cols-4 sm:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-2 sm:gap-3">
               {avatarOptions.map((option) => {
                 const Icon = option.icon;
                 const isSelected = avatarType === 'emoji' && selectedEmoji?.label === option.label;
@@ -290,13 +308,18 @@ const AccountDetails = () => {
                     key={option.label}
                     onClick={() => handleSelectEmoji(option)}
                     className={`
-                      ${option.color} rounded-full p-4 hover:scale-110 transition-transform
+                      ${option.color}
+                      rounded-full
+                      flex items-center
+                      aspect-square justify-center p-3
+                      sm:aspect-auto sm:justify-start sm:px-4 sm:py-3
+                      hover:scale-105 transition-transform
                       ${isSelected ? 'ring-4 ring-emerald-500 ring-offset-2' : ''}
                     `}
                     title={option.label}
                     data-testid={`avatar-option-${option.label.toLowerCase()}`}
                   >
-                    <Icon className="h-6 w-6 text-white" />
+                    <Icon className="h-8 w-8 sm:h-6 sm:w-6 text-white" />
                   </button>
                 );
               })}
