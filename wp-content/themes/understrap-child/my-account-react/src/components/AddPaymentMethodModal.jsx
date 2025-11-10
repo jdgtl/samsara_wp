@@ -98,7 +98,6 @@ const AddPaymentMethodModal = ({ isOpen, onClose, onSuccess }) => {
       setError(null);
 
       // Confirm card setup with Stripe
-      console.log('Confirming card setup with Stripe...');
       const setupIntent = await confirmCardSetup(
         stripe,
         clientSecret,
@@ -107,8 +106,6 @@ const AddPaymentMethodModal = ({ isOpen, onClose, onSuccess }) => {
           name: cardholderName,
         }
       );
-
-      console.log('Setup Intent result:', setupIntent);
 
       // Verify the setup intent succeeded
       if (!setupIntent || setupIntent.status !== 'succeeded') {
@@ -120,29 +117,19 @@ const AddPaymentMethodModal = ({ isOpen, onClose, onSuccess }) => {
       }
 
       // Save to WooCommerce
-      console.log('💳 Saving payment method to WooCommerce...', {
-        setupIntentId: setupIntent.id,
-        setAsDefault,
-        timestamp: new Date().toISOString()
-      });
-
       const result = await paymentMethodsApi.confirmPaymentMethod(
         setupIntent.id,
         setAsDefault
       );
-
-      console.log('✅ WooCommerce save result:', result);
 
       if (!result.success) {
         throw new Error(result.message || 'Failed to save payment method');
       }
 
       setSuccess(true);
-      console.log('🎉 Payment method added successfully, will refresh in 1.5s');
 
       // Close modal after short delay
       setTimeout(() => {
-        console.log('🔄 Calling onSuccess() to refresh payment methods list');
         onSuccess();
         onClose();
         resetForm();

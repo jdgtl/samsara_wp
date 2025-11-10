@@ -52,7 +52,6 @@ const Payments = () => {
   };
 
   const handleModalSuccess = () => {
-    console.log('🔄 Payment method added successfully, refetching payment methods...');
     refetchPayments(); // Refresh payment methods list
   };
 

@@ -47,10 +47,6 @@ const OrderDetail = () => {
       try {
         setGiftCardsLoading(true);
         const data = await get(`samsara/v1/orders/${orderId}/gift-cards`);
-        console.log('🎁 Gift cards API response for order', orderId, ':', data);
-        console.log('🎁 Is array?', Array.isArray(data));
-        console.log('🎁 Length:', data?.length);
-        console.log('🎁 Type:', typeof data);
         // Ensure we always set an array, even if API returns null or empty string
         setGiftCards(Array.isArray(data) ? data : []);
       } catch (err) {
