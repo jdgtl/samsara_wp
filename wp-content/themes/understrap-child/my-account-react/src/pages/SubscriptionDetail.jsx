@@ -145,11 +145,11 @@ const SubscriptionDetail = () => {
   };
 
   const handleCancel = async () => {
-    setShowCancelDialog(false);
     const result = await cancelSubscription(subId);
     if (result.success) {
       window.location.reload(); // Reload to fetch updated data
     } else {
+      setShowCancelDialog(false);
       alert(`Failed to cancel subscription: ${result.error}`);
     }
   };
@@ -380,13 +380,26 @@ const SubscriptionDetail = () => {
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel data-testid="cancel-cancel-btn">Keep Subscription</AlertDialogCancel>
-            <AlertDialogAction 
-              onClick={handleCancel} 
+            <AlertDialogCancel
+              data-testid="cancel-cancel-btn"
+              disabled={actionLoading}
+            >
+              Keep Subscription
+            </AlertDialogCancel>
+            <AlertDialogAction
+              onClick={handleCancel}
               className="bg-red-600 hover:bg-red-700"
               data-testid="cancel-confirm-btn"
+              disabled={actionLoading}
             >
-              Yes, Cancel Subscription
+              {actionLoading ? (
+                <>
+                  <Loader2 className="h-4 w-4 animate-spin mr-2" />
+                  Canceling...
+                </>
+              ) : (
+                'Yes, Cancel Subscription'
+              )}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
