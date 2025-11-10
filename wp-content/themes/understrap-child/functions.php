@@ -1531,6 +1531,10 @@ function samsara_grant_customer_rest_api_caps($allcaps, $caps, $args, $user) {
     $allcaps['read_customer'] = true;
     $allcaps['edit_customer'] = true;
 
+    // Grant edit capabilities for subscriptions so users can cancel their own
+    $allcaps['edit_shop_subscriptions'] = true;
+    $allcaps['edit_shop_subscription'] = true;
+
     return $allcaps;
 }
 
@@ -1560,8 +1564,8 @@ function samsara_verify_own_data_access($permission, $context, $object_id, $post
         }
     }
 
-    // Allow users to view their own subscriptions
-    if ($post_type === 'shop_subscription' && $context === 'read') {
+    // Allow users to view and edit their own subscriptions
+    if ($post_type === 'shop_subscription' && ($context === 'read' || $context === 'edit')) {
         // If no object_id, it's a list request - check if customer param matches current user
         if (!$object_id) {
             $customer_param = isset($_GET['customer']) ? intval($_GET['customer']) : null;
