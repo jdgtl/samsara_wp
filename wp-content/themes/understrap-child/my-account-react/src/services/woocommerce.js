@@ -275,6 +275,9 @@ export const transformers = {
    * Transform WC Subscription to our Subscription format
    */
   subscription: (wcSub) => {
+    const productId = wcSub.line_items?.[0]?.product_id;
+    const productUrl = productId ? `/product/?p=${productId}` : '/shop/';
+
     return {
       id: wcSub.id.toString(),
       startDate: wcSub.date_created,
@@ -285,6 +288,8 @@ export const transformers = {
       billingInterval: wcSub.billing_period || 'monthly',
       canceledAt: wcSub.date_cancelled || wcSub.end_date || null,
       relatedOrders: wcSub.related_orders || [],
+      productUrl: productUrl,
+      productId: productId,
     };
   },
 
