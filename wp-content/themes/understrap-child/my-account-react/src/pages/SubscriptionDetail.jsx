@@ -155,13 +155,8 @@ const SubscriptionDetail = () => {
   };
 
   const handleResubscribe = () => {
-    // Redirect to the subscription product page to re-purchase
-    if (subscription.productUrl) {
-      window.location.href = subscription.productUrl;
-    } else {
-      // Fallback to shop page if product URL not available
-      window.location.href = '/shop/';
-    }
+    // Redirect to the specific product page to re-purchase
+    window.location.href = subscription.productUrl || '/shop/';
   };
 
   return (
@@ -264,65 +259,83 @@ const SubscriptionDetail = () => {
           <div className="space-y-4">
             {subscription.status === 'active' && (
               <>
-                {/* Cancel Button */}
-                <Button
-                  variant="destructive"
-                  onClick={() => setShowCancelDialog(true)}
-                  disabled={!cancellationEligibility?.cancelable || eligibilityLoading}
-                  className="gap-2"
-                  data-testid="cancel-subscription-btn"
-                >
-                  <XCircle className="h-4 w-4" />
-                  Cancel Subscription
-                </Button>
+                {/* Loading state while canceling */}
+                {actionLoading ? (
+                  <div className="flex items-center gap-3 p-4 border border-stone-200 rounded-lg bg-stone-50">
+                    <Loader2 className="h-5 w-5 animate-spin text-red-600" />
+                    <div>
+                      <p className="font-medium text-stone-900">Canceling subscription...</p>
+                      <p className="text-sm text-stone-600">Please wait while we process your request</p>
+                    </div>
+                  </div>
+                ) : (
+                  <>
+                    {/* Cancel Button */}
+                    <Button
+                      variant="destructive"
+                      onClick={() => setShowCancelDialog(true)}
+                      disabled={!cancellationEligibility?.cancelable || eligibilityLoading}
+                      className="gap-2"
+                      data-testid="cancel-subscription-btn"
+                    >
+                      <XCircle className="h-4 w-4" />
+                      Cancel Subscription
+                    </Button>
 
-                {/* Cancellation eligibility info - two column layout */}
-                {!eligibilityLoading && cancellationEligibility && (
-                  <div className="grid md:grid-cols-2 gap-4 pt-2 text-sm">
-                    {/* Left: Reasons */}
-                    {!cancellationEligibility.cancelable && cancellationEligibility.reasons && (
-                      <div className="text-stone-700">
-                        <p className="font-semibold mb-1">Cancellation not available</p>
-                        <div className="text-xs space-y-0.5 text-stone-600">
-                          {cancellationEligibility.reasons.map((reason, idx) => (
-                            <p key={idx}>{reason}</p>
-                          ))}
-                        </div>
-                      </div>
-                    )}
+                    {/* Cancellation eligibility info - two column layout */}
+                    {!eligibilityLoading && cancellationEligibility && (
+                      <div className="grid md:grid-cols-2 gap-4 pt-2 text-sm">
+                        {/* Left: Reasons */}
+                        {!cancellationEligibility.cancelable && cancellationEligibility.reasons && (
+                          <div className="text-stone-700">
+                            <p className="font-semibold mb-1">Cancellation not available</p>
+                            <div className="text-xs space-y-0.5 text-stone-600">
+                              {cancellationEligibility.reasons.map((reason, idx) => (
+                                <p key={idx}>{reason}</p>
+                              ))}
+                            </div>
+                          </div>
+                        )}
 
-                    {/* Right: Window Info */}
-                    {cancellationEligibility.window?.start && (
-                      <div className={`${cancellationEligibility.cancelable ? 'text-emerald-700 md:col-span-2' : 'text-stone-700'}`}>
-                        <p className="font-semibold mb-1">
-                          {cancellationEligibility.cancelable ? '✓ ' : ''}Cancellation Window
-                        </p>
-                        {cancellationEligibility.window.end ? (
-                          <p className="text-xs text-stone-600">
-                            From <span className="font-medium">{cancellationEligibility.window.start}</span>
-                            {' to '}
-                            <span className="font-medium">{cancellationEligibility.window.end}</span>
-                          </p>
-                        ) : (
-                          <p className="text-xs text-stone-600">
-                            From <span className="font-medium">{cancellationEligibility.window.start}</span> onwards
-                          </p>
+                        {/* Right: Window Info */}
+                        {cancellationEligibility.window?.start && (
+                          <div className={`${cancellationEligibility.cancelable ? 'text-emerald-700 md:col-span-2' : 'text-stone-700'}`}>
+                            <p className="font-semibold mb-1">
+                              {cancellationEligibility.cancelable ? '✓ ' : ''}Cancellation Window
+                            </p>
+                            {cancellationEligibility.window.end ? (
+                              <p className="text-xs text-stone-600">
+                                From <span className="font-medium">{cancellationEligibility.window.start}</span>
+                                {' to '}
+                                <span className="font-medium">{cancellationEligibility.window.end}</span>
+                              </p>
+                            ) : (
+                              <p className="text-xs text-stone-600">
+                                From <span className="font-medium">{cancellationEligibility.window.start}</span> onwards
+                              </p>
+                            )}
+                          </div>
                         )}
                       </div>
                     )}
-                  </div>
+                  </>
                 )}
               </>
             )}
 
             {subscription.status === 'canceled' && (
-              <Button
-                onClick={handleResubscribe}
-                className="gap-2 bg-samsara-gold hover:bg-samsara-gold/90 text-samsara-black"
-                data-testid="resubscribe-btn"
-              >
-                Re-subscribe
-              </Button>
+              <div className="space-y-3">
+                <Button
+                  onClick={handleResubscribe}
+                  className="gap-2 bg-samsara-gold hover:bg-samsara-gold/90 text-samsara-black"
+                  data-testid="resubscribe-btn"
+                >
+                  Re-subscribe to {subscription.planName}
+                </Button>
+                <p className="text-xs text-stone-600">
+                  You'll be redirected to purchase this subscription again
+                </p>
+              </div>
             )}
           </div>
         </CardContent>
@@ -380,26 +393,15 @@ const SubscriptionDetail = () => {
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel
-              data-testid="cancel-cancel-btn"
-              disabled={actionLoading}
-            >
+            <AlertDialogCancel data-testid="cancel-cancel-btn">
               Keep Subscription
             </AlertDialogCancel>
             <AlertDialogAction
               onClick={handleCancel}
               className="bg-red-600 hover:bg-red-700"
               data-testid="cancel-confirm-btn"
-              disabled={actionLoading}
             >
-              {actionLoading ? (
-                <>
-                  <Loader2 className="h-4 w-4 animate-spin mr-2" />
-                  Canceling...
-                </>
-              ) : (
-                'Yes, Cancel Subscription'
-              )}
+              Yes, Cancel Subscription
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
