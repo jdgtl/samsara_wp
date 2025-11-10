@@ -1522,13 +1522,17 @@ function samsara_grant_customer_rest_api_caps($allcaps, $caps, $args, $user) {
     // If an admin has switched to this user, grant them full WooCommerce capabilities
     if (function_exists('current_user_switched')) {
         $old_user = current_user_switched();
-        if ($old_user && user_can($old_user, 'manage_woocommerce')) {
-            // Grant full WooCommerce admin capabilities
-            $allcaps['manage_woocommerce'] = true;
-            $allcaps['edit_shop_orders'] = true;
-            $allcaps['edit_shop_subscriptions'] = true;
-            $allcaps['edit_users'] = true;
-            return $allcaps;
+        if ($old_user) {
+            // Check capabilities directly to avoid infinite recursion
+            $old_user_data = new WP_User($old_user->ID);
+            if (isset($old_user_data->allcaps['manage_woocommerce']) && $old_user_data->allcaps['manage_woocommerce']) {
+                // Grant full WooCommerce admin capabilities
+                $allcaps['manage_woocommerce'] = true;
+                $allcaps['edit_shop_orders'] = true;
+                $allcaps['edit_shop_subscriptions'] = true;
+                $allcaps['edit_users'] = true;
+                return $allcaps;
+            }
         }
     }
 
@@ -1570,8 +1574,12 @@ function samsara_verify_own_data_access($permission, $context, $object_id, $post
     // Allow admins who have switched to a user to manage that user's data
     if (function_exists('current_user_switched')) {
         $old_user = current_user_switched();
-        if ($old_user && user_can($old_user, 'manage_woocommerce')) {
-            return true;
+        if ($old_user) {
+            // Check capabilities directly to avoid infinite recursion
+            $old_user_data = new WP_User($old_user->ID);
+            if (isset($old_user_data->allcaps['manage_woocommerce']) && $old_user_data->allcaps['manage_woocommerce']) {
+                return true;
+            }
         }
     }
 
