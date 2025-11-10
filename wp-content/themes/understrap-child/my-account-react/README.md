@@ -35,6 +35,32 @@ This React application replaces the default WooCommerce My Account pages with a 
 
 **Recent Updates (November 2025):**
 
+### Subscription Management Enhancements (November 10, 2025)
+- **Customer Self-Service Cancellation** - Fixed permission issues blocking subscription cancellations
+  - Customers can now cancel their own subscriptions via REST API when allowed by product settings
+  - Added edit capabilities (`edit_shop_subscriptions`, `edit_shop_subscription`) to customer role during REST requests
+  - Enhanced permission verification to allow both read and edit context for own subscriptions
+  - Respects all WooCommerce product-level cancellation rules and windows
+- **Admin User Switching Support** - Admins can manage customer subscriptions when switched to user
+  - Detects when admin has switched to customer account (User Switching plugin)
+  - Grants full WooCommerce admin capabilities to switched admins
+  - Fixed infinite recursion bug by checking capabilities directly on WP_User object
+  - Enables support staff to help customers with subscription management
+- **Improved Cancellation UX** - Better visual feedback during subscription cancellation
+  - Loading state now visible in main "Manage Subscription" card (not hidden in closing modal)
+  - Prominent loading indicator with spinner and descriptive text
+  - Button states disabled during processing to prevent duplicate actions
+  - Clear messaging: "Canceling subscription... Please wait while we process your request"
+- **Enhanced Resubscribe Experience** - Smarter resubscribe button after cancellation
+  - Links directly to specific product page instead of general shop
+  - Shows product name in button: "Re-subscribe to [Product Name]"
+  - Helpful description below button for clarity
+  - Product URL included in subscription data from API
+- **Code Cleanup** - Removed debug console logs from production build
+  - Cleaned up debug logging from dashboard hooks, payment methods, gift cards
+  - Reduced console noise for better debugging experience
+  - Retained error logging for troubleshooting
+
 ### Gift Cards Feature (November 1, 2025)
 - **Full Gift Card Management** - Complete integration with WooCommerce Gift Cards plugin
   - View all gift cards (received and purchased) in unified list

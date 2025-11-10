@@ -15,12 +15,7 @@ export const usePaymentMethods = () => {
     try {
       setLoading(true);
       setError(null);
-      console.log('📡 Fetching payment methods from API...');
       const data = await paymentMethodsApi.getPaymentMethods();
-      console.log('📥 Received payment methods:', {
-        count: Array.isArray(data) ? data.length : 0,
-        data: data
-      });
       setPaymentMethods(Array.isArray(data) ? data : []);
     } catch (err) {
       setError(err.message || 'Failed to fetch payment methods');

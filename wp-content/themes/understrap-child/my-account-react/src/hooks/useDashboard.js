@@ -22,10 +22,6 @@ export const useDashboard = () => {
   // Prioritize Athlete Team FIRST, then Basecamp, then any active subscription/membership
   // Check both subscriptions AND manually-added memberships
   const primarySubscription = (() => {
-    // DEBUG: Log what data we're working with
-    console.log('DEBUG - All Subscriptions:', subscriptions);
-    console.log('DEBUG - All Memberships:', memberships);
-
     // First priority: Active Athlete Team subscription (Mandala, Momentum, Matrix, Alumni, Recon)
     const athleteTeamSub = subscriptions.find(sub => {
       const planName = sub.planName?.toLowerCase() || '';
@@ -41,7 +37,6 @@ export const useDashboard = () => {
       return isActive && isAthleteTeam;
     });
     if (athleteTeamSub) {
-      console.log('DEBUG - Found Athlete Team subscription:', athleteTeamSub);
       return athleteTeamSub;
     }
 
@@ -49,7 +44,6 @@ export const useDashboard = () => {
     const athleteTeamMembership = memberships.find(m => {
       const slug = m.slug?.toLowerCase() || '';
       const name = m.name?.toLowerCase() || '';
-      console.log('DEBUG - Checking membership:', { name: m.name, slug: m.slug, status: m.status });
       const isActive = m.status === 'active';
       // Check for specific team names in slug or name
       const isAthleteTeam = (
@@ -63,7 +57,6 @@ export const useDashboard = () => {
       return isActive && isAthleteTeam;
     });
     if (athleteTeamMembership) {
-      console.log('DEBUG - Found Athlete Team membership:', athleteTeamMembership);
       // Convert membership to subscription-like format for display
       return {
         id: `membership-${athleteTeamMembership.id}`,
@@ -83,7 +76,6 @@ export const useDashboard = () => {
       return sub.status === 'active' && planName.includes('basecamp');
     });
     if (basecampSub) {
-      console.log('DEBUG - Found Basecamp subscription:', basecampSub);
       return basecampSub;
     }
 
@@ -97,7 +89,6 @@ export const useDashboard = () => {
       );
     });
     if (basecampMembership) {
-      console.log('DEBUG - Found Basecamp membership:', basecampMembership);
       // Convert membership to subscription-like format for display
       return {
         id: `membership-${basecampMembership.id}`,
@@ -114,7 +105,6 @@ export const useDashboard = () => {
     // REMOVED FALLBACK: Only Athlete Team or Basecamp should show as primary
     // Other memberships (like Bodyweight Programs) should ONLY appear in "Additional Memberships"
     // If no Athlete Team/Basecamp, return null to show CTA buttons
-    console.log('DEBUG - No Athlete Team or Basecamp subscription/membership found');
     return null;
   })();
 

@@ -20,15 +20,6 @@ const GiftCardDetail = () => {
   // Fetch gift card data
   const { giftCard, loading, error, refetch } = useGiftCard(cardId);
 
-  // Debug logging
-  React.useEffect(() => {
-    if (giftCard) {
-      console.log('🎁 Gift card data:', giftCard);
-      console.log('🎁 Activities:', giftCard.activities);
-      console.log('🎁 Has activities?', giftCard.activities && giftCard.activities.length > 0);
-    }
-  }, [giftCard]);
-
   const copyToClipboard = async (code) => {
     try {
       await navigator.clipboard.writeText(code);
