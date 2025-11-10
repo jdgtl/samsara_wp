@@ -1519,6 +1519,19 @@ function samsara_grant_customer_rest_api_caps($allcaps, $caps, $args, $user) {
         return $allcaps;
     }
 
+    // If an admin has switched to this user, grant them full WooCommerce capabilities
+    if (function_exists('current_user_switched')) {
+        $old_user = current_user_switched();
+        if ($old_user && user_can($old_user, 'manage_woocommerce')) {
+            // Grant full WooCommerce admin capabilities
+            $allcaps['manage_woocommerce'] = true;
+            $allcaps['edit_shop_orders'] = true;
+            $allcaps['edit_shop_subscriptions'] = true;
+            $allcaps['edit_users'] = true;
+            return $allcaps;
+        }
+    }
+
     $user_id = $user->ID;
 
     // Grant read capabilities for own data
@@ -1552,6 +1565,14 @@ function samsara_verify_own_data_access($permission, $context, $object_id, $post
     // Only modify permissions for logged in users
     if (!is_user_logged_in()) {
         return $permission;
+    }
+
+    // Allow admins who have switched to a user to manage that user's data
+    if (function_exists('current_user_switched')) {
+        $old_user = current_user_switched();
+        if ($old_user && user_can($old_user, 'manage_woocommerce')) {
+            return true;
+        }
     }
 
     $user_id = get_current_user_id();
