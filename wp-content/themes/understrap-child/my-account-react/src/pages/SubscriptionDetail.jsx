@@ -145,7 +145,9 @@ const SubscriptionDetail = () => {
   };
 
   const handleCancel = async () => {
-    const result = await cancelSubscription(subId);
+    // Pass the next payment date as the end date to preserve the prepaid term
+    // This prevents the "Jan 1, 1970" epoch date issue
+    const result = await cancelSubscription(subId, subscription.nextPaymentDate);
     if (result.success) {
       window.location.reload(); // Reload to fetch updated data
     } else {

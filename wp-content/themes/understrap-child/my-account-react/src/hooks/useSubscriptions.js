@@ -107,11 +107,11 @@ export const useSubscriptionActions = () => {
   const [actionLoading, setActionLoading] = useState(false);
   const [actionError, setActionError] = useState(null);
 
-  const cancelSubscription = async (subscriptionId) => {
+  const cancelSubscription = async (subscriptionId, endDate = null) => {
     try {
       setActionLoading(true);
       setActionError(null);
-      await subscriptionsApi.cancelSubscription(subscriptionId);
+      await subscriptionsApi.cancelSubscription(subscriptionId, endDate);
       return { success: true };
     } catch (err) {
       setActionError(err.message || 'Failed to cancel subscription');
