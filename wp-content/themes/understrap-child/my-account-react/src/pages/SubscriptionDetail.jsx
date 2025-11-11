@@ -219,10 +219,10 @@ const SubscriptionDetail = () => {
             {/* Conditional: Active vs Canceled layout */}
             {subscription.status === 'canceled' ? (
               <>
-                {/* For Canceled: Show Date Canceled */}
-                {subscription.canceledAt && (
-                  <div>
-                    <p className="text-sm text-stone-600">Date Canceled</p>
+                {/* For Canceled: Show Date Canceled - Always show this column */}
+                <div>
+                  <p className="text-sm text-stone-600">Date Canceled</p>
+                  {subscription.canceledAt ? (
                     <p className="text-lg font-medium text-stone-900" data-testid="canceled-date">
                       {new Date(subscription.canceledAt).toLocaleDateString('en-US', {
                         month: 'long',
@@ -230,8 +230,12 @@ const SubscriptionDetail = () => {
                         year: 'numeric'
                       })}
                     </p>
-                  </div>
-                )}
+                  ) : (
+                    <p className="text-lg font-medium text-stone-600" data-testid="canceled-date-unavailable">
+                      Date not available
+                    </p>
+                  )}
+                </div>
 
                 {/* For Canceled: Show Access Valid Until */}
                 {subscription.endDate && (
