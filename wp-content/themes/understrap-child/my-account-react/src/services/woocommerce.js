@@ -288,6 +288,19 @@ export const transformers = {
     const productId = wcSub.line_items?.[0]?.product_id;
     const productUrl = productId ? `/product/?p=${productId}` : '/shop/';
 
+    // Try to get cancellation date from multiple sources
+    let canceledAt = wcSub.date_cancelled || null;
+
+    // If not available, try schedule dates
+    if (!canceledAt && wcSub.schedule && wcSub.schedule.cancelled) {
+      canceledAt = wcSub.schedule.cancelled;
+    }
+
+    // If still not available and status is cancelled, try date_modified or date_updated
+    if (!canceledAt && (wcSub.status === 'cancelled' || wcSub.status === 'canceled')) {
+      canceledAt = wcSub.date_modified || wcSub.date_updated || null;
+    }
+
     return {
       id: wcSub.id.toString(),
       startDate: wcSub.date_created,
@@ -296,7 +309,7 @@ export const transformers = {
       nextPaymentAmount: parseFloat(wcSub.total || 0),
       planName: wcSub.line_items?.[0]?.name || 'Subscription',
       billingInterval: wcSub.billing_period || 'monthly',
-      canceledAt: wcSub.date_cancelled || null,
+      canceledAt: canceledAt,
       endDate: wcSub.end_date || wcSub.next_payment_date || null, // When access/subscription ends
       relatedOrders: wcSub.related_orders || [],
       productUrl: productUrl,
