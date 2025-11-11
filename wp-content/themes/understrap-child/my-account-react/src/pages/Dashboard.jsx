@@ -110,14 +110,21 @@ const Dashboard = () => {
       })
     : 'Recently';
 
-  // Calculate countdown for next payment
+  // Calculate countdown for next payment or access expiry
   useEffect(() => {
     const calculateCountdown = () => {
-      if (!primarySubscription || !primarySubscription.nextPaymentDate) return;
+      if (!primarySubscription) return;
+
+      // For cancelled subscriptions, use endDate; for active, use nextPaymentDate
+      const targetDate = primarySubscription.status === 'canceled'
+        ? primarySubscription.endDate || primarySubscription.nextPaymentDate
+        : primarySubscription.nextPaymentDate;
+
+      if (!targetDate) return;
 
       const now = new Date();
-      const nextPayment = new Date(primarySubscription.nextPaymentDate);
-      const diff = nextPayment - now;
+      const target = new Date(targetDate);
+      const diff = target - now;
 
       const days = Math.floor(diff / (1000 * 60 * 60 * 24));
 
@@ -368,8 +375,49 @@ const Dashboard = () => {
             </div>
           </CardHeader>
           <CardContent className="space-y-4">
-            {/* Only show billing info if this is a subscription (not a manually-added membership) */}
-            {!primarySubscription.isMembership && primarySubscription.nextPaymentDate ? (
+            {/* Conditional display based on subscription type and status */}
+            {!primarySubscription.isMembership && primarySubscription.status === 'canceled' ? (
+              // Cancelled subscription - show expiry information
+              <div className="space-y-3">
+                <div className="bg-amber-50 border border-amber-200 rounded-lg p-4">
+                  <div className="flex items-start gap-2">
+                    <span className="text-amber-600 text-xl">⚠️</span>
+                    <div className="flex-1">
+                      <p className="text-sm font-semibold text-amber-900">Subscription Cancelled</p>
+                      <p className="text-sm text-amber-700 mt-1">
+                        You still have access until your prepaid period ends
+                      </p>
+                    </div>
+                  </div>
+                </div>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div className="space-y-1">
+                    <p className="text-sm text-stone-600">Access valid until</p>
+                    <p className="text-lg font-semibold text-amber-700" data-testid="access-end-date">
+                      {new Date(primarySubscription.endDate || primarySubscription.nextPaymentDate).toLocaleDateString('en-US', {
+                        month: 'long',
+                        day: 'numeric',
+                        year: 'numeric'
+                      })}
+                    </p>
+                    <p className="text-sm text-amber-600 font-medium" data-testid="access-countdown">
+                      {countdown.days} days remaining
+                    </p>
+                  </div>
+                  <div className="space-y-1">
+                    <p className="text-sm text-stone-600">Cancelled on</p>
+                    <p className="text-lg font-semibold text-stone-900" data-testid="cancelled-date">
+                      {primarySubscription.canceledAt ? new Date(primarySubscription.canceledAt).toLocaleDateString('en-US', {
+                        month: 'long',
+                        day: 'numeric',
+                        year: 'numeric'
+                      }) : 'N/A'}
+                    </p>
+                  </div>
+                </div>
+              </div>
+            ) : !primarySubscription.isMembership && primarySubscription.nextPaymentDate ? (
+              // Active subscription - show billing info
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div className="space-y-1">
                   <p className="text-sm text-stone-600">Next billing date</p>
@@ -392,6 +440,7 @@ const Dashboard = () => {
                 </div>
               </div>
             ) : (
+              // Manually-added membership - show status
               <div className="space-y-1">
                 <p className="text-sm text-stone-600">Status</p>
                 <p className="text-lg font-semibold text-emerald-700">Active Membership</p>

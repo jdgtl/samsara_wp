@@ -43,14 +43,19 @@ const SubscriptionDetail = () => {
     fetchCancellationEligibility();
   }, [subId]);
 
-  // Calculate countdown for next payment
+  // Calculate countdown for next payment or access expiry
   useEffect(() => {
-    if (!subscription?.nextPaymentDate) return;
+    // For canceled subscriptions, use endDate; for active, use nextPaymentDate
+    const targetDate = subscription?.status === 'canceled'
+      ? subscription?.endDate
+      : subscription?.nextPaymentDate;
+
+    if (!targetDate) return;
 
     const calculateCountdown = () => {
       const now = new Date();
-      const nextPayment = new Date(subscription.nextPaymentDate);
-      const diff = nextPayment - now;
+      const target = new Date(targetDate);
+      const diff = target - now;
 
       const days = Math.floor(diff / (1000 * 60 * 60 * 24));
 
@@ -198,7 +203,8 @@ const SubscriptionDetail = () => {
           <CardTitle>Subscription Details</CardTitle>
         </CardHeader>
         <CardContent className="space-y-4">
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+            {/* Start Date - Always shown */}
             <div>
               <p className="text-sm text-stone-600">Start Date</p>
               <p className="text-lg font-medium text-stone-900" data-testid="start-date">
@@ -209,43 +215,70 @@ const SubscriptionDetail = () => {
                 })}
               </p>
             </div>
-            
-            {subscription.nextPaymentDate && (
-              <div>
-                <p className="text-sm text-stone-600">Next Payment Date</p>
-                <p className="text-lg font-medium text-stone-900" data-testid="next-payment-date">
-                  {new Date(subscription.nextPaymentDate).toLocaleDateString('en-US', {
-                    month: 'long',
-                    day: 'numeric',
-                    year: 'numeric'
-                  })}
-                </p>
-                <p className="text-sm text-emerald-700 font-medium mt-1" data-testid="payment-countdown">
-                  in {countdown.days} days
-                </p>
-              </div>
-            )}
-            
-            {subscription.nextPaymentAmount && (
-              <div>
-                <p className="text-sm text-stone-600">Amount</p>
-                <p className="text-lg font-medium text-stone-900" data-testid="payment-amount">
-                  ${subscription.nextPaymentAmount.toFixed(2)} / {subscription.billingInterval}
-                </p>
-              </div>
-            )}
 
-            {subscription.canceledAt && (
-              <div>
-                <p className="text-sm text-stone-600">Canceled On</p>
-                <p className="text-lg font-medium text-stone-900" data-testid="canceled-date">
-                  {new Date(subscription.canceledAt).toLocaleDateString('en-US', {
-                    month: 'long',
-                    day: 'numeric',
-                    year: 'numeric'
-                  })}
-                </p>
-              </div>
+            {/* Conditional: Active vs Canceled layout */}
+            {subscription.status === 'canceled' ? (
+              <>
+                {/* For Canceled: Show Date Canceled */}
+                {subscription.canceledAt && (
+                  <div>
+                    <p className="text-sm text-stone-600">Date Canceled</p>
+                    <p className="text-lg font-medium text-stone-900" data-testid="canceled-date">
+                      {new Date(subscription.canceledAt).toLocaleDateString('en-US', {
+                        month: 'long',
+                        day: 'numeric',
+                        year: 'numeric'
+                      })}
+                    </p>
+                  </div>
+                )}
+
+                {/* For Canceled: Show Access Valid Until */}
+                {subscription.endDate && (
+                  <div>
+                    <p className="text-sm text-stone-600">Access Valid Until</p>
+                    <p className="text-lg font-medium text-amber-700" data-testid="access-end-date">
+                      {new Date(subscription.endDate).toLocaleDateString('en-US', {
+                        month: 'long',
+                        day: 'numeric',
+                        year: 'numeric'
+                      })}
+                    </p>
+                    <p className="text-sm text-amber-600 font-medium mt-1" data-testid="access-countdown">
+                      {countdown.days} days remaining
+                    </p>
+                  </div>
+                )}
+              </>
+            ) : (
+              <>
+                {/* For Active: Show Next Payment Date */}
+                {subscription.nextPaymentDate && (
+                  <div>
+                    <p className="text-sm text-stone-600">Next Payment Date</p>
+                    <p className="text-lg font-medium text-stone-900" data-testid="next-payment-date">
+                      {new Date(subscription.nextPaymentDate).toLocaleDateString('en-US', {
+                        month: 'long',
+                        day: 'numeric',
+                        year: 'numeric'
+                      })}
+                    </p>
+                    <p className="text-sm text-emerald-700 font-medium mt-1" data-testid="payment-countdown">
+                      in {countdown.days} days
+                    </p>
+                  </div>
+                )}
+
+                {/* For Active: Show Amount */}
+                {subscription.nextPaymentAmount && (
+                  <div>
+                    <p className="text-sm text-stone-600">Amount</p>
+                    <p className="text-lg font-medium text-stone-900" data-testid="payment-amount">
+                      ${subscription.nextPaymentAmount.toFixed(2)} / {subscription.billingInterval}
+                    </p>
+                  </div>
+                )}
+              </>
             )}
           </div>
         </CardContent>
