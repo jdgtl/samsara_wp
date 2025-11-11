@@ -108,17 +108,27 @@ export const subscriptionsApi = {
    * Update subscription status (cancel only)
    * Note: Pause/resume functionality has been removed per business requirements
    */
-  async updateSubscriptionStatus(subscriptionId, status) {
-    return await put(`${WCS_API_BASE}/subscriptions/${subscriptionId}`, {
+  async updateSubscriptionStatus(subscriptionId, status, endDate = null) {
+    const data = {
       status: status, // 'cancelled' only
-    });
+    };
+
+    // Set end_date to prevent "Jan 1, 1970" issue
+    // When cancelling, end_date should be set to the end of prepaid term (next payment date)
+    if (status === 'cancelled' && endDate) {
+      data.end_date = endDate;
+    }
+
+    return await put(`${WCS_API_BASE}/subscriptions/${subscriptionId}`, data);
   },
 
   /**
    * Cancel subscription
+   * @param {string} subscriptionId - The subscription ID
+   * @param {string} endDate - Optional end date (defaults to next payment date to preserve prepaid term)
    */
-  async cancelSubscription(subscriptionId) {
-    return await this.updateSubscriptionStatus(subscriptionId, 'cancelled');
+  async cancelSubscription(subscriptionId, endDate = null) {
+    return await this.updateSubscriptionStatus(subscriptionId, 'cancelled', endDate);
   },
 
   /**
