@@ -18,14 +18,27 @@ export const useDashboard = () => {
   const { memberships, loading: membershipsLoading, error: membershipsError, refetch: refetchMemberships } = useMemberships();
   const { paymentMethods, loading: paymentsLoading, error: paymentsError, refetch: refetchPayments } = usePaymentMethods();
 
+  // Helper function to check if subscription has valid access
+  // Includes both active subscriptions AND cancelled subscriptions with future end dates
+  const hasValidAccess = (sub) => {
+    if (sub.status === 'active') return true;
+    if (sub.status === 'canceled' && sub.endDate) {
+      const endDate = new Date(sub.endDate);
+      const now = new Date();
+      return endDate > now; // Still has access if end date is in the future
+    }
+    return false;
+  };
+
   // Calculate derived data
   // Prioritize Athlete Team FIRST, then Basecamp, then any active subscription/membership
   // Check both subscriptions AND manually-added memberships
+  // Include cancelled subscriptions that still have valid access
   const primarySubscription = (() => {
-    // First priority: Active Athlete Team subscription (Mandala, Momentum, Matrix, Alumni, Recon)
+    // First priority: Athlete Team subscription with valid access (active or cancelled with future end date)
     const athleteTeamSub = subscriptions.find(sub => {
       const planName = sub.planName?.toLowerCase() || '';
-      const isActive = sub.status === 'active';
+      const hasAccess = hasValidAccess(sub);
       // Check for specific team names
       const isAthleteTeam = (
         planName.includes('mandala') ||
@@ -34,7 +47,7 @@ export const useDashboard = () => {
         planName.includes('alumni') ||
         planName.includes('recon')
       );
-      return isActive && isAthleteTeam;
+      return hasAccess && isAthleteTeam;
     });
     if (athleteTeamSub) {
       return athleteTeamSub;
@@ -70,10 +83,11 @@ export const useDashboard = () => {
       };
     }
 
-    // Third priority: Active Basecamp subscription
+    // Third priority: Basecamp subscription with valid access (active or cancelled with future end date)
     const basecampSub = subscriptions.find(sub => {
       const planName = sub.planName?.toLowerCase() || '';
-      return sub.status === 'active' && planName.includes('basecamp');
+      const hasAccess = hasValidAccess(sub);
+      return hasAccess && planName.includes('basecamp');
     });
     if (basecampSub) {
       return basecampSub;

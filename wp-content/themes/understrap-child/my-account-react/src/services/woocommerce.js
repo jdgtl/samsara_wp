@@ -296,7 +296,8 @@ export const transformers = {
       nextPaymentAmount: parseFloat(wcSub.total || 0),
       planName: wcSub.line_items?.[0]?.name || 'Subscription',
       billingInterval: wcSub.billing_period || 'monthly',
-      canceledAt: wcSub.date_cancelled || wcSub.end_date || null,
+      canceledAt: wcSub.date_cancelled || null,
+      endDate: wcSub.end_date || wcSub.next_payment_date || null, // When access/subscription ends
       relatedOrders: wcSub.related_orders || [],
       productUrl: productUrl,
       productId: productId,
