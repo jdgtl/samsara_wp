@@ -389,43 +389,30 @@ const Dashboard = () => {
           <CardContent className="space-y-4">
             {/* Conditional display based on subscription type and status */}
             {!primarySubscription.isMembership && primarySubscription.status === 'canceled' ? (
-              // Cancelled subscription - show expiry information
-              <div className="space-y-3">
-                <div className="bg-amber-50 border border-amber-200 rounded-lg p-4">
-                  <div className="flex items-start gap-2">
-                    <span className="text-amber-600 text-xl">⚠️</span>
-                    <div className="flex-1">
-                      <p className="text-sm font-semibold text-amber-900">Subscription Cancelled</p>
-                      <p className="text-sm text-amber-700 mt-1">
-                        You still have access until your prepaid period ends
-                      </p>
-                    </div>
-                  </div>
+              // Cancelled subscription - show expiry information (no warning box, just the data)
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="space-y-1">
+                  <p className="text-sm text-stone-600">Access valid until</p>
+                  <p className="text-lg font-semibold text-amber-700" data-testid="access-end-date">
+                    {new Date(primarySubscription.endDate || primarySubscription.nextPaymentDate).toLocaleDateString('en-US', {
+                      month: 'long',
+                      day: 'numeric',
+                      year: 'numeric'
+                    })}
+                  </p>
+                  <p className="text-sm text-amber-600 font-medium" data-testid="access-countdown">
+                    {countdown.days} days remaining
+                  </p>
                 </div>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <div className="space-y-1">
-                    <p className="text-sm text-stone-600">Access valid until</p>
-                    <p className="text-lg font-semibold text-amber-700" data-testid="access-end-date">
-                      {new Date(primarySubscription.endDate || primarySubscription.nextPaymentDate).toLocaleDateString('en-US', {
-                        month: 'long',
-                        day: 'numeric',
-                        year: 'numeric'
-                      })}
-                    </p>
-                    <p className="text-sm text-amber-600 font-medium" data-testid="access-countdown">
-                      {countdown.days} days remaining
-                    </p>
-                  </div>
-                  <div className="space-y-1">
-                    <p className="text-sm text-stone-600">Cancelled on</p>
-                    <p className="text-lg font-semibold text-stone-900" data-testid="cancelled-date">
-                      {primarySubscription.canceledAt ? new Date(primarySubscription.canceledAt).toLocaleDateString('en-US', {
-                        month: 'long',
-                        day: 'numeric',
-                        year: 'numeric'
-                      }) : 'N/A'}
-                    </p>
-                  </div>
+                <div className="space-y-1">
+                  <p className="text-sm text-stone-600">Cancelled on</p>
+                  <p className="text-lg font-semibold text-stone-900" data-testid="cancelled-date">
+                    {primarySubscription.canceledAt ? new Date(primarySubscription.canceledAt).toLocaleDateString('en-US', {
+                      month: 'long',
+                      day: 'numeric',
+                      year: 'numeric'
+                    }) : 'N/A'}
+                  </p>
                 </div>
               </div>
             ) : !primarySubscription.isMembership && primarySubscription.nextPaymentDate ? (
