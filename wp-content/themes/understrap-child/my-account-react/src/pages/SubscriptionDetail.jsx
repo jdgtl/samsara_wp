@@ -274,7 +274,7 @@ const SubscriptionDetail = () => {
                 )}
 
                 {/* For Active: Show Amount */}
-                {subscription.nextPaymentAmount && (
+                {subscription.nextPaymentAmount != null && (
                   <div>
                     <p className="text-sm text-stone-600">Amount</p>
                     <p className="text-lg font-medium text-stone-900" data-testid="payment-amount">
