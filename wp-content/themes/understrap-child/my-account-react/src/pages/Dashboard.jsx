@@ -147,19 +147,33 @@ const Dashboard = () => {
     const normalizedStatus = status.toLowerCase();
 
     const badges = {
+      // Active statuses
       active: { variant: 'default', text: 'Active', className: 'bg-emerald-600 text-white hover:bg-emerald-700' },
       complimentary: { variant: 'secondary', text: 'Complimentary', className: 'bg-blue-600 text-white hover:bg-blue-700' },
+      trial: { variant: 'secondary', text: 'Trial', className: 'bg-purple-600 text-white hover:bg-purple-700' },
+      trialing: { variant: 'secondary', text: 'Trial', className: 'bg-purple-600 text-white hover:bg-purple-700' },
+
+      // Pending cancellation statuses
       'pending-cancel': { variant: 'outline', text: 'Ending Soon', className: 'border-amber-600 text-amber-700 bg-amber-50' },
       pending_cancellation: { variant: 'outline', text: 'Ending Soon', className: 'border-amber-600 text-amber-700 bg-amber-50' },
       pending_cancelled: { variant: 'outline', text: 'Ending Soon', className: 'border-amber-600 text-amber-700 bg-amber-50' },
-      trial: { variant: 'secondary', text: 'Trial', className: 'bg-purple-600 text-white hover:bg-purple-700' },
-      trialing: { variant: 'secondary', text: 'Trial', className: 'bg-purple-600 text-white hover:bg-purple-700' },
-      delayed: { variant: 'secondary', text: 'Not Started', className: 'bg-stone-400 text-white' },
-      paused: { variant: 'secondary', text: 'Paused', className: 'bg-stone-400 text-white' },
-      expired: { variant: 'destructive', text: 'Expired', className: 'bg-red-600 text-white hover:bg-red-700' },
+
+      // Payment failed / on-hold
+      'on-hold': { variant: 'destructive', text: 'Payment Failed', className: 'bg-red-600 text-white hover:bg-red-700' },
+
+      // Pending / awaiting payment
+      pending: { variant: 'secondary', text: 'Pending', className: 'bg-amber-500 text-white hover:bg-amber-600' },
+
+      // Cancelled / Expired / Inactive
       canceled: { variant: 'destructive', text: 'Cancelled', className: 'bg-red-600 text-white hover:bg-red-700' },
       cancelled: { variant: 'destructive', text: 'Cancelled', className: 'bg-red-600 text-white hover:bg-red-700' },
+      expired: { variant: 'secondary', text: 'Expired', className: 'bg-stone-500 text-white' },
+      switched: { variant: 'secondary', text: 'Switched', className: 'bg-blue-500 text-white' },
       inactive: { variant: 'secondary', text: 'Inactive', className: 'bg-stone-400 text-white' },
+
+      // Other statuses
+      delayed: { variant: 'secondary', text: 'Not Started', className: 'bg-stone-400 text-white' },
+      paused: { variant: 'secondary', text: 'Paused', className: 'bg-stone-400 text-white' },
     };
 
     const badgeConfig = badges[normalizedStatus] || {
@@ -178,14 +192,36 @@ const Dashboard = () => {
   const basecampUrl = window.samsaraMyAccount?.basecampUrl || 'https://videos.samsaraexperience.com';
 
   // Helper function to check if subscription has valid access
-  // Includes both active subscriptions AND cancelled subscriptions with future end dates
+  // Includes active, trial, on-hold, pending-cancel, and cancelled subscriptions with future end dates
   const hasValidAccess = (subscription) => {
-    if (subscription.status === 'active') return true;
-    if (subscription.status === 'canceled' && subscription.endDate) {
-      const endDate = new Date(subscription.endDate);
-      const now = new Date();
-      return endDate > now; // Still has access if end date is in the future
+    const now = new Date();
+
+    // Active subscriptions - full access
+    if (subscription.status === 'active' || subscription.status === 'trial' || subscription.status === 'trialing') return true;
+
+    // On-hold - payment failed but should still show with warning
+    // Customer needs to see their subscription and update payment method
+    if (subscription.status === 'on-hold') return true;
+
+    // Pending-cancel - still has access until end date
+    // Scheduled for cancellation but not cancelled yet
+    if (subscription.status === 'pending-cancel' ||
+        subscription.status === 'pending_cancellation' ||
+        subscription.status === 'pending_cancelled') return true;
+
+    // Cancelled - check if still in prepaid period
+    if ((subscription.status === 'canceled' || subscription.status === 'cancelled') && subscription.endDate) {
+      return new Date(subscription.endDate) > now;
     }
+
+    // Pending, expired, switched, inactive - no access
+    if (subscription.status === 'pending' ||
+        subscription.status === 'expired' ||
+        subscription.status === 'switched' ||
+        subscription.status === 'inactive') {
+      return false;
+    }
+
     return false;
   };
 
@@ -394,7 +430,88 @@ const Dashboard = () => {
           </CardHeader>
           <CardContent className="space-y-4">
             {/* Conditional display based on subscription type and status */}
-            {!primarySubscription.isMembership && primarySubscription.status === 'canceled' ? (
+            {!primarySubscription.isMembership && primarySubscription.status === 'on-hold' ? (
+              // On-hold subscription - payment failed, needs immediate attention
+              <div className="space-y-3">
+                <Alert className="border-red-500 bg-red-50">
+                  <AlertTriangle className="h-4 w-4 text-red-600" />
+                  <AlertDescription className="text-red-800">
+                    <p className="font-medium text-red-900 mb-1">Payment Failed</p>
+                    <p className="text-sm mb-3">
+                      Your payment method was declined. Update your card to restore access.
+                    </p>
+                    <Link to="/payments">
+                      <Button size="sm" className="bg-red-600 hover:bg-red-700 text-white">
+                        Update Payment Method
+                      </Button>
+                    </Link>
+                  </AlertDescription>
+                </Alert>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div className="space-y-1">
+                    <p className="text-sm text-stone-600">Started</p>
+                    <p className="text-lg font-semibold text-stone-900">
+                      {new Date(primarySubscription.startDate).toLocaleDateString('en-US', {
+                        month: 'long',
+                        day: 'numeric',
+                        year: 'numeric'
+                      })}
+                    </p>
+                  </div>
+                  <div className="space-y-1">
+                    <p className="text-sm text-stone-600">Status</p>
+                    <p className="text-lg font-semibold text-red-700">Payment Failed</p>
+                    <p className="text-sm text-stone-600 mt-1">Update payment to continue</p>
+                  </div>
+                </div>
+              </div>
+            ) : !primarySubscription.isMembership && (primarySubscription.status === 'pending-cancel' ||
+              primarySubscription.status === 'pending_cancellation' ||
+              primarySubscription.status === 'pending_cancelled') ? (
+              // Pending-cancel subscription - show scheduled cancellation info
+              <div className="space-y-3">
+                <Alert className="border-amber-500 bg-amber-50">
+                  <AlertCircle className="h-4 w-4 text-amber-600" />
+                  <AlertDescription className="text-amber-800">
+                    <p className="font-medium text-amber-900 mb-1">Cancellation Scheduled</p>
+                    <p className="text-sm">
+                      Your subscription will end on{' '}
+                      {primarySubscription.endDate && new Date(primarySubscription.endDate).toLocaleDateString('en-US', {
+                        month: 'long',
+                        day: 'numeric',
+                        year: 'numeric'
+                      })}.
+                      Contact support to undo this cancellation.
+                    </p>
+                  </AlertDescription>
+                </Alert>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div className="space-y-1">
+                    <p className="text-sm text-stone-600">Access until</p>
+                    <p className="text-lg font-semibold text-amber-700">
+                      {primarySubscription.endDate && new Date(primarySubscription.endDate).toLocaleDateString('en-US', {
+                        month: 'long',
+                        day: 'numeric',
+                        year: 'numeric'
+                      })}
+                    </p>
+                    <p className={`text-sm font-medium ${countdown.days < 0 ? 'text-red-600' : 'text-amber-600'}`}>
+                      {countdown.displayText || `${countdown.days} days remaining`}
+                    </p>
+                  </div>
+                  <div className="space-y-1">
+                    <p className="text-sm text-stone-600">Started</p>
+                    <p className="text-lg font-semibold text-stone-900">
+                      {new Date(primarySubscription.startDate).toLocaleDateString('en-US', {
+                        month: 'long',
+                        day: 'numeric',
+                        year: 'numeric'
+                      })}
+                    </p>
+                  </div>
+                </div>
+              </div>
+            ) : !primarySubscription.isMembership && primarySubscription.status === 'canceled' ? (
               // Cancelled subscription - show expiry information (no warning box, just the data)
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div className="space-y-1">

@@ -141,16 +141,45 @@ const SubscriptionDetail = () => {
   }
 
   const getStatusBadge = (status) => {
+    const normalizedStatus = status.toLowerCase();
+
     const variants = {
-      active: { variant: 'default', className: 'bg-emerald-100 text-emerald-800 hover:bg-emerald-100' },
-      trial: { variant: 'secondary', className: 'bg-blue-100 text-blue-800 hover:bg-blue-100' },
-      canceled: { variant: 'destructive', className: 'bg-red-100 text-red-800 hover:bg-red-100' },
+      // Active statuses
+      active: { variant: 'default', text: 'Active', className: 'bg-emerald-100 text-emerald-800 hover:bg-emerald-100' },
+      trial: { variant: 'secondary', text: 'Trial', className: 'bg-purple-100 text-purple-800 hover:bg-purple-100' },
+      trialing: { variant: 'secondary', text: 'Trial', className: 'bg-purple-100 text-purple-800 hover:bg-purple-100' },
+
+      // Pending cancellation statuses
+      'pending-cancel': { variant: 'outline', text: 'Ending Soon', className: 'border-amber-600 text-amber-700 bg-amber-50' },
+      pending_cancellation: { variant: 'outline', text: 'Ending Soon', className: 'border-amber-600 text-amber-700 bg-amber-50' },
+      pending_cancelled: { variant: 'outline', text: 'Ending Soon', className: 'border-amber-600 text-amber-700 bg-amber-50' },
+
+      // Payment failed / on-hold
+      'on-hold': { variant: 'destructive', text: 'Payment Failed', className: 'bg-red-100 text-red-800 hover:bg-red-100' },
+
+      // Pending / awaiting payment
+      pending: { variant: 'secondary', text: 'Pending', className: 'bg-amber-100 text-amber-800 hover:bg-amber-100' },
+
+      // Cancelled / Expired / Inactive
+      canceled: { variant: 'destructive', text: 'Cancelled', className: 'bg-red-100 text-red-800 hover:bg-red-100' },
+      cancelled: { variant: 'destructive', text: 'Cancelled', className: 'bg-red-100 text-red-800 hover:bg-red-100' },
+      expired: { variant: 'secondary', text: 'Expired', className: 'bg-stone-100 text-stone-700 hover:bg-stone-100' },
+      switched: { variant: 'secondary', text: 'Switched', className: 'bg-blue-100 text-blue-800 hover:bg-blue-100' },
+      inactive: { variant: 'secondary', text: 'Inactive', className: 'bg-stone-100 text-stone-600 hover:bg-stone-100' },
+
+      // Other statuses
+      paused: { variant: 'secondary', text: 'Paused', className: 'bg-stone-100 text-stone-600 hover:bg-stone-100' },
     };
 
-    const config = variants[status] || variants.active;
+    const config = variants[normalizedStatus] || {
+      variant: 'secondary',
+      text: status.charAt(0).toUpperCase() + status.slice(1),
+      className: 'bg-stone-100 text-stone-600 hover:bg-stone-100'
+    };
+
     return (
-      <Badge variant={config.variant} className={config.className}>
-        {status.charAt(0).toUpperCase() + status.slice(1)}
+      <Badge variant={config.variant} className={config.className} data-testid={`status-badge-${status}`}>
+        {config.text}
       </Badge>
     );
   };
@@ -203,13 +232,31 @@ const SubscriptionDetail = () => {
         </CardHeader>
       </Card>
 
+      {/* Status-specific alert banners */}
+      {subscription.status === 'on-hold' && (
+        <Alert className="border-red-500 bg-red-50">
+          <AlertTriangle className="h-4 w-4 text-red-600" />
+          <AlertDescription className="text-red-800">
+            <p className="font-medium text-red-900 mb-2">Payment Failed</p>
+            <p className="text-sm mb-3">
+              Your payment method was declined. Update your card to restore access and continue your subscription.
+            </p>
+            <Link to="/payments">
+              <Button size="sm" className="bg-red-600 hover:bg-red-700 text-white">
+                Update Payment Method
+              </Button>
+            </Link>
+          </AlertDescription>
+        </Alert>
+      )}
+
       {/* Subscription Details */}
       <Card data-testid="subscription-details-section">
         <CardHeader>
           <CardTitle>Subscription Details</CardTitle>
         </CardHeader>
         <CardContent className="space-y-4">
-          <div className={`grid grid-cols-1 gap-6 ${subscription.status === 'canceled' ? 'md:grid-cols-3' : 'md:grid-cols-2'}`}>
+          <div className={`grid grid-cols-1 gap-6 ${(subscription.status === 'canceled' || subscription.status === 'pending-cancel') ? 'md:grid-cols-3' : 'md:grid-cols-2'}`}>
             {/* Start Date - Always shown */}
             <div>
               <p className="text-sm text-stone-600">Start Date</p>
@@ -222,8 +269,40 @@ const SubscriptionDetail = () => {
               </p>
             </div>
 
-            {/* Conditional: Active vs Canceled layout */}
-            {subscription.status === 'canceled' ? (
+            {/* Conditional: Pending-Cancel, Canceled, or Active layout */}
+            {subscription.status === 'pending-cancel' ||
+             subscription.status === 'pending_cancellation' ||
+             subscription.status === 'pending_cancelled' ? (
+              <>
+                {/* For Pending-Cancel: Show Cancellation Scheduled */}
+                <div>
+                  <p className="text-sm text-stone-600">Cancellation Scheduled</p>
+                  {subscription.endDate ? (
+                    <p className="text-lg font-medium text-amber-700" data-testid="scheduled-cancel-date">
+                      {new Date(subscription.endDate).toLocaleDateString('en-US', {
+                        month: 'long',
+                        day: 'numeric',
+                        year: 'numeric'
+                      })}
+                    </p>
+                  ) : (
+                    <p className="text-lg font-medium text-stone-600">Date not available</p>
+                  )}
+                  <p className={`text-sm font-medium mt-1 ${countdown.days < 0 ? 'text-red-600' : 'text-amber-600'}`}>
+                    {countdown.displayText || `${countdown.days} days remaining`}
+                  </p>
+                </div>
+
+                {/* For Pending-Cancel: Show Contact Support message */}
+                <div>
+                  <p className="text-sm text-stone-600">Need to Reactivate?</p>
+                  <p className="text-lg font-medium text-stone-900">Contact Support</p>
+                  <p className="text-sm text-stone-600 mt-1">
+                    To undo this cancellation
+                  </p>
+                </div>
+              </>
+            ) : subscription.status === 'canceled' ? (
               <>
                 {/* For Canceled: Show Date Canceled - Always show this column */}
                 <div>
@@ -369,6 +448,38 @@ const SubscriptionDetail = () => {
                   </>
                 )}
               </>
+            )}
+
+            {(subscription.status === 'pending-cancel' ||
+              subscription.status === 'pending_cancellation' ||
+              subscription.status === 'pending_cancelled') && (
+              <div className="space-y-3">
+                <Alert className="border-amber-500 bg-amber-50">
+                  <AlertCircle className="h-4 w-4 text-amber-600" />
+                  <AlertDescription className="text-amber-800">
+                    <p className="font-medium text-amber-900 mb-2">Cancellation Scheduled</p>
+                    <p className="text-sm">
+                      Your subscription will automatically end on{' '}
+                      {subscription.endDate && new Date(subscription.endDate).toLocaleDateString('en-US', {
+                        month: 'long',
+                        day: 'numeric',
+                        year: 'numeric'
+                      })}.
+                      Contact support if you'd like to undo this cancellation.
+                    </p>
+                  </AlertDescription>
+                </Alert>
+                <Button
+                  onClick={handleResubscribe}
+                  className="gap-2 bg-samsara-gold hover:bg-samsara-gold/90 text-samsara-black"
+                  data-testid="resubscribe-btn"
+                >
+                  Re-subscribe to {subscription.planName}
+                </Button>
+                <p className="text-xs text-stone-600">
+                  You'll be redirected to purchase this subscription again
+                </p>
+              </div>
             )}
 
             {subscription.status === 'canceled' && (

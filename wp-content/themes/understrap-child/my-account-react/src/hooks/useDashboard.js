@@ -21,14 +21,36 @@ export const useDashboard = () => {
   const { paymentMethods, loading: paymentsLoading, error: paymentsError, refetch: refetchPayments } = usePaymentMethods();
 
   // Helper function to check if subscription has valid access
-  // Includes both active subscriptions AND cancelled subscriptions with future end dates
+  // Includes active, trial, on-hold, pending-cancel, and cancelled subscriptions with future end dates
   const hasValidAccess = (sub) => {
-    if (sub.status === 'active') return true;
-    if (sub.status === 'canceled' && sub.endDate) {
-      const endDate = new Date(sub.endDate);
-      const now = new Date();
-      return endDate > now; // Still has access if end date is in the future
+    const now = new Date();
+
+    // Active subscriptions - full access
+    if (sub.status === 'active' || sub.status === 'trial' || sub.status === 'trialing') return true;
+
+    // On-hold - payment failed but should still show with warning
+    // Customer needs to see their subscription and update payment method
+    if (sub.status === 'on-hold') return true;
+
+    // Pending-cancel - still has access until end date
+    // Scheduled for cancellation but not cancelled yet
+    if (sub.status === 'pending-cancel' ||
+        sub.status === 'pending_cancellation' ||
+        sub.status === 'pending_cancelled') return true;
+
+    // Cancelled - check if still in prepaid period
+    if ((sub.status === 'canceled' || sub.status === 'cancelled') && sub.endDate) {
+      return new Date(sub.endDate) > now;
     }
+
+    // Pending, expired, switched, inactive - no access
+    if (sub.status === 'pending' ||
+        sub.status === 'expired' ||
+        sub.status === 'switched' ||
+        sub.status === 'inactive') {
+      return false;
+    }
+
     return false;
   };
 
