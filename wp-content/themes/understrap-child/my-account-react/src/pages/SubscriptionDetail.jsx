@@ -59,7 +59,13 @@ const SubscriptionDetail = () => {
 
       const days = Math.floor(diff / (1000 * 60 * 60 * 24));
 
-      setCountdown({ days });
+      // Handle negative days, today, and future dates
+      const displayText = days < 0 ? 'Expired' :
+                         days === 0 ? 'Expires today' :
+                         days === 1 ? '1 day remaining' :
+                         `${days} days remaining`;
+
+      setCountdown({ days, displayText });
     };
 
     calculateCountdown();
@@ -248,8 +254,8 @@ const SubscriptionDetail = () => {
                         year: 'numeric'
                       })}
                     </p>
-                    <p className="text-sm text-amber-600 font-medium mt-1" data-testid="access-countdown">
-                      {countdown.days} days remaining
+                    <p className={`text-sm font-medium mt-1 ${countdown.days < 0 ? 'text-red-600' : 'text-amber-600'}`} data-testid="access-countdown">
+                      {countdown.displayText || `${countdown.days} days remaining`}
                     </p>
                   </div>
                 )}
@@ -267,8 +273,11 @@ const SubscriptionDetail = () => {
                         year: 'numeric'
                       })}
                     </p>
-                    <p className="text-sm text-emerald-700 font-medium mt-1" data-testid="payment-countdown">
-                      in {countdown.days} days
+                    <p className={`text-sm font-medium mt-1 ${countdown.days < 0 ? 'text-red-600' : 'text-emerald-700'}`} data-testid="payment-countdown">
+                      {countdown.days < 0 ? 'Overdue' :
+                       countdown.days === 0 ? 'Today' :
+                       countdown.days === 1 ? 'Tomorrow' :
+                       `in ${countdown.days} days`}
                     </p>
                   </div>
                 )}
