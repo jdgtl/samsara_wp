@@ -17,17 +17,45 @@ const Subscriptions = () => {
   const { subscriptions, loading, error } = useSubscriptions();
 
   const getStatusBadge = (status) => {
+    const normalizedStatus = status.toLowerCase();
+
     const variants = {
-      active: { variant: 'default', className: 'bg-emerald-100 text-emerald-800 hover:bg-emerald-100' },
-      trial: { variant: 'secondary', className: 'bg-blue-100 text-blue-800 hover:bg-blue-100' },
-      paused: { variant: 'outline', className: 'bg-amber-100 text-amber-800 hover:bg-amber-100' },
-      canceled: { variant: 'destructive', className: 'bg-red-100 text-red-800 hover:bg-red-100' },
+      // Active statuses
+      active: { variant: 'default', text: 'Active', className: 'bg-emerald-100 text-emerald-800 hover:bg-emerald-100' },
+      trial: { variant: 'secondary', text: 'Trial', className: 'bg-purple-100 text-purple-800 hover:bg-purple-100' },
+      trialing: { variant: 'secondary', text: 'Trial', className: 'bg-purple-100 text-purple-800 hover:bg-purple-100' },
+
+      // Pending cancellation statuses
+      'pending-cancel': { variant: 'outline', text: 'Ending Soon', className: 'border-amber-600 text-amber-700 bg-amber-50' },
+      pending_cancellation: { variant: 'outline', text: 'Ending Soon', className: 'border-amber-600 text-amber-700 bg-amber-50' },
+      pending_cancelled: { variant: 'outline', text: 'Ending Soon', className: 'border-amber-600 text-amber-700 bg-amber-50' },
+
+      // Payment failed / on-hold
+      'on-hold': { variant: 'destructive', text: 'Payment Failed', className: 'bg-red-100 text-red-800 hover:bg-red-100' },
+
+      // Pending / awaiting payment
+      pending: { variant: 'secondary', text: 'Pending', className: 'bg-amber-100 text-amber-800 hover:bg-amber-100' },
+
+      // Cancelled / Expired / Inactive
+      canceled: { variant: 'destructive', text: 'Cancelled', className: 'bg-red-100 text-red-800 hover:bg-red-100' },
+      cancelled: { variant: 'destructive', text: 'Cancelled', className: 'bg-red-100 text-red-800 hover:bg-red-100' },
+      expired: { variant: 'secondary', text: 'Expired', className: 'bg-stone-100 text-stone-700 hover:bg-stone-100' },
+      switched: { variant: 'secondary', text: 'Switched', className: 'bg-blue-100 text-blue-800 hover:bg-blue-100' },
+      inactive: { variant: 'secondary', text: 'Inactive', className: 'bg-stone-100 text-stone-600 hover:bg-stone-100' },
+
+      // Other statuses
+      paused: { variant: 'secondary', text: 'Paused', className: 'bg-stone-100 text-stone-600 hover:bg-stone-100' },
     };
 
-    const config = variants[status] || variants.active;
+    const config = variants[normalizedStatus] || {
+      variant: 'secondary',
+      text: status.charAt(0).toUpperCase() + status.slice(1),
+      className: 'bg-stone-100 text-stone-600 hover:bg-stone-100'
+    };
+
     return (
       <Badge variant={config.variant} className={config.className} data-testid={`subscription-status-${status}`}>
-        {status.charAt(0).toUpperCase() + status.slice(1)}
+        {config.text}
       </Badge>
     );
   };
