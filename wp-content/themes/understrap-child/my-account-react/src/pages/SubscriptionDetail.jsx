@@ -233,13 +233,86 @@ const SubscriptionDetail = () => {
       </Card>
 
       {/* Status-specific alert banners */}
+      {(subscription.status === 'trial' || subscription.status === 'trialing') && subscription.trialEndDate && (
+        <Alert className="border-purple-500 bg-purple-50">
+          <Calendar className="h-4 w-4 text-purple-600" />
+          <AlertDescription className="text-purple-800">
+            <p className="font-medium text-purple-900 mb-2">Free Trial Active</p>
+            <p className="text-sm mb-1">
+              Your trial ends on {new Date(subscription.trialEndDate).toLocaleDateString('en-US', {
+                month: 'long',
+                day: 'numeric',
+                year: 'numeric'
+              })}.
+            </p>
+            {subscription.nextPaymentAmount && subscription.nextPaymentAmount > 0 && (
+              <p className="text-sm font-semibold mb-2">
+                After trial: ${subscription.nextPaymentAmount.toFixed(2)}/{subscription.billingInterval}
+              </p>
+            )}
+            <p className="text-xs text-purple-700 mt-2">
+              Cancel anytime before {new Date(subscription.trialEndDate).toLocaleDateString('en-US', {
+                month: 'long',
+                day: 'numeric'
+              })} to avoid charges
+            </p>
+          </AlertDescription>
+        </Alert>
+      )}
+
+      {subscription.status === 'pending' && (
+        <Alert className="border-amber-500 bg-amber-50">
+          <AlertCircle className="h-4 w-4 text-amber-600" />
+          <AlertDescription className="text-amber-800">
+            <p className="font-medium text-amber-900 mb-2">Subscription Pending</p>
+            <p className="text-sm mb-3">
+              Your subscription is awaiting payment confirmation to activate.
+            </p>
+            {subscription.paymentUrl ? (
+              <a href={subscription.paymentUrl} target="_blank" rel="noopener noreferrer">
+                <Button size="sm" className="bg-amber-600 hover:bg-amber-700 text-white">
+                  Complete Payment
+                </Button>
+              </a>
+            ) : (
+              <Link to="/payments">
+                <Button size="sm" className="bg-amber-600 hover:bg-amber-700 text-white">
+                  Update Payment Method
+                </Button>
+              </Link>
+            )}
+          </AlertDescription>
+        </Alert>
+      )}
+
       {subscription.status === 'on-hold' && (
         <Alert className="border-red-500 bg-red-50">
           <AlertTriangle className="h-4 w-4 text-red-600" />
           <AlertDescription className="text-red-800">
             <p className="font-medium text-red-900 mb-2">Payment Failed</p>
+            {subscription.onHoldDate && (
+              <p className="text-sm">
+                Failed on {new Date(subscription.onHoldDate).toLocaleDateString('en-US', {
+                  month: 'long',
+                  day: 'numeric',
+                  year: 'numeric'
+                })}
+              </p>
+            )}
+            {subscription.failureReason && (
+              <p className="text-sm mb-2">Reason: {subscription.failureReason}</p>
+            )}
+            {subscription.paymentRetryDate && (
+              <p className="text-sm mb-3">
+                Next automatic retry: {new Date(subscription.paymentRetryDate).toLocaleDateString('en-US', {
+                  month: 'long',
+                  day: 'numeric',
+                  year: 'numeric'
+                })}
+              </p>
+            )}
             <p className="text-sm mb-3">
-              Your payment method was declined. Update your card to restore access and continue your subscription.
+              Update your payment method to restore access and continue your subscription.
             </p>
             <Link to="/payments">
               <Button size="sm" className="bg-red-600 hover:bg-red-700 text-white">
