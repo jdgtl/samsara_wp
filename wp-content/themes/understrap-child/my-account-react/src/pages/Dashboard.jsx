@@ -430,16 +430,78 @@ const Dashboard = () => {
           </CardHeader>
           <CardContent className="space-y-4">
             {/* Conditional display based on subscription type and status */}
-            {!primarySubscription.isMembership && primarySubscription.status === 'on-hold' ? (
+            {!primarySubscription.isMembership && (primarySubscription.status === 'trial' || primarySubscription.status === 'trialing') && primarySubscription.trialEndDate ? (
+              // Trial subscription - show trial conversion warning
+              <div className="space-y-3">
+                <Alert className="border-purple-500 bg-purple-50">
+                  <Calendar className="h-4 w-4 text-purple-600" />
+                  <AlertDescription className="text-purple-800">
+                    <p className="font-medium text-purple-900 mb-1">Free Trial Active</p>
+                    <p className="text-sm">
+                      Trial ends {new Date(primarySubscription.trialEndDate).toLocaleDateString('en-US', {
+                        month: 'long',
+                        day: 'numeric',
+                        year: 'numeric'
+                      })}.
+                      {primarySubscription.nextPaymentAmount && primarySubscription.nextPaymentAmount > 0 && (
+                        <span className="font-semibold">
+                          {' '}Converts to ${primarySubscription.nextPaymentAmount.toFixed(2)}/{primarySubscription.billingInterval}.
+                        </span>
+                      )}
+                    </p>
+                    <p className="text-xs mt-2">Cancel before trial ends to avoid charges</p>
+                  </AlertDescription>
+                </Alert>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div className="space-y-1">
+                    <p className="text-sm text-stone-600">Trial ends</p>
+                    <p className="text-lg font-semibold text-purple-700">
+                      {new Date(primarySubscription.trialEndDate).toLocaleDateString('en-US', {
+                        month: 'long',
+                        day: 'numeric',
+                        year: 'numeric'
+                      })}
+                    </p>
+                    <p className={`text-sm font-medium ${countdown.days < 0 ? 'text-red-600' : 'text-purple-600'}`}>
+                      {countdown.displayText || `${countdown.days} days remaining`}
+                    </p>
+                  </div>
+                  <div className="space-y-1">
+                    <p className="text-sm text-stone-600">Then converts to</p>
+                    <p className="text-lg font-semibold text-stone-900">
+                      ${primarySubscription.nextPaymentAmount?.toFixed(2) || '0.00'} / {primarySubscription.billingInterval}
+                    </p>
+                  </div>
+                </div>
+              </div>
+            ) : !primarySubscription.isMembership && primarySubscription.status === 'on-hold' ? (
               // On-hold subscription - payment failed, needs immediate attention
               <div className="space-y-3">
                 <Alert className="border-red-500 bg-red-50">
                   <AlertTriangle className="h-4 w-4 text-red-600" />
                   <AlertDescription className="text-red-800">
                     <p className="font-medium text-red-900 mb-1">Payment Failed</p>
-                    <p className="text-sm mb-3">
-                      Your payment method was declined. Update your card to restore access.
-                    </p>
+                    {primarySubscription.onHoldDate && (
+                      <p className="text-sm">
+                        Failed on {new Date(primarySubscription.onHoldDate).toLocaleDateString('en-US', {
+                          month: 'short',
+                          day: 'numeric',
+                          year: 'numeric'
+                        })}
+                      </p>
+                    )}
+                    {primarySubscription.failureReason && (
+                      <p className="text-sm mb-1">Reason: {primarySubscription.failureReason}</p>
+                    )}
+                    {primarySubscription.paymentRetryDate && (
+                      <p className="text-sm mb-2">
+                        Next retry: {new Date(primarySubscription.paymentRetryDate).toLocaleDateString('en-US', {
+                          month: 'short',
+                          day: 'numeric'
+                        })}
+                      </p>
+                    )}
+                    <p className="text-sm mb-3">Update your card to restore access.</p>
                     <Link to="/payments">
                       <Button size="sm" className="bg-red-600 hover:bg-red-700 text-white">
                         Update Payment Method

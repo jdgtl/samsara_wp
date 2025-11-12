@@ -314,6 +314,27 @@ export const transformers = {
       relatedOrders: wcSub.related_orders || [],
       productUrl: productUrl,
       productId: productId,
+
+      // Phase 6: Enhanced fields for better UX
+      // On-hold / Payment failure data
+      onHoldDate: wcSub.date_on_hold || wcSub.date_modified || null,
+      paymentRetryDate: wcSub.payment_retry_date || wcSub.schedule?.payment_retry || null,
+      failureReason: wcSub.payment_failure_reason || wcSub.payment_details?.failure_reason || null,
+
+      // Pending payment data
+      paymentUrl: wcSub.payment_url || null,
+
+      // Trial data
+      trialEndDate: wcSub.trial_end_date || wcSub.schedule?.trial_end || null,
+
+      // Schedule metadata (full schedule object for reference)
+      schedule: {
+        nextPayment: wcSub.schedule?.next_payment || null,
+        trialEnd: wcSub.schedule?.trial_end || null,
+        cancelled: wcSub.schedule?.cancelled || null,
+        end: wcSub.schedule?.end || null,
+        paymentRetry: wcSub.schedule?.payment_retry || null,
+      },
     };
   },
 
