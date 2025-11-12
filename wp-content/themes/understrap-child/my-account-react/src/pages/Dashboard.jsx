@@ -171,6 +171,18 @@ const Dashboard = () => {
 
   const basecampUrl = window.samsaraMyAccount?.basecampUrl || 'https://videos.samsaraexperience.com';
 
+  // Helper function to check if subscription has valid access
+  // Includes both active subscriptions AND cancelled subscriptions with future end dates
+  const hasValidAccess = (subscription) => {
+    if (subscription.status === 'active') return true;
+    if (subscription.status === 'canceled' && subscription.endDate) {
+      const endDate = new Date(subscription.endDate);
+      const now = new Date();
+      return endDate > now; // Still has access if end date is in the future
+    }
+    return false;
+  };
+
   // Check if user has Basecamp access
   // Users with Athlete Team (Mandala, Momentum, Matrix, Alumni, Recon) or Basecamp subscriptions/memberships get Basecamp access
   // First check memberships
@@ -193,11 +205,11 @@ const Dashboard = () => {
     return isActive && (hasAthleteTeam || hasBasecamp);
   });
 
-  // Also check if they have an active subscription
+  // Also check if they have an active subscription OR cancelled with valid access
   // Athlete Team (Mandala, Momentum, Matrix, Alumni, Recon) or Basecamp subscriptions grant Basecamp access
   const hasBasecampSubscription = (subscriptions || []).some(subscription => {
     const planName = subscription.planName?.toLowerCase() || '';
-    const isActive = subscription.status === 'active';
+    const hasAccess = hasValidAccess(subscription);
 
     // Check for specific team names or basecamp
     const hasAthleteTeam = (
@@ -209,7 +221,7 @@ const Dashboard = () => {
     );
     const hasBasecamp = planName.includes('basecamp');
 
-    return isActive && (hasAthleteTeam || hasBasecamp);
+    return hasAccess && (hasAthleteTeam || hasBasecamp);
   });
 
   const hasBasecampAccess = hasBasecampMembership || hasBasecampSubscription;
