@@ -5,7 +5,7 @@
 
 import { useState, useEffect, useCallback } from 'react';
 import { statsApi } from '../services/woocommerce';
-import { useActiveSubscriptions } from './useSubscriptions';
+import { useSubscriptions } from './useSubscriptions';
 import { useMemberships } from './useMemberships';
 import { usePaymentMethods, getExpiringPaymentMethods } from './usePaymentMethods';
 
@@ -14,7 +14,9 @@ import { usePaymentMethods, getExpiringPaymentMethods } from './usePaymentMethod
  */
 export const useDashboard = () => {
   // Fetch individual data sources
-  const { subscriptions, loading: subsLoading, error: subsError, refetch: refetchSubs } = useActiveSubscriptions();
+  // Use useSubscriptions() instead of useActiveSubscriptions() to get ALL subscriptions
+  // (including cancelled ones with valid access during prepaid term)
+  const { subscriptions, loading: subsLoading, error: subsError, refetch: refetchSubs } = useSubscriptions();
   const { memberships, loading: membershipsLoading, error: membershipsError, refetch: refetchMemberships } = useMemberships();
   const { paymentMethods, loading: paymentsLoading, error: paymentsError, refetch: refetchPayments } = usePaymentMethods();
 
