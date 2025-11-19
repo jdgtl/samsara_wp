@@ -24,6 +24,11 @@ const SubscriptionDetail = () => {
   // Fetch cancellation eligibility
   const [cancellationEligibility, setCancellationEligibility] = useState(null);
   const [eligibilityLoading, setEligibilityLoading] = useState(true);
+  const [cancelError, setCancelError] = useState(null);
+
+  // Fetch subscription actions (to get cancel URL from plugin)
+  const [cancelUrl, setCancelUrl] = useState(null);
+  const [actionsLoading, setActionsLoading] = useState(true);
 
   useEffect(() => {
     const fetchCancellationEligibility = async () => {
@@ -43,10 +48,33 @@ const SubscriptionDetail = () => {
     fetchCancellationEligibility();
   }, [subId]);
 
+  // Fetch subscription actions to get the cancel URL
+  useEffect(() => {
+    const fetchActions = async () => {
+      if (!subId) return;
+
+      try {
+        setActionsLoading(true);
+        const data = await subscriptionsApi.getSubscriptionActions(subId);
+        // Find the cancel action
+        const cancelAction = data.actions?.find(action => action.key === 'cancel');
+        if (cancelAction) {
+          setCancelUrl(cancelAction.url);
+        }
+      } catch (err) {
+        console.error('Error fetching subscription actions:', err);
+      } finally {
+        setActionsLoading(false);
+      }
+    };
+
+    fetchActions();
+  }, [subId]);
+
   // Calculate countdown for next payment or access expiry
   useEffect(() => {
-    // For canceled subscriptions, use endDate; for active, use nextPaymentDate
-    const targetDate = subscription?.status === 'canceled'
+    // For canceled/pending-cancel subscriptions, use endDate; for active, use nextPaymentDate
+    const targetDate = (subscription?.status === 'canceled' || subscription?.status === 'pending-cancel')
       ? subscription?.endDate
       : subscription?.nextPaymentDate;
 
@@ -146,8 +174,8 @@ const SubscriptionDetail = () => {
     const variants = {
       // Active statuses
       active: { variant: 'default', text: 'Active', className: 'bg-emerald-100 text-emerald-800 hover:bg-emerald-100' },
-      trial: { variant: 'secondary', text: 'Trial', className: 'bg-purple-100 text-purple-800 hover:bg-purple-100' },
-      trialing: { variant: 'secondary', text: 'Trial', className: 'bg-purple-100 text-purple-800 hover:bg-purple-100' },
+      trial: { variant: 'secondary', text: 'Trial', className: 'bg-emerald-100 text-emerald-800 hover:bg-emerald-100' },
+      trialing: { variant: 'secondary', text: 'Trial', className: 'bg-emerald-100 text-emerald-800 hover:bg-emerald-100' },
 
       // Pending cancellation statuses
       'pending-cancel': { variant: 'outline', text: 'Ending Soon', className: 'border-amber-600 text-amber-700 bg-amber-50' },
@@ -184,15 +212,34 @@ const SubscriptionDetail = () => {
     );
   };
 
+  // Trigger plugin's cancel popup directly
+  const handleCancelClick = (e) => {
+    if (e) e.preventDefault();
+    setCancelError(null);
+
+    // Check if the plugin's popup object exists and is initialized
+    if (window.popup && typeof window.popup.open === 'function') {
+      console.log('Opening plugin cancellation popup...');
+      window.popup.open();
+    } else {
+      // Fallback: show our React confirmation dialog if plugin isn't available
+      console.log('Plugin popup not initialized, showing fallback dialog');
+      setShowCancelDialog(true);
+    }
+  };
+
+  // Handle cancellation
   const handleCancel = async () => {
-    // Pass the next payment date as the end date to preserve the prepaid term
-    // This prevents the "Jan 1, 1970" epoch date issue
-    const result = await cancelSubscription(subId, subscription.nextPaymentDate);
+    setCancelError(null); // Clear any previous errors
+
+    // Don't pass an end date - let WooCommerce set it automatically
+    // WooCommerce will set it to the end of the current billing period
+    const result = await cancelSubscription(subId);
     if (result.success) {
       window.location.reload(); // Reload to fetch updated data
     } else {
       setShowCancelDialog(false);
-      alert(`Failed to cancel subscription: ${result.error}`);
+      setCancelError(result.error || 'Failed to cancel subscription');
     }
   };
 
@@ -234,10 +281,10 @@ const SubscriptionDetail = () => {
 
       {/* Status-specific alert banners */}
       {(subscription.status === 'trial' || subscription.status === 'trialing') && subscription.trialEndDate && (
-        <Alert className="border-purple-500 bg-purple-50">
-          <Calendar className="h-4 w-4 text-purple-600" />
-          <AlertDescription className="text-purple-800">
-            <p className="font-medium text-purple-900 mb-2">Free Trial Active</p>
+        <Alert className="border-emerald-500 bg-emerald-50">
+          <Calendar className="h-4 w-4 text-emerald-600" />
+          <AlertDescription className="text-emerald-800">
+            <p className="font-medium text-emerald-900 mb-2">Free Trial Active</p>
             <p className="text-sm mb-1">
               Your trial ends on {new Date(subscription.trialEndDate).toLocaleDateString('en-US', {
                 month: 'long',
@@ -250,7 +297,7 @@ const SubscriptionDetail = () => {
                 After trial: ${subscription.nextPaymentAmount.toFixed(2)}/{subscription.billingInterval}
               </p>
             )}
-            <p className="text-xs text-purple-700 mt-2">
+            <p className="text-xs text-emerald-700 mt-2">
               Cancel anytime before {new Date(subscription.trialEndDate).toLocaleDateString('en-US', {
                 month: 'long',
                 day: 'numeric'
@@ -366,14 +413,6 @@ const SubscriptionDetail = () => {
                   </p>
                 </div>
 
-                {/* For Pending-Cancel: Show Contact Support message */}
-                <div>
-                  <p className="text-sm text-stone-600">Need to Reactivate?</p>
-                  <p className="text-lg font-medium text-stone-900">Contact Support</p>
-                  <p className="text-sm text-stone-600 mt-1">
-                    To undo this cancellation
-                  </p>
-                </div>
               </>
             ) : subscription.status === 'canceled' ? (
               <>
@@ -449,6 +488,17 @@ const SubscriptionDetail = () => {
         </CardContent>
       </Card>
 
+      {/* Cancellation error alert */}
+      {cancelError && (
+        <Alert className="border-red-500 bg-red-50" data-testid="cancel-error-alert">
+          <AlertTriangle className="h-4 w-4 text-red-600" />
+          <AlertDescription className="text-red-800">
+            <p className="font-medium text-red-900 mb-1">Failed to cancel subscription</p>
+            <p className="text-sm">{cancelError}</p>
+          </AlertDescription>
+        </Alert>
+      )}
+
       {/* Actions */}
       <Card data-testid="subscription-actions-section">
         <CardHeader>
@@ -473,7 +523,7 @@ const SubscriptionDetail = () => {
                     {/* Cancel Button */}
                     <Button
                       variant="destructive"
-                      onClick={() => setShowCancelDialog(true)}
+                      onClick={handleCancelClick}
                       disabled={!cancellationEligibility?.cancelable || eligibilityLoading}
                       className="gap-2"
                       data-testid="cancel-subscription-btn"
@@ -538,7 +588,6 @@ const SubscriptionDetail = () => {
                         day: 'numeric',
                         year: 'numeric'
                       })}.
-                      Contact support if you'd like to undo this cancellation.
                     </p>
                   </AlertDescription>
                 </Alert>
@@ -547,7 +596,7 @@ const SubscriptionDetail = () => {
                   className="gap-2 bg-samsara-gold hover:bg-samsara-gold/90 text-samsara-black"
                   data-testid="resubscribe-btn"
                 >
-                  Re-subscribe to {subscription.planName}
+                  Re-Subscribe
                 </Button>
                 <p className="text-xs text-stone-600">
                   You'll be redirected to purchase this subscription again
@@ -562,7 +611,7 @@ const SubscriptionDetail = () => {
                   className="gap-2 bg-samsara-gold hover:bg-samsara-gold/90 text-samsara-black"
                   data-testid="resubscribe-btn"
                 >
-                  Re-subscribe to {subscription.planName}
+                  Re-Subscribe
                 </Button>
                 <p className="text-xs text-stone-600">
                   You'll be redirected to purchase this subscription again

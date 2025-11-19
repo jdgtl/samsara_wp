@@ -116,7 +116,26 @@ export const subscriptionsApi = {
     // Set end_date to prevent "Jan 1, 1970" issue
     // When cancelling, end_date should be set to the end of prepaid term (next payment date)
     if (status === 'cancelled' && endDate) {
-      data.end_date = endDate;
+      // Format the date to "Y-m-d H:i:s" format required by WooCommerce
+      // Convert ISO string or any date string to the required format
+      try {
+        const date = new Date(endDate);
+        // Check if date is valid
+        if (!isNaN(date.getTime())) {
+          // Format to "YYYY-MM-DD HH:mm:ss"
+          const year = date.getFullYear();
+          const month = String(date.getMonth() + 1).padStart(2, '0');
+          const day = String(date.getDate()).padStart(2, '0');
+          const hours = String(date.getHours()).padStart(2, '0');
+          const minutes = String(date.getMinutes()).padStart(2, '0');
+          const seconds = String(date.getSeconds()).padStart(2, '0');
+          data.end_date = `${year}-${month}-${day} ${hours}:${minutes}:${seconds}`;
+        } else {
+          console.warn('Invalid end date provided for subscription cancellation:', endDate);
+        }
+      } catch (err) {
+        console.error('Error formatting end date for subscription cancellation:', err);
+      }
     }
 
     return await put(`${WCS_API_BASE}/subscriptions/${subscriptionId}`, data);
@@ -136,6 +155,39 @@ export const subscriptionsApi = {
    */
   async getCancellationEligibility(subscriptionId) {
     return await get(`samsara/v1/subscriptions/${subscriptionId}/cancellation-eligibility`);
+  },
+
+  /**
+   * Get cancellation survey/offer for a subscription
+   */
+  async getCancellationSurvey(subscriptionId) {
+    return await get(`samsara/v1/subscriptions/${subscriptionId}/cancellation-survey`);
+  },
+
+  /**
+   * Cancel subscription with survey response
+   * @param {string} subscriptionId - The subscription ID
+   * @param {object} surveyData - Survey response data (offerId, surveyAnswer, surveyText, endDate)
+   */
+  async cancelSubscriptionWithSurvey(subscriptionId, surveyData) {
+    return await post(`samsara/v1/subscriptions/${subscriptionId}/cancel-with-survey`, surveyData);
+  },
+
+  /**
+   * Accept discount offer (keep subscription with discount)
+   * @param {string} subscriptionId - The subscription ID
+   * @param {object} offerData - Offer acceptance data (offerId, surveyAnswer, surveyText)
+   */
+  async takeDiscountOffer(subscriptionId, offerData) {
+    return await post(`samsara/v1/subscriptions/${subscriptionId}/take-discount-offer`, offerData);
+  },
+
+  /**
+   * Get subscription actions (including plugin-added actions like cancel URL)
+   * @param {string} subscriptionId - The subscription ID
+   */
+  async getSubscriptionActions(subscriptionId) {
+    return await get(`samsara/v1/subscriptions/${subscriptionId}/actions`);
   },
 };
 
@@ -301,10 +353,25 @@ export const transformers = {
       canceledAt = wcSub.date_modified || wcSub.date_updated || null;
     }
 
+    // Determine the correct status
+    // WooCommerce returns "active" for trial subscriptions, but we need to detect and override
+    let status = wcSub.status === 'cancelled' ? 'canceled' : wcSub.status;
+
+    // Check if subscription is in trial period
+    const trialEndDate = wcSub.trial_end_date || wcSub.schedule?.trial_end || null;
+    if (trialEndDate && status === 'active') {
+      const now = new Date();
+      const trialEnd = new Date(trialEndDate);
+      // If trial end date is in the future, it's a trial subscription
+      if (trialEnd > now) {
+        status = 'trial';
+      }
+    }
+
     return {
       id: wcSub.id.toString(),
       startDate: wcSub.date_created,
-      status: wcSub.status === 'cancelled' ? 'canceled' : wcSub.status,
+      status: status,
       nextPaymentDate: wcSub.next_payment_date || null,
       nextPaymentAmount: parseFloat(wcSub.total || 0),
       planName: wcSub.line_items?.[0]?.name || 'Subscription',

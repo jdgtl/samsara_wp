@@ -22,8 +22,8 @@ const Subscriptions = () => {
     const variants = {
       // Active statuses
       active: { variant: 'default', text: 'Active', className: 'bg-emerald-100 text-emerald-800 hover:bg-emerald-100' },
-      trial: { variant: 'secondary', text: 'Trial', className: 'bg-purple-100 text-purple-800 hover:bg-purple-100' },
-      trialing: { variant: 'secondary', text: 'Trial', className: 'bg-purple-100 text-purple-800 hover:bg-purple-100' },
+      trial: { variant: 'secondary', text: 'Trial', className: 'bg-emerald-100 text-emerald-800 hover:bg-emerald-100' },
+      trialing: { variant: 'secondary', text: 'Trial', className: 'bg-emerald-100 text-emerald-800 hover:bg-emerald-100' },
 
       // Pending cancellation statuses
       'pending-cancel': { variant: 'outline', text: 'Ending Soon', className: 'border-amber-600 text-amber-700 bg-amber-50' },
@@ -93,7 +93,7 @@ const Subscriptions = () => {
     { value: 'all', label: 'All' },
     { value: 'active', label: 'Active' },
     { value: 'trial', label: 'Trial' },
-    { value: 'paused', label: 'Paused' },
+    { value: 'pending-cancel', label: 'Ending Soon' },
     { value: 'canceled', label: 'Canceled' },
   ];
 
