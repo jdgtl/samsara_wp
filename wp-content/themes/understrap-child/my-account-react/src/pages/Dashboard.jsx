@@ -9,6 +9,8 @@ import AvatarDisplay from '../components/AvatarDisplay';
 import { useAvatar } from '../contexts/AvatarContext';
 import {
   AlertTriangle,
+  AlertCircle,
+  Calendar,
   Loader2,
   LayoutGrid,
   List
@@ -115,8 +117,8 @@ const Dashboard = () => {
     const calculateCountdown = () => {
       if (!primarySubscription) return;
 
-      // For cancelled subscriptions, use endDate; for active, use nextPaymentDate
-      const targetDate = primarySubscription.status === 'canceled'
+      // For cancelled/pending-cancel subscriptions, use endDate; for active, use nextPaymentDate
+      const targetDate = (primarySubscription.status === 'canceled' || primarySubscription.status === 'pending-cancel')
         ? primarySubscription.endDate || primarySubscription.nextPaymentDate
         : primarySubscription.nextPaymentDate;
 
@@ -150,8 +152,8 @@ const Dashboard = () => {
       // Active statuses
       active: { variant: 'default', text: 'Active', className: 'bg-emerald-600 text-white hover:bg-emerald-700' },
       complimentary: { variant: 'secondary', text: 'Complimentary', className: 'bg-blue-600 text-white hover:bg-blue-700' },
-      trial: { variant: 'secondary', text: 'Trial', className: 'bg-purple-600 text-white hover:bg-purple-700' },
-      trialing: { variant: 'secondary', text: 'Trial', className: 'bg-purple-600 text-white hover:bg-purple-700' },
+      trial: { variant: 'secondary', text: 'Trial', className: 'bg-emerald-600 text-white hover:bg-emerald-700' },
+      trialing: { variant: 'secondary', text: 'Trial', className: 'bg-emerald-600 text-white hover:bg-emerald-700' },
 
       // Pending cancellation statuses
       'pending-cancel': { variant: 'outline', text: 'Ending Soon', className: 'border-amber-600 text-amber-700 bg-amber-50' },
@@ -433,10 +435,10 @@ const Dashboard = () => {
             {!primarySubscription.isMembership && (primarySubscription.status === 'trial' || primarySubscription.status === 'trialing') && primarySubscription.trialEndDate ? (
               // Trial subscription - show trial conversion warning
               <div className="space-y-3">
-                <Alert className="border-purple-500 bg-purple-50">
-                  <Calendar className="h-4 w-4 text-purple-600" />
-                  <AlertDescription className="text-purple-800">
-                    <p className="font-medium text-purple-900 mb-1">Free Trial Active</p>
+                <Alert className="border-emerald-500 bg-emerald-50">
+                  <Calendar className="h-4 w-4 text-emerald-600" />
+                  <AlertDescription className="text-emerald-800">
+                    <p className="font-medium text-emerald-900 mb-1">Free Trial Active</p>
                     <p className="text-sm">
                       Trial ends {new Date(primarySubscription.trialEndDate).toLocaleDateString('en-US', {
                         month: 'long',
@@ -455,14 +457,14 @@ const Dashboard = () => {
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div className="space-y-1">
                     <p className="text-sm text-stone-600">Trial ends</p>
-                    <p className="text-lg font-semibold text-purple-700">
+                    <p className="text-lg font-semibold text-emerald-700">
                       {new Date(primarySubscription.trialEndDate).toLocaleDateString('en-US', {
                         month: 'long',
                         day: 'numeric',
                         year: 'numeric'
                       })}
                     </p>
-                    <p className={`text-sm font-medium ${countdown.days < 0 ? 'text-red-600' : 'text-purple-600'}`}>
+                    <p className={`text-sm font-medium ${countdown.days < 0 ? 'text-red-600' : 'text-emerald-600'}`}>
                       {countdown.displayText || `${countdown.days} days remaining`}
                     </p>
                   </div>
@@ -543,7 +545,6 @@ const Dashboard = () => {
                         day: 'numeric',
                         year: 'numeric'
                       })}.
-                      Contact support to undo this cancellation.
                     </p>
                   </AlertDescription>
                 </Alert>

@@ -18,6 +18,72 @@ require get_stylesheet_directory() . '/inc/enqueue.php';
 require get_stylesheet_directory() . '/inc/setup.php';
 require get_stylesheet_directory() . '/inc/nav.php';
 require get_stylesheet_directory() . '/inc/widgets.php';
+
+/**
+ * LOCAL DEVELOPMENT: Redirect all emails to test address
+ * Automatically detects environment - only works on dev domains, safe for production
+ */
+add_filter('wp_mail', 'samsara_dev_redirect_emails');
+function samsara_dev_redirect_emails($args) {
+    // Get current site URL
+    $site_url = get_site_url();
+
+    // Define local/development domains (add your staging domains here if needed)
+    $dev_domains = array(
+        '.local',                   // Local WP domains (samsara.local)
+        'localhost',                // Localhost
+        '.test',                    // Laravel Valet .test domains
+        '.dev',                     // .dev domains
+        '127.0.0.1',                // Localhost IP
+        'staging.',                 // Any staging subdomain (staging.samsaraexperience.com)
+        '-staging.',                // Staging with dash
+        'wpenginepowered.com',      // WP Engine staging domains (samsarastage.wpenginepowered.com)
+    );
+
+    // Check if current domain is a development domain
+    $is_dev = false;
+    foreach ($dev_domains as $dev_domain) {
+        if (strpos($site_url, $dev_domain) !== false) {
+            $is_dev = true;
+            break;
+        }
+    }
+
+    // Only redirect emails on development domains
+    if (!$is_dev) {
+        // Production - do nothing, let emails send normally
+        return $args;
+    }
+
+    // DEVELOPMENT ENVIRONMENT - Redirect emails
+    $test_email = 'j@jdgtl.com';
+
+    // Log original recipient for debugging
+    error_log('📧 [DEV] Email intercepted - Original TO: ' . (is_array($args['to']) ? implode(', ', $args['to']) : $args['to']));
+    error_log('📧 [DEV] Subject: ' . $args['subject']);
+    error_log('📧 [DEV] Site URL: ' . $site_url);
+
+    // Modify subject to show original recipient
+    $original_to = is_array($args['to']) ? implode(', ', $args['to']) : $args['to'];
+    $args['subject'] = '[DEV - Originally to: ' . $original_to . '] ' . $args['subject'];
+
+    // Redirect to test email
+    $args['to'] = $test_email;
+
+    // Add notice to email body
+    $original_body = $args['message'];
+    $args['message'] = "
+========================================
+LOCAL DEVELOPMENT EMAIL CAPTURE
+Site: {$site_url}
+Original Recipient: {$original_to}
+========================================
+
+{$original_body}
+    ";
+
+    return $args;
+}
 require get_stylesheet_directory() . '/inc/sidebars.php';
 require get_stylesheet_directory() . '/inc/cancellation-eligibility-endpoint.php';
 require get_stylesheet_directory() . '/inc/gift-cards-endpoints.php';
@@ -1211,6 +1277,7 @@ function samsara_enqueue_react_my_account() {
 }
 add_action('wp_enqueue_scripts', 'samsara_enqueue_react_my_account');
 
+
 /**
  * Remove ALL theme and plugin styles/scripts on React template
  * Only load React app assets
@@ -1405,6 +1472,51 @@ function samsara_register_custom_api_routes() {
     register_rest_route('samsara/v1', '/subscriptions/(?P<id>\d+)/cancellation-eligibility', array(
         'methods' => 'GET',
         'callback' => 'samsara_get_cancellation_eligibility',
+        'permission_callback' => 'samsara_check_authentication',
+        'args' => array(
+            'id' => array(
+                'required' => true,
+                'validate_callback' => function($param) {
+                    return is_numeric($param);
+                }
+            ),
+        ),
+    ));
+
+    // Get cancellation survey/offer for a subscription
+    register_rest_route('samsara/v1', '/subscriptions/(?P<id>\d+)/cancellation-survey', array(
+        'methods' => 'GET',
+        'callback' => 'samsara_get_cancellation_survey',
+        'permission_callback' => 'samsara_check_authentication',
+        'args' => array(
+            'id' => array(
+                'required' => true,
+                'validate_callback' => function($param) {
+                    return is_numeric($param);
+                }
+            ),
+        ),
+    ));
+
+    // Submit cancellation survey and cancel subscription
+    register_rest_route('samsara/v1', '/subscriptions/(?P<id>\d+)/cancel-with-survey', array(
+        'methods' => 'POST',
+        'callback' => 'samsara_cancel_subscription_with_survey',
+        'permission_callback' => 'samsara_check_authentication',
+        'args' => array(
+            'id' => array(
+                'required' => true,
+                'validate_callback' => function($param) {
+                    return is_numeric($param);
+                }
+            ),
+        ),
+    ));
+
+    // Take discount offer (keep subscription with discount)
+    register_rest_route('samsara/v1', '/subscriptions/(?P<id>\d+)/take-discount-offer', array(
+        'methods' => 'POST',
+        'callback' => 'samsara_take_discount_offer',
         'permission_callback' => 'samsara_check_authentication',
         'args' => array(
             'id' => array(
@@ -3169,16 +3281,678 @@ function samsara_add_membership_plans_menu() {
 add_action('admin_menu', 'samsara_add_membership_plans_menu');
 
 /**
- * Query script for athlete team subscribers
+ * Get cancellation survey/offer data for a subscription
+ * Integrates with Cancellation Surveys & Offers plugin
  */
-require get_stylesheet_directory() . '/query-athlete-subscribers.php';
+function samsara_get_cancellation_survey($request) {
+    $subscription_id = $request->get_param('id');
+    $user_id = get_current_user_id();
+
+    // Verify subscription belongs to user
+    $subscription = wcs_get_subscription($subscription_id);
+    if (!$subscription || $subscription->get_user_id() != $user_id) {
+        return new WP_Error('forbidden', 'You do not have permission to access this subscription', array('status' => 403));
+    }
+
+    // Check if Cancellation Surveys plugin is active
+    if (!class_exists('MeowCrew\CancellationOffers\Offer\OfferManager')) {
+        return rest_ensure_response(array('hasOffer' => false));
+    }
+
+    // Get offer for subscription using plugin's OfferManager
+    try {
+        $offer = \MeowCrew\CancellationOffers\Offer\OfferManager::getOfferForSubscription($subscription);
+
+        if (!$offer) {
+            return rest_ensure_response(array('hasOffer' => false));
+        }
+
+        // Build response with survey data
+        $response = array(
+            'hasOffer' => true,
+            'offerId' => $offer->getId(),
+            'survey' => array(
+                'enabled' => $offer->getSurvey()->isEnabled(),
+                'title' => $offer->getSurvey()->getTitle(),
+                'description' => $offer->getSurvey()->getDescription(),
+                'items' => array(),
+                'textAnswerRequired' => $offer->getSurvey()->isTextAnswerRequired(),
+                'textAnswerMinLength' => $offer->getSurvey()->getTextAnswerMinimumLength(),
+                'textAnswerMaxLength' => $offer->getSurvey()->getTextAnswerMaximumLength(),
+            ),
+            'discountOffer' => array(
+                'enabled' => $offer->getDiscountOffer()->isApplicableForSubscription($subscription),
+                'title' => $offer->getDiscountOffer()->getTitle(),
+                'description' => $offer->getDiscountOffer()->getDescription(),
+                'applyButtonLabel' => $offer->getDiscountOffer()->getApplyDiscountButtonLabel(),
+                'cancelButtonLabel' => $offer->getDiscountOffer()->getCancelSubscriptionButtonLabel(),
+            ),
+        );
+
+        // Add survey items
+        foreach ($offer->getSurvey()->getItems() as $item) {
+            $response['survey']['items'][] = array(
+                'slug' => $item->getSlug(),
+                'title' => $item->getTitle(),
+                'textAnswerEnabled' => $item->isTextAnswerEnabled(),
+                'discountOfferEnabled' => $item->isDiscountOfferEnabled($offer),
+            );
+        }
+
+        return rest_ensure_response($response);
+    } catch (Exception $e) {
+        error_log('Error getting cancellation survey: ' . $e->getMessage());
+        return rest_ensure_response(array('hasOffer' => false));
+    }
+}
 
 /**
- * Grant memberships script for athlete team subscribers
+ * Submit cancellation survey and cancel subscription
+ * Integrates with Cancellation Surveys plugin to save survey responses
  */
-require get_stylesheet_directory() . '/grant-athlete-team-memberships.php';
+function samsara_cancel_subscription_with_survey($request) {
+    $subscription_id = $request->get_param('id');
+    $user_id = get_current_user_id();
+
+    // Get request body
+    $body = $request->get_json_params();
+    $offer_id = isset($body['offerId']) ? intval($body['offerId']) : null;
+    $survey_answer_slug = isset($body['surveyAnswer']) ? sanitize_text_field($body['surveyAnswer']) : null;
+    $survey_text = isset($body['surveyText']) ? sanitize_textarea_field($body['surveyText']) : '';
+    $end_date = isset($body['endDate']) ? $body['endDate'] : null;
+
+    // Verify subscription belongs to user
+    $subscription = wcs_get_subscription($subscription_id);
+    if (!$subscription || $subscription->get_user_id() != $user_id) {
+        return new WP_Error('forbidden', 'You do not have permission to access this subscription', array('status' => 403));
+    }
+
+    // Check if user can cancel subscription
+    if (!$subscription->can_be_updated_to('cancelled')) {
+        return new WP_Error('invalid_status', 'This subscription cannot be cancelled', array('status' => 400));
+    }
+
+    try {
+        // Save survey answer if Cancellation Surveys plugin is active
+        if (class_exists('MeowCrew\CancellationOffers\SurveyAnswers\SurveyAnswer') && $offer_id) {
+            $survey_answer_instance = new \MeowCrew\CancellationOffers\SurveyAnswers\SurveyAnswer(
+                $offer_id,
+                $subscription_id,
+                $user_id,
+                true, // survey was shown
+                $survey_answer_slug,
+                $survey_text,
+                false, // discount was not offered (user chose to cancel)
+                false, // discount was not accepted
+                null   // no coupon used
+            );
+            $survey_answer_instance->save();
+
+            // Add survey response to subscription notes
+            if ($survey_answer_slug || $survey_text) {
+                $cancellation_note = sprintf(
+                    __('Subscription canceled with reason: %s', 'samsara'),
+                    $survey_answer_slug . ($survey_text ? ' (' . $survey_text . ')' : '')
+                );
+                $subscription->add_order_note($cancellation_note);
+            }
+        }
+
+        // Update subscription status using WooCommerce Subscriptions API
+        // This ensures the date format is correct
+        $update_data = array('status' => 'cancelled');
+
+        if ($end_date) {
+            // Format the date properly for WooCommerce
+            $date = new DateTime($end_date);
+            $update_data['end_date'] = $date->format('Y-m-d H:i:s');
+        }
+
+        // Use WooCommerce REST API to update subscription
+        $wc_rest_subscription_controller = new WC_REST_Subscriptions_Controller();
+        $rest_request = new WP_REST_Request('PUT', '/wc/v1/subscriptions/' . $subscription_id);
+        $rest_request->set_body_params($update_data);
+
+        $result = $wc_rest_subscription_controller->update_item($rest_request);
+
+        if (is_wp_error($result)) {
+            return $result;
+        }
+
+        return rest_ensure_response(array(
+            'success' => true,
+            'message' => 'Subscription cancelled successfully',
+        ));
+    } catch (Exception $e) {
+        error_log('Error cancelling subscription with survey: ' . $e->getMessage());
+        return new WP_Error('cancellation_failed', $e->getMessage(), array('status' => 500));
+    }
+}
 
 /**
- * Cleanup duplicate payment methods script
+ * Apply discount offer and keep subscription active
+ * Integrates with Cancellation Surveys plugin
  */
-require get_stylesheet_directory() . '/cleanup-duplicate-payment-methods.php';
+function samsara_take_discount_offer($request) {
+    $subscription_id = $request->get_param('id');
+    $user_id = get_current_user_id();
+
+    // Get request body
+    $body = $request->get_json_params();
+    $offer_id = isset($body['offerId']) ? intval($body['offerId']) : null;
+    $survey_answer_slug = isset($body['surveyAnswer']) ? sanitize_text_field($body['surveyAnswer']) : null;
+    $survey_text = isset($body['surveyText']) ? sanitize_textarea_field($body['surveyText']) : '';
+
+    // Verify subscription belongs to user
+    $subscription = wcs_get_subscription($subscription_id);
+    if (!$subscription || $subscription->get_user_id() != $user_id) {
+        return new WP_Error('forbidden', 'You do not have permission to access this subscription', array('status' => 403));
+    }
+
+    if (!$offer_id) {
+        return new WP_Error('invalid_request', 'Offer ID is required', array('status' => 400));
+    }
+
+    try {
+        // Use the plugin's TakeDiscountAction logic
+        if (class_exists('MeowCrew\CancellationOffers\Frontend\OfferPopup\Actions\TakeDiscountAction')) {
+            $take_discount_action = new \MeowCrew\CancellationOffers\Frontend\OfferPopup\Actions\TakeDiscountAction();
+
+            // Manually build the request similar to how the plugin does it
+            $_POST['offerId'] = $offer_id;
+            $_POST['subscriptionId'] = $subscription_id;
+            $_POST['surveyItem'] = $survey_answer_slug;
+            $_POST['surveyText'] = $survey_text;
+
+            // Run the action
+            $take_discount_action->run();
+
+            return rest_ensure_response(array(
+                'success' => true,
+                'message' => 'Discount offer applied successfully',
+            ));
+        } else {
+            return new WP_Error('plugin_not_active', 'Cancellation Surveys plugin is not active', array('status' => 500));
+        }
+    } catch (Exception $e) {
+        error_log('Error applying discount offer: ' . $e->getMessage());
+        return new WP_Error('offer_failed', $e->getMessage(), array('status' => 500));
+    }
+}
+
+/**
+ * Get subscription actions from plugins (including cancel URL)
+ * This allows React to redirect to the plugin's cancel URL instead of handling it directly
+ */
+function samsara_get_subscription_actions($request) {
+    try {
+        $subscription_id = $request->get_param('id');
+        $user_id = get_current_user_id();
+
+        // Verify subscription belongs to user
+        $subscription = wcs_get_subscription($subscription_id);
+        if (!$subscription || $subscription->get_user_id() != $user_id) {
+            return new WP_Error('forbidden', 'Access denied', array('status' => 403));
+        }
+
+        // Get all subscription actions (including those added by plugins)
+        $actions = apply_filters('wcs_view_subscription_actions', array(), $subscription);
+
+        // Format actions for React
+        $formatted_actions = array();
+        if (is_array($actions)) {
+            foreach ($actions as $key => $action) {
+                if (is_array($action)) {
+                    $formatted_actions[] = array(
+                        'key' => $key,
+                        'name' => isset($action['name']) ? $action['name'] : ucfirst(str_replace('_', ' ', $key)),
+                        'url' => isset($action['url']) ? $action['url'] : '',
+                    );
+                }
+            }
+        }
+
+        return rest_ensure_response(array(
+            'actions' => $formatted_actions,
+        ));
+    } catch (Exception $e) {
+        error_log('Error getting subscription actions: ' . $e->getMessage());
+        return new WP_Error('internal_error', 'Failed to get subscription actions', array('status' => 500));
+    }
+}
+
+add_action('rest_api_init', function() {
+    register_rest_route('samsara/v1', '/subscriptions/(?P<id>\d+)/actions', array(
+        'methods' => 'GET',
+        'callback' => 'samsara_get_subscription_actions',
+        'permission_callback' => function() { return is_user_logged_in(); },
+    ));
+});
+
+/**
+ * Render cancellation popup HTML in React template footer
+ * This allows the plugin's JavaScript to work even though we're not using WooCommerce templates
+ */
+function samsara_render_cancellation_popup_in_react() {
+    if (!is_page_template('template-my-account.php')) {
+        echo '<!-- Not on my-account template -->';
+        return;
+    }
+
+    echo '<!-- On my-account template, checking for subscriptions... -->';
+
+    // Get current user's subscriptions to find an active one for the popup
+    $user_id = get_current_user_id();
+    if (!$user_id) {
+        echo '<!-- No user ID -->';
+        return;
+    }
+
+    $subscriptions = wcs_get_users_subscriptions($user_id);
+    if (empty($subscriptions)) {
+        echo '<!-- No subscriptions found -->';
+        return;
+    }
+
+    echo '<!-- Found ' . count($subscriptions) . ' subscriptions -->';
+
+    // Find first active subscription and render popup for it
+    foreach ($subscriptions as $subscription) {
+        echo '<!-- Checking subscription ' . $subscription->get_id() . ' status: ' . $subscription->get_status() . ' -->';
+        if ($subscription->has_status('active')) {
+            $sub_id = $subscription->get_id();
+            echo '<!-- Triggering woocommerce_subscription_after_actions for subscription ' . $sub_id . ' -->';
+
+            // Render subscription actions (which includes the cancel link that triggers the popup)
+            $actions = wcs_get_all_user_actions_for_subscription($subscription, $user_id);
+            if (!empty($actions) && isset($actions['cancel'])) {
+                echo '<!-- Rendering cancellation trigger link for subscription ' . $sub_id . ' -->';
+                echo '<a href="' . esc_url($actions['cancel']['url']) . '" class="hidden-cancellation-trigger" style="display:none !important; position:absolute; left:-9999px;">' . esc_html($actions['cancel']['name']) . '</a>';
+            }
+
+            // Fire the hook that makes the plugin render its popup HTML
+            do_action('woocommerce_subscription_after_actions', $subscription);
+
+            // After rendering popup HTML, reinitialize the plugin's JavaScript
+            // The plugin creates a global 'popup' object, but it runs before our HTML exists
+            // So we need to recreate it after the HTML is rendered
+            ?>
+            <script type="text/javascript">
+            jQuery(document).ready(function($) {
+                // Wait for DOM to be fully ready, then reinitialize the plugin
+                if (typeof CancellationOfferPopup !== 'undefined' && $('#cancellation-offer-popup').length > 0) {
+                    console.log('Reinitializing cancellation popup plugin...');
+                    window.popup = new CancellationOfferPopup($('#cancellation-offer-popup'));
+                    window.popup.init();
+                    console.log('Cancellation popup plugin initialized successfully');
+                } else {
+                    console.log('CancellationOfferPopup not available or popup element not found');
+                }
+            });
+            </script>
+            <?php
+
+            break; // Only need one popup rendered
+        }
+    }
+
+    echo '<!-- Finished checking subscriptions -->';
+}
+add_action('wp_footer', 'samsara_render_cancellation_popup_in_react', 100);
+
+/**
+ * Relocate WooCommerce Subscriptions gifting checkbox to better position in checkout
+ * Moves it from the quantity field (awkward) to its own table row (cleaner UX)
+ * Compatible with both CartFlows and standard WooCommerce checkout
+ */
+function samsara_relocate_gifting_checkbox_checkout() {
+	// Remove from default location (appended to quantity field)
+	remove_filter( 'woocommerce_checkout_cart_item_quantity', array( 'WCSG_Checkout', 'add_gifting_option_checkout' ), 1 );
+
+	// Add custom rendering - use wp_footer to ensure it works on all checkout pages
+	add_action( 'wp_footer', 'samsara_add_gifting_rows_script', 10 );
+}
+add_action( 'init', 'samsara_relocate_gifting_checkbox_checkout', 20 );
+
+/**
+ * Add JavaScript to inject gifting rows into checkout review table
+ * This creates proper table rows below each giftable product
+ */
+function samsara_add_gifting_rows_script() {
+	// Only run on checkout
+	if ( ! is_checkout() ) {
+		return;
+	}
+
+	// Check if gifting classes exist
+	if ( ! class_exists( 'WCSG_Cart' ) || ! class_exists( 'WCS_Gifting' ) ) {
+		return;
+	}
+
+	// Get cart items and build gifting HTML for each giftable item
+	$cart = WC()->cart->get_cart();
+	$gifting_data = array();
+
+	foreach ( $cart as $cart_item_key => $cart_item ) {
+		if ( WCSG_Cart::is_giftable_item( $cart_item ) ) {
+			$email = ( empty( $cart_item['wcsg_gift_recipients_email'] ) ) ? '' : $cart_item['wcsg_gift_recipients_email'];
+
+			// Capture gifting HTML
+			ob_start();
+			WCS_Gifting::render_add_recipient_fields( $email, $cart_item_key, 'print' );
+			$gifting_html = ob_get_clean();
+
+			$gifting_data[ $cart_item_key ] = $gifting_html;
+		}
+	}
+
+	// If no giftable items, exit
+	if ( empty( $gifting_data ) ) {
+		return;
+	}
+
+	// Output JavaScript to inject rows
+	?>
+	<script type="text/javascript">
+	jQuery(document).ready(function($) {
+		var giftingData = <?php echo wp_json_encode( $gifting_data ); ?>;
+
+		console.log('Samsara Gifting: Initializing', giftingData);
+
+		// Function to inject gifting rows
+		function injectGiftingRows() {
+			// Find all cart items in any checkout review table (CartFlows or standard WooCommerce)
+			var $tables = $('.woocommerce-checkout-review-order-table, #order_review table');
+
+			$tables.find('tbody tr.cart_item').each(function() {
+				var $row = $(this);
+
+				// Skip if we already added a gifting row for this item
+				if ($row.next('tr.cart_item_gifting').length) {
+					return;
+				}
+
+				// Try to find cart item key from various possible locations
+				var cartItemKey = null;
+
+				// Method 1: Look for data attribute (if CartFlows adds it)
+				cartItemKey = $row.data('item-key');
+
+				// Method 2: Look for CartFlows remove button with data-item-key
+				if (!cartItemKey) {
+					var $removeBtn = $row.find('a.wcf-remove-product[data-item-key], a.remove[data-cart_item_key]');
+					if ($removeBtn.length) {
+						cartItemKey = $removeBtn.attr('data-item-key') || $removeBtn.attr('data-cart_item_key');
+						console.log('Samsara Gifting: Found cart item key via remove button:', cartItemKey);
+					}
+				}
+
+				// Method 3: Try to extract from product quantity field name attribute
+				// Standard WooCommerce uses: cart[HASH][qty]
+				if (!cartItemKey) {
+					var $qtyInput = $row.find('input[name*="cart["]');
+					if ($qtyInput.length) {
+						var nameAttr = $qtyInput.attr('name');
+						var match = nameAttr.match(/cart\[([^\]]+)\]/);
+						if (match) {
+							cartItemKey = match[1];
+							console.log('Samsara Gifting: Found cart item key via quantity input:', cartItemKey);
+						}
+					}
+				}
+
+				// If we found a cart item key and have gifting data for it
+				if (cartItemKey && giftingData[cartItemKey]) {
+					console.log('Samsara Gifting: Adding gifting row for item:', cartItemKey);
+
+					// Create new table row for gifting
+					var $giftRow = $('<tr class="cart_item_gifting"></tr>');
+					var $giftCell = $('<td colspan="2" class="product-gifting"></td>');
+
+					$giftCell.html(giftingData[cartItemKey]);
+					$giftRow.append($giftCell);
+
+					// Insert after current cart item row
+					$row.after($giftRow);
+
+					// Re-initialize checkbox functionality for this row
+					var $checkbox = $giftRow.find('.woocommerce_subscription_gifting_checkbox');
+					var $fields = $giftRow.find('.wcsg_add_recipient_fields');
+
+					$checkbox.on('change', function() {
+						if ($(this).is(':checked')) {
+							$fields.removeClass('hidden');
+						} else {
+							$fields.addClass('hidden');
+						}
+					});
+				} else {
+					console.log('Samsara Gifting: No gifting data for item or key not found');
+				}
+			});
+		}
+
+		// Store to preserve gifting state across checkout updates
+		var giftingStateBeforeUpdate = {};
+
+		// Before checkout updates, preserve the current state
+		$(document.body).on('update_checkout', function() {
+			console.log('Samsara Gifting: About to update checkout, preserving state...');
+			giftingStateBeforeUpdate = {};
+
+			$('.cart_item_gifting').each(function() {
+				var $giftRow = $(this);
+				var $cartRow = $giftRow.prev('tr.cart_item');
+				var $checkbox = $giftRow.find('.woocommerce_subscription_gifting_checkbox');
+				var $email = $giftRow.find('.recipient_email');
+
+				// Try to get cart item key
+				var $removeBtn = $cartRow.find('a.wcf-remove-product[data-item-key], a.remove[data-cart_item_key]');
+				var cartItemKey = $removeBtn.attr('data-item-key') || $removeBtn.attr('data-cart_item_key');
+
+				if (cartItemKey) {
+					giftingStateBeforeUpdate[cartItemKey] = {
+						checked: $checkbox.is(':checked'),
+						email: $email.val() || ''
+					};
+					console.log('Samsara Gifting: Saved state for', cartItemKey, giftingStateBeforeUpdate[cartItemKey]);
+				}
+			});
+		});
+
+		// Inject rows on page load
+		injectGiftingRows();
+
+		// Re-inject when checkout updates (AJAX updates)
+		$(document.body).on('updated_checkout', function() {
+			console.log('Samsara Gifting: Checkout updated, re-injecting rows with preserved state');
+			injectGiftingRows();
+
+			// Restore state after injection
+			setTimeout(function() {
+				for (var cartItemKey in giftingStateBeforeUpdate) {
+					var state = giftingStateBeforeUpdate[cartItemKey];
+					console.log('Samsara Gifting: Attempting to restore state for', cartItemKey, state);
+
+					// Find the row by cart item key
+					$('tr.cart_item').each(function() {
+						var $cartRow = $(this);
+						var $removeBtn = $cartRow.find('a.wcf-remove-product[data-item-key], a.remove[data-cart_item_key]');
+						var key = $removeBtn.attr('data-item-key') || $removeBtn.attr('data-cart_item_key');
+
+						if (key === cartItemKey) {
+							var $giftRow = $cartRow.next('tr.cart_item_gifting');
+							if ($giftRow.length) {
+								var $checkbox = $giftRow.find('.woocommerce_subscription_gifting_checkbox');
+								var $email = $giftRow.find('.recipient_email');
+								var $fields = $giftRow.find('.wcsg_add_recipient_fields');
+
+								$checkbox.prop('checked', state.checked);
+
+								if (state.checked && state.email) {
+									$email.val(state.email);
+									$email.attr('data-recipient', state.email);
+									$fields.removeClass('hidden');
+									console.log('Samsara Gifting: Restored checked state with email:', state.email);
+								} else {
+									$email.val('');
+									$email.attr('data-recipient', '');
+									$fields.addClass('hidden');
+									console.log('Samsara Gifting: Restored unchecked state');
+								}
+							}
+						}
+					});
+				}
+			}, 100);
+		});
+	});
+	</script>
+	<?php
+}
+
+/**
+ * Add custom CSS for relocated gifting checkbox
+ * Styles it to appear as a child element of the product with proper indentation
+ */
+function samsara_enqueue_gifting_checkout_styles() {
+	// Only load on checkout page
+	if ( ! is_checkout() ) {
+		return;
+	}
+
+	$custom_css = "
+		/* WooCommerce Subscriptions Gifting - Relocated Checkout Styling */
+
+		/* Gifting table row */
+		.woocommerce-checkout-review-order-table tr.cart_item_gifting,
+		#order_review table tr.cart_item_gifting {
+			background: transparent;
+		}
+
+		.woocommerce-checkout-review-order-table tr.cart_item_gifting td.product-gifting,
+		#order_review table tr.cart_item_gifting td.product-gifting {
+			padding: 0.25rem 1rem 0.75rem 1rem;
+			border-top: none;
+		}
+
+		/* Container styling - compact and indented */
+		.woocommerce-checkout-review-order-table .wcsg_add_recipient_fields_container,
+		#order_review table .wcsg_add_recipient_fields_container {
+			margin: 0 0 0 1.5rem;
+			padding: 0.5rem 0.75rem;
+			background: #f9fafb;
+			border-radius: 4px;
+		}
+
+		/* Checkbox and label styling */
+		.woocommerce-checkout-review-order-table .woocommerce_subscription_gifting_checkbox,
+		#order_review table .woocommerce_subscription_gifting_checkbox {
+			margin-right: 0.5rem;
+			cursor: pointer;
+		}
+
+		.woocommerce-checkout-review-order-table .wcsg_add_recipient_fields_container > label,
+		#order_review table .wcsg_add_recipient_fields_container > label {
+			display: inline-block;
+			margin: 0;
+			font-weight: 500;
+			color: #374151;
+			cursor: pointer;
+			font-size: 0.875rem;
+		}
+
+		/* Email input container */
+		.woocommerce-checkout-review-order-table .wcsg_add_recipient_fields,
+		#order_review table .wcsg_add_recipient_fields {
+			margin-top: 0.5rem;
+			padding-top: 0.5rem;
+			border-top: 1px solid #e5e7eb;
+		}
+
+		.woocommerce-checkout-review-order-table .wcsg_add_recipient_fields.hidden,
+		#order_review table .wcsg_add_recipient_fields.hidden {
+			display: none;
+		}
+
+		/* Email input field wrapper */
+		.woocommerce-checkout-review-order-table .woocommerce_subscriptions_gifting_recipient_email,
+		#order_review table .woocommerce_subscriptions_gifting_recipient_email {
+			margin-bottom: 0;
+			position: relative;
+		}
+
+		/* Email input field */
+		.woocommerce-checkout-review-order-table .wcsg_add_recipient_fields input[type=\"email\"],
+		#order_review table .wcsg_add_recipient_fields input[type=\"email\"] {
+			width: 100%;
+			padding: 0.5rem 0.75rem;
+			border: 1px solid #d1d5db;
+			border-radius: 4px;
+			font-size: 0.875rem;
+		}
+
+		.woocommerce-checkout-review-order-table .wcsg_add_recipient_fields input[type=\"email\"]:focus,
+		#order_review table .wcsg_add_recipient_fields input[type=\"email\"]:focus {
+			outline: none;
+			border-color: #d4af37;
+			box-shadow: 0 0 0 3px rgba(212, 175, 55, 0.1);
+		}
+
+		/* Recipient email label */
+		.woocommerce-checkout-review-order-table .woocommerce_subscriptions_gifting_recipient_email label,
+		#order_review table .woocommerce_subscriptions_gifting_recipient_email label {
+			display: block;
+			margin-bottom: 0.375rem;
+			font-size: 0.875rem;
+			font-weight: 500;
+			color: #6b7280;
+		}
+
+		/* Validation error container */
+		.woocommerce-checkout-review-order-table .wc-shortcode-components-validation-error,
+		#order_review table .wc-shortcode-components-validation-error {
+			position: relative;
+			z-index: 10;
+			margin-top: 0.5rem;
+			padding: 0.5rem 0.75rem;
+			background: #fef2f2;
+			border: 1px solid #fecaca;
+			border-radius: 4px;
+		}
+
+		/* Validation error paragraph */
+		.woocommerce-checkout-review-order-table .wc-shortcode-components-validation-error p,
+		#order_review table .wc-shortcode-components-validation-error p {
+			display: flex;
+			align-items: center;
+			gap: 0.5rem;
+			margin: 0;
+			color: #dc2626;
+			font-size: 0.875rem;
+			line-height: 1.5;
+		}
+
+		/* Error icon */
+		.woocommerce-checkout-review-order-table .wc-shortcode-components-validation-error svg,
+		#order_review table .wc-shortcode-components-validation-error svg {
+			flex-shrink: 0;
+			width: 1.25rem;
+			height: 1.25rem;
+			fill: #dc2626;
+		}
+
+		/* Mobile responsive */
+		@media (max-width: 768px) {
+			.woocommerce-checkout-review-order-table .wcsg_add_recipient_fields_container,
+			#order_review table .wcsg_add_recipient_fields_container {
+				margin-left: 1rem;
+				padding: 0.5rem 0.75rem;
+			}
+		}
+	";
+
+	wp_add_inline_style( 'woocommerce-general', $custom_css );
+}
+add_action( 'wp_enqueue_scripts', 'samsara_enqueue_gifting_checkout_styles', 20 );
+
