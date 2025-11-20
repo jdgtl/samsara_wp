@@ -36,18 +36,59 @@ function samsara_get_cancellation_eligibility($request) {
     foreach ($items as $item) {
         $product_id = $item->get_product_id();
         $variation_id = $item->get_variation_id();
+        error_log('DEBUG: Line item product_id=' . $product_id . ', variation_id=' . $variation_id);
         break;
+    }
+
+    // Check which product ID we'll actually use
+    $check_product_id = $variation_id > 0 ? $variation_id : $product_id;
+    error_log('DEBUG: Using product ID for meta lookup: ' . $check_product_id);
+
+    // Check if there's a parent product
+    if ($check_product_id > 0) {
+        $product = wc_get_product($check_product_id);
+        if ($product && $product->get_parent_id() > 0) {
+            error_log('DEBUG: Product has parent ID: ' . $product->get_parent_id());
+        }
+    }
+
+    // DEBUG: Get all meta fields to find the correct key names
+    $all_sub_meta = get_post_meta($subscription_id);
+    $all_product_meta = $check_product_id > 0 ? get_post_meta($check_product_id) : array();
+    error_log('=== DEBUG: All Subscription Meta Keys ===');
+    foreach ($all_sub_meta as $key => $value) {
+        if (strpos($key, 'ccp') !== false || strpos($key, 'cancel') !== false || strpos($key, 'window') !== false) {
+            error_log('  Subscription ' . $key . ': ' . print_r($value, true));
+        }
+    }
+    error_log('=== DEBUG: ALL Product Meta Keys (Product ID: ' . $check_product_id . ') ===');
+    foreach ($all_product_meta as $key => $value) {
+        // Log ALL keys to see everything
+        error_log('  Product ' . $key . ': ' . print_r($value, true));
+    }
+
+    // Also check product 14894 if it's different
+    if ($check_product_id != 14894) {
+        error_log('=== DEBUG: Checking Product 14894 (User-specified ID) ===');
+        $product_14894_meta = get_post_meta(14894);
+        foreach ($product_14894_meta as $key => $value) {
+            if (strpos($key, 'ccp') !== false || strpos($key, 'cancel') !== false || strpos($key, 'window') !== false) {
+                error_log('  Product 14894 ' . $key . ': ' . print_r($value, true));
+            }
+        }
     }
 
     // Get cancellation rules from subscription or product
     $minimum_period = get_post_meta($subscription_id, '_ccp_minimum_period', true);
     $cooling_off_period = get_post_meta($subscription_id, '_ccp_cooling_off_period', true);
     $rolling_cycle = get_post_meta($subscription_id, '_ccp_rolling_cycle', true);
-    $disable_cancellation_days = get_post_meta($subscription_id, '_ccp_disable_cancellation_x_days', true);
+    $cancellation_window_start = get_post_meta($subscription_id, '_ccp_cancellation_window_start', true);
+    $cancellation_window_end = get_post_meta($subscription_id, '_ccp_cancellation_window_end', true);
+    $cancellation_window_period = get_post_meta($subscription_id, '_ccp_cancellation_window_period', true);
 
     // Get product-level rules if subscription rules don't exist
     $check_product_id = $variation_id > 0 ? $variation_id : $product_id;
-    if (empty($minimum_period) && $check_product_id > 0) {
+    if (empty($minimum_period) && empty($cancellation_window_start) && $check_product_id > 0) {
         $product = wc_get_product($check_product_id);
         if ($product) {
             $parent_id = $product->get_parent_id();
@@ -55,13 +96,38 @@ function samsara_get_cancellation_eligibility($request) {
                 $minimum_period = get_post_meta($parent_id, '_ccp_minimum_period', true);
                 $cooling_off_period = get_post_meta($parent_id, '_ccp_cooling_off_period', true);
                 $rolling_cycle = get_post_meta($parent_id, '_ccp_rolling_cycle', true);
-                $disable_cancellation_days = get_post_meta($parent_id, '_ccp_disable_cancellation_x_days', true);
+                $cancellation_window_start = get_post_meta($parent_id, '_ccp_cancellation_window_start', true);
+                $cancellation_window_end = get_post_meta($parent_id, '_ccp_cancellation_window_end', true);
+                $cancellation_window_period = get_post_meta($parent_id, '_ccp_cancellation_window_period', true);
             } else {
                 $minimum_period = get_post_meta($check_product_id, '_ccp_minimum_period', true);
                 $cooling_off_period = get_post_meta($check_product_id, '_ccp_cooling_off_period', true);
                 $rolling_cycle = get_post_meta($check_product_id, '_ccp_rolling_cycle', true);
-                $disable_cancellation_days = get_post_meta($check_product_id, '_ccp_disable_cancellation_x_days', true);
+                $cancellation_window_start = get_post_meta($check_product_id, '_ccp_cancellation_window_start', true);
+                $cancellation_window_end = get_post_meta($check_product_id, '_ccp_cancellation_window_end', true);
+                $cancellation_window_period = get_post_meta($check_product_id, '_ccp_cancellation_window_period', true);
             }
+        }
+    }
+
+    // Convert cancellation window to days (for time-based restrictions)
+    $disable_cancellation_days = 0;
+    if (!empty($cancellation_window_start) && is_numeric($cancellation_window_start)) {
+        // Convert to days based on period (day, week, month, year)
+        $period = !empty($cancellation_window_period) ? $cancellation_window_period : 'day';
+        switch ($period) {
+            case 'day':
+                $disable_cancellation_days = intval($cancellation_window_start);
+                break;
+            case 'week':
+                $disable_cancellation_days = intval($cancellation_window_start) * 7;
+                break;
+            case 'month':
+                $disable_cancellation_days = intval($cancellation_window_start) * 30; // Approximate
+                break;
+            case 'year':
+                $disable_cancellation_days = intval($cancellation_window_start) * 365;
+                break;
         }
     }
 
@@ -83,6 +149,46 @@ function samsara_get_cancellation_eligibility($request) {
         }
     }
 
+    // Check time-based cancellation window using Custom Cancellation Rules plugin logic
+    // This matches the plugin's ccp_check_window_period() function
+    if (!empty($cancellation_window_action) && !empty($cancellation_window_start)) {
+        // Get last payment date (plugin uses this, not start date!)
+        $last_payment = $subscription->get_date('last_order_date_created');
+        $last_payment_timestamp = strtotime($last_payment);
+
+        // Calculate window start date
+        $period = !empty($cancellation_window_period) ? $cancellation_window_period : 'day';
+        $window_start_date = strtotime("+{$cancellation_window_start} {$period}", $last_payment_timestamp);
+
+        // Calculate window end date if set
+        $window_end_date = null;
+        if (!empty($cancellation_window_end)) {
+            $window_end_date = strtotime("+{$cancellation_window_end} {$period}", $last_payment_timestamp);
+        }
+
+        $now = time();
+        $in_window = true;
+
+        // Check if we're outside the window
+        if ($now < $window_start_date || ($window_end_date && $now > $window_end_date)) {
+            $in_window = false;
+        }
+
+        // Apply action logic (enable = allow during window, disable = block during window)
+        if (($cancellation_window_action === 'enable' && !$in_window) ||
+            ($cancellation_window_action === 'disable' && $in_window)) {
+            $cancelable = false;
+
+            if ($now < $window_start_date) {
+                $days_remaining = ceil(($window_start_date - $now) / 86400);
+                $cancel_reasons[] = "Cancellation not available for {$days_remaining} more days";
+                $cancel_available_start = date('m/d/Y', $window_start_date);
+            } elseif ($window_end_date && $now > $window_end_date) {
+                $cancel_reasons[] = "Cancellation window has closed";
+            }
+        }
+    }
+
     // Check minimum period and calculate cancellation window
     if (!empty($minimum_period) && $minimum_period > 0) {
         if ($payment_count < $minimum_period) {
@@ -101,16 +207,31 @@ function samsara_get_cancellation_eligibility($request) {
                 // Therefore we add (remaining_periods - 1) to next_payment_timestamp
                 $periods_needed = $remaining_periods - 1;
 
+                $payment_based_start = null;
                 if ($billing_period === 'month') {
-                    $cancel_available_start = date('m/d/Y', strtotime("+{$periods_needed} months", $next_payment_timestamp));
+                    $payment_based_start = date('m/d/Y', strtotime("+{$periods_needed} months", $next_payment_timestamp));
                 } elseif ($billing_period === 'year') {
-                    $cancel_available_start = date('m/d/Y', strtotime("+{$periods_needed} years", $next_payment_timestamp));
+                    $payment_based_start = date('m/d/Y', strtotime("+{$periods_needed} years", $next_payment_timestamp));
                 } elseif ($billing_period === 'week') {
                     $weeks = $periods_needed * $billing_interval;
-                    $cancel_available_start = date('m/d/Y', strtotime("+{$weeks} weeks", $next_payment_timestamp));
+                    $payment_based_start = date('m/d/Y', strtotime("+{$weeks} weeks", $next_payment_timestamp));
                 } elseif ($billing_period === 'day') {
                     $days = $periods_needed * $billing_interval;
-                    $cancel_available_start = date('m/d/Y', strtotime("+{$days} days", $next_payment_timestamp));
+                    $payment_based_start = date('m/d/Y', strtotime("+{$days} days", $next_payment_timestamp));
+                }
+
+                // If both time-based and payment-based rules exist, use the later date (strictest rule)
+                if ($payment_based_start) {
+                    if (!$cancel_available_start) {
+                        $cancel_available_start = $payment_based_start;
+                    } else {
+                        // Compare dates and use the later one
+                        $time_based_timestamp = strtotime($cancel_available_start);
+                        $payment_based_timestamp = strtotime($payment_based_start);
+                        if ($payment_based_timestamp > $time_based_timestamp) {
+                            $cancel_available_start = $payment_based_start;
+                        }
+                    }
                 }
             }
         }
@@ -178,12 +299,30 @@ function samsara_get_cancellation_eligibility($request) {
             'minimum_period' => $minimum_period ?: 0,
             'cooling_off_period' => $cooling_off_period ?: 0,
             'rolling_cycle' => $rolling_cycle ?: 0,
+            'disable_cancellation_days' => $disable_cancellation_days ?: 0,
         ),
         'current' => array(
             'payment_count' => $payment_count,
             'status' => $status,
+            'start_date' => $start_date,
+        ),
+        'debug' => array(
+            'product_id' => $product_id,
+            'variation_id' => $variation_id,
+            'check_product_id' => $check_product_id,
         ),
     );
+
+    // Log for debugging
+    error_log('Cancellation Eligibility Debug - Subscription ' . $subscription_id);
+    error_log('  cancellation_window_action: ' . ($cancellation_window_action ?: 'NOT SET'));
+    error_log('  cancellation_window_start: ' . ($cancellation_window_start ?: 'NOT SET'));
+    error_log('  cancellation_window_period: ' . ($cancellation_window_period ?: 'NOT SET'));
+    error_log('  minimum_period: ' . ($minimum_period ?: 'not set'));
+    error_log('  payment_count: ' . $payment_count);
+    error_log('  start_date: ' . $start_date);
+    error_log('  cancelable: ' . ($cancelable ? 'true' : 'false'));
+    error_log('  reasons: ' . json_encode($cancel_reasons));
 
     return new WP_REST_Response($response, 200);
 }

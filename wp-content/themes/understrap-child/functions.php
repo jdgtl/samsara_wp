@@ -91,6 +91,8 @@ require get_stylesheet_directory() . '/inc/gift-card-balance-checker-shortcode.p
 require get_stylesheet_directory() . '/inc/gift-card-modal.php';
 require get_stylesheet_directory() . '/inc/gift-card-debug.php';
 require get_stylesheet_directory() . '/inc/fix-gift-card-option.php';
+require get_stylesheet_directory() . '/inc/gift-card-checkout-display.php';
+require get_stylesheet_directory() . '/inc/clear-thank-you-notices.php';
 
 require_once get_stylesheet_directory() . '/inc/Mobile_Detect.php';
 global $detect;
@@ -1563,7 +1565,7 @@ function samsara_register_custom_api_routes() {
     register_rest_route('samsara/v1', '/gift-cards/balance/(?P<code>[a-zA-Z0-9-]+)', array(
         'methods' => 'GET',
         'callback' => 'samsara_check_gift_card_balance',
-        'permission_callback' => 'samsara_check_authentication',
+        'permission_callback' => '__return_true', // Public endpoint - anyone with a code can check balance
     ));
 
     // Get gift cards for a specific order

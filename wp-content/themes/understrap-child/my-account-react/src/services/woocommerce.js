@@ -322,7 +322,17 @@ export const transformers = {
       id: wcOrder.id.toString(),
       date: wcOrder.date_created,
       status: wcOrder.status,
-      items: wcOrder.line_items.map(item => item.name),
+      items: wcOrder.line_items.map(item => ({
+        name: item.name,
+        quantity: item.quantity,
+        price: parseFloat(item.price || 0),
+        subtotal: parseFloat(item.subtotal || 0),
+        total: parseFloat(item.total || 0),
+        // Get regular price from meta data if available (for on-sale products)
+        regularPrice: item.meta_data?.find(m => m.key === '_regular_price')?.value
+          ? parseFloat(item.meta_data.find(m => m.key === '_regular_price').value)
+          : null,
+      })),
       total: parseFloat(wcOrder.total),
       currency: wcOrder.currency,
       paymentMethod: wcOrder.payment_method_title,

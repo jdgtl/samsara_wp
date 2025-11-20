@@ -507,7 +507,7 @@ const SubscriptionDetail = () => {
         </CardHeader>
         <CardContent>
           <div className="space-y-4">
-            {subscription.status === 'active' && (
+            {(subscription.status === 'active' || subscription.status === 'trial' || subscription.status === 'trialing') && (
               <>
                 {/* Loading state while canceling */}
                 {actionLoading ? (

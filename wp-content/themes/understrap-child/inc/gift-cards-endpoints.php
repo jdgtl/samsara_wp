@@ -143,10 +143,41 @@ function samsara_get_gift_card($request) {
 
         $gift_card_data = samsara_format_gift_card($gc, true);
 
+        // Add flag to indicate if current user is the recipient (vs. purchaser)
+        $gift_card_data['is_current_user_recipient'] = ($recipient === $user_email);
+
         return new WP_REST_Response($gift_card_data, 200);
 
     } catch (Exception $e) {
-        return new WP_Error('gift_card_error', $e->getMessage(), array('status' => 500));
+        // Log detailed error for debugging
+        error_log('Gift Card API Error (ID: ' . $gift_card_id . '): ' . $e->getMessage());
+        error_log('Stack trace: ' . $e->getTraceAsString());
+
+        // Return user-friendly error with technical details
+        $error_message = 'Failed to load gift card. ';
+
+        // Add specific error hints
+        if (strpos($e->getMessage(), 'DateTime') !== false) {
+            $error_message .= 'Date formatting error. Please contact support.';
+        } elseif (strpos($e->getMessage(), 'timezone') !== false) {
+            $error_message .= 'Timezone configuration error. Please contact support.';
+        } else {
+            $error_message .= $e->getMessage();
+        }
+
+        return new WP_Error(
+            'gift_card_error',
+            $error_message,
+            array(
+                'status' => 500,
+                'technical_details' => array(
+                    'exception' => get_class($e),
+                    'message' => $e->getMessage(),
+                    'file' => basename($e->getFile()),
+                    'line' => $e->getLine(),
+                )
+            )
+        );
     }
 }
 
@@ -175,13 +206,37 @@ function samsara_check_gift_card_balance($request) {
 
         $gift_card_obj = new WC_GC_Gift_Card($gcs[0]->get_id());
 
+        // Format expire date with timezone (same as other endpoints)
+        $expire_date = null;
+        $expire_timestamp = $gift_card_obj->get_expire_date();
+        if ($expire_timestamp) {
+            try {
+                if (function_exists('wp_timezone')) {
+                    $wp_timezone = wp_timezone();
+                } else {
+                    $timezone_string = get_option('timezone_string');
+                    if (empty($timezone_string)) {
+                        $timezone_string = 'UTC';
+                    }
+                    $wp_timezone = new DateTimeZone($timezone_string);
+                }
+                $date = new DateTime('@' . $expire_timestamp);
+                $date->setTimezone($wp_timezone);
+                $expire_date = $date->format('c'); // ISO 8601 with timezone
+            } catch (Exception $e) {
+                error_log('Date formatting error in balance check: ' . $e->getMessage());
+                $expire_date = date('Y-m-d', $expire_timestamp);
+            }
+        }
+
         // Return basic balance info (don't expose full details for privacy)
         $response = array(
             'code' => $gift_card_obj->get_code(),
             'balance' => (float) $gift_card_obj->get_initial_balance(),
             'remaining' => (float) $gift_card_obj->get_balance(),
             'is_active' => $gift_card_obj->is_active(),
-            'expire_date' => $gift_card_obj->get_expire_date() ? $gift_card_obj->get_expire_date('Y-m-d') : null,
+            'expire_date' => $expire_date,
+            'status' => samsara_get_gift_card_status($gift_card_obj),
         );
 
         return new WP_REST_Response($response, 200);
@@ -200,8 +255,35 @@ function samsara_check_gift_card_balance($request) {
  */
 function samsara_format_gift_card($gc, $include_activities = false) {
     // All date methods return Unix timestamps (int|null), not DateTime objects
+    // Format dates in ISO 8601 with timezone for proper JavaScript parsing
     $format_date = function($timestamp) {
-        return $timestamp ? date('Y-m-d H:i:s', $timestamp) : null;
+        if (!$timestamp) {
+            return null;
+        }
+
+        try {
+            // Get WordPress timezone (wp_timezone() requires WP 5.3+)
+            if (function_exists('wp_timezone')) {
+                $wp_timezone = wp_timezone();
+            } else {
+                // Fallback for older WordPress versions
+                $timezone_string = get_option('timezone_string');
+                if (empty($timezone_string)) {
+                    $timezone_string = 'UTC';
+                }
+                $wp_timezone = new DateTimeZone($timezone_string);
+            }
+
+            // Create DateTime object in WordPress timezone
+            $date = new DateTime('@' . $timestamp);
+            $date->setTimezone($wp_timezone);
+            // Return ISO 8601 format with timezone (e.g., "2025-11-19T16:00:00-05:00")
+            return $date->format('c');
+        } catch (Exception $e) {
+            // Fallback to simple format if timezone conversion fails
+            error_log('Gift card date formatting error: ' . $e->getMessage());
+            return date('Y-m-d H:i:s', $timestamp);
+        }
     };
 
     $data = array(
@@ -292,8 +374,9 @@ function samsara_get_gift_card_status($gc) {
     }
 
     // Check if expired
+    // Note: get_expire_date() returns a Unix timestamp (int), not a date string
     $expire_date = $gc->get_expire_date();
-    if ($expire_date && strtotime($expire_date) < time()) {
+    if ($expire_date && $expire_date < time()) {
         return 'expired';
     }
 
@@ -349,11 +432,6 @@ function samsara_redeem_gift_card_to_account($request) {
         // Redeem to account using the redeem() method
         $gc->redeem($user_id);
 
-        // Clear the account cache so the balance updates immediately
-        if (function_exists('WC_GC') && isset(WC_GC()->account)) {
-            WC_GC()->account->clear_caches();
-        }
-
         error_log('✅ Gift card #' . $gift_card_id . ' redeemed to user #' . $user_id);
 
         return new WP_REST_Response(array(
@@ -362,8 +440,39 @@ function samsara_redeem_gift_card_to_account($request) {
         ), 200);
 
     } catch (Exception $e) {
-        error_log('❌ Error redeeming gift card: ' . $e->getMessage());
-        return new WP_Error('gift_card_error', $e->getMessage(), array('status' => 400));
+        // Log detailed error for debugging
+        error_log('❌ Error redeeming gift card (ID: ' . $gift_card_id . '): ' . $e->getMessage());
+        error_log('Stack trace: ' . $e->getTraceAsString());
+
+        // Return user-friendly error with technical details
+        $error_message = 'Failed to redeem gift card. ';
+
+        // Add specific error hints
+        if (strpos($e->getMessage(), 'already') !== false) {
+            $error_message .= 'This gift card has already been redeemed.';
+        } elseif (strpos($e->getMessage(), 'expired') !== false) {
+            $error_message .= 'This gift card has expired.';
+        } elseif (strpos($e->getMessage(), 'balance') !== false) {
+            $error_message .= 'This gift card has no remaining balance.';
+        } else {
+            $error_message .= $e->getMessage();
+        }
+
+        return new WP_Error(
+            'gift_card_redeem_error',
+            $error_message,
+            array(
+                'status' => 400,
+                'technical_details' => array(
+                    'exception' => get_class($e),
+                    'message' => $e->getMessage(),
+                    'file' => basename($e->getFile()),
+                    'line' => $e->getLine(),
+                    'gift_card_id' => $gift_card_id,
+                    'user_id' => $user_id,
+                )
+            )
+        );
     }
 }
 

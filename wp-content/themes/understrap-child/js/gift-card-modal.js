@@ -187,7 +187,15 @@
 
         // Helper: Format date
         function formatDate(dateString) {
+            if (!dateString) return 'No expiry';
+
             const date = new Date(dateString);
+
+            // Check if date is valid
+            if (isNaN(date.getTime())) {
+                return 'No expiry';
+            }
+
             return date.toLocaleDateString('en-US', {
                 month: 'long',
                 day: 'numeric',
