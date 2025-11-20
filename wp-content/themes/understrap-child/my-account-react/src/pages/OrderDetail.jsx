@@ -153,20 +153,29 @@ const OrderDetail = () => {
     );
   };
 
-  const getGiftCardStatusBadge = (status) => {
+  const getGiftCardStatusBadge = (giftCard) => {
+    // Check if redeemed to account
+    if (giftCard.is_redeemed_to_account) {
+      return (
+        <Badge variant="default" className="bg-blue-100 text-blue-800 hover:bg-blue-100">
+          In Account
+        </Badge>
+      );
+    }
+
+    // Otherwise show the standard status
     const variants = {
-      active: { variant: 'default', className: 'bg-emerald-100 text-emerald-800 hover:bg-emerald-100' },
-      used: { variant: 'secondary', className: 'bg-stone-200 text-stone-700 hover:bg-stone-200' },
-      expired: { variant: 'outline', className: 'bg-red-100 text-red-800 hover:bg-red-100' },
-      inactive: { variant: 'outline', className: 'bg-amber-100 text-amber-800 hover:bg-amber-100' },
+      active: { variant: 'default', className: 'bg-amber-100 text-amber-800 hover:bg-amber-100', label: 'Ready to Redeem' },
+      used: { variant: 'secondary', className: 'bg-stone-200 text-stone-700 hover:bg-stone-200', label: 'Used' },
+      expired: { variant: 'outline', className: 'bg-red-100 text-red-800 hover:bg-red-100', label: 'Expired' },
+      inactive: { variant: 'outline', className: 'bg-stone-300 text-stone-700 hover:bg-stone-300', label: 'Inactive' },
     };
 
-    const config = variants[status] || { variant: 'outline', className: 'bg-stone-100 text-stone-800 hover:bg-stone-100' };
-    const displayName = status.charAt(0).toUpperCase() + status.slice(1);
+    const config = variants[giftCard.status] || { variant: 'outline', className: 'bg-stone-100 text-stone-800 hover:bg-stone-100', label: 'Unknown' };
 
     return (
       <Badge variant={config.variant} className={config.className}>
-        {displayName}
+        {config.label}
       </Badge>
     );
   };
@@ -223,10 +232,21 @@ const OrderDetail = () => {
         <CardContent>
           <div className="space-y-3">
             {order.items.map((item, index) => (
-              <div key={index} className="flex justify-between items-center" data-testid={`order-item-${index}`}>
+              <div key={index} className="flex justify-between items-start" data-testid={`order-item-${index}`}>
                 <div>
-                  <p className="font-medium text-stone-900">{item}</p>
-                  <p className="text-sm text-stone-600">Quantity: 1</p>
+                  <p className="font-medium text-stone-900">{item.name}</p>
+                  <p className="text-sm text-stone-600">Quantity: {item.quantity}</p>
+                </div>
+                <div className="text-right">
+                  <p className="font-medium text-stone-900">{formatCurrency(item.total)}</p>
+                  {/* Show original price if discount applied */}
+                  {item.subtotal > item.total && (
+                    <p className="text-sm text-stone-500 line-through">{formatCurrency(item.subtotal)}</p>
+                  )}
+                  {/* Show regular price if available and different from price paid */}
+                  {item.regularPrice && item.regularPrice * item.quantity > item.total && !item.subtotal && (
+                    <p className="text-sm text-stone-500 line-through">{formatCurrency(item.regularPrice * item.quantity)}</p>
+                  )}
                 </div>
               </div>
             ))}
@@ -349,7 +369,7 @@ const OrderDetail = () => {
                     </div>
                   </div>
                   <div className="flex items-center gap-3">
-                    {getGiftCardStatusBadge(giftCard.status)}
+                    {getGiftCardStatusBadge(giftCard)}
                     <Button
                       variant="ghost"
                       size="sm"

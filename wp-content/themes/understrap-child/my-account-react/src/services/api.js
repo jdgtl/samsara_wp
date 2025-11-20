@@ -81,6 +81,19 @@ const createApiInstance = () => {
           // }
         }
 
+        // Check if we got HTML instead of JSON (PHP fatal error)
+        if (typeof data === 'string' && (data.includes('<!DOCTYPE') || data.includes('<html'))) {
+          return Promise.reject({
+            status,
+            message: 'Server error occurred. The operation may have completed successfully - please refresh the page to verify.',
+            code: 'server_error_html_response',
+            data: {
+              html_error: true,
+              raw_response: data.substring(0, 500), // First 500 chars for debugging
+            },
+          });
+        }
+
         // Return formatted error
         return Promise.reject({
           status,

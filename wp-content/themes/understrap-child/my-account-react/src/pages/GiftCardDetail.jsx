@@ -18,7 +18,7 @@ const GiftCardDetail = () => {
   const [redeemError, setRedeemError] = useState(null);
 
   // Fetch gift card data
-  const { giftCard, loading, error, refetch } = useGiftCard(cardId);
+  const { giftCard, loading, error, errorDetails, refetch } = useGiftCard(cardId);
 
   const copyToClipboard = async (code) => {
     try {
@@ -39,8 +39,20 @@ const GiftCardDetail = () => {
       // Refetch to show updated state
       setTimeout(() => refetch(), 500);
     } catch (err) {
-      setRedeemError(err.message || 'Failed to redeem gift card');
+      // Create detailed error message with technical info if available
+      let errorMsg = err.message || 'Failed to redeem gift card';
+
+      // Append technical details if available
+      if (err.data?.technical_details) {
+        errorMsg += `\n\nTechnical Details:\n`;
+        errorMsg += `Exception: ${err.data.technical_details.exception}\n`;
+        errorMsg += `Message: ${err.data.technical_details.message}\n`;
+        errorMsg += `File: ${err.data.technical_details.file}:${err.data.technical_details.line}`;
+      }
+
+      setRedeemError(errorMsg);
       console.error('Error redeeming gift card:', err);
+      console.error('Technical details:', err.data?.technical_details);
     } finally {
       setRedeemLoading(false);
     }
@@ -105,7 +117,7 @@ const GiftCardDetail = () => {
   const getActivityTypeLabel = (type) => {
     const labels = {
       issued: 'Issued',
-      redeemed: 'Redeemed',
+      redeemed: 'Added to Account',
       refunded: 'Refunded',
       used: 'Used',
       credited: 'Credited',
@@ -116,7 +128,7 @@ const GiftCardDetail = () => {
   const getActivityTypeBadge = (type) => {
     const variants = {
       issued: 'bg-blue-100 text-blue-800',
-      redeemed: 'bg-emerald-100 text-emerald-800',
+      redeemed: 'bg-blue-100 text-blue-800', // Matches "In Account" status badge
       refunded: 'bg-purple-100 text-purple-800',
       used: 'bg-stone-200 text-stone-700',
       credited: 'bg-amber-100 text-amber-800',
@@ -134,11 +146,21 @@ const GiftCardDetail = () => {
   const getActivityAmountDisplay = (activity) => {
     // Determine if this activity adds or removes balance
     // issued, credited, refunded = adds balance (positive, green)
-    // used, redeemed = removes balance (negative, red)
+    // used = removes balance (negative, red)
+    // redeemed = neutral/informational (no +/-, blue-gray)
     const addsBalance = ['issued', 'credited', 'refunded'].includes(activity.type);
+    const isRedeemed = activity.type === 'redeemed';
     const amount = Math.abs(activity.amount);
 
     if (amount === 0) return null;
+
+    if (isRedeemed) {
+      return (
+        <span className="text-stone-900">
+          {formatCurrency(amount)}
+        </span>
+      );
+    }
 
     return (
       <span className={addsBalance ? 'text-emerald-600' : 'text-red-600'}>
@@ -181,15 +203,59 @@ const GiftCardDetail = () => {
           </Button>
         </Link>
         {error ? (
-          <Alert className="border-red-500 bg-red-50">
-            <AlertTriangle className="h-4 w-4 text-red-600" />
-            <AlertDescription className="ml-2">
-              <div className="text-red-900">
-                <p className="font-medium">Failed to load gift card</p>
-                <p className="text-sm">{error}</p>
+          <Card>
+            <CardContent className="py-8">
+              <Alert className="border-red-500 bg-red-50">
+                <AlertTriangle className="h-5 w-5 text-red-600" />
+                <AlertDescription className="ml-2">
+                  <div className="text-red-900">
+                    <p className="font-semibold text-lg mb-2">Failed to load gift card</p>
+                    <p className="text-sm mb-4">{error}</p>
+
+                    {/* Technical details section */}
+                    <div className="mt-4 pt-4 border-t border-red-200">
+                      <details className="text-xs">
+                        <summary className="cursor-pointer font-medium text-red-800 hover:text-red-900">
+                          Show technical details (for support)
+                        </summary>
+                        <div className="mt-3 p-3 bg-red-100 rounded font-mono text-red-900 whitespace-pre-wrap break-all">
+                          <p><strong>Error:</strong> {error}</p>
+                          <p><strong>Gift Card ID:</strong> {cardId}</p>
+                          <p><strong>Timestamp:</strong> {new Date().toISOString()}</p>
+                          {errorDetails && (
+                            <>
+                              <p className="mt-2"><strong>Exception:</strong> {errorDetails.exception}</p>
+                              <p><strong>Message:</strong> {errorDetails.message}</p>
+                              <p><strong>File:</strong> {errorDetails.file}</p>
+                              <p><strong>Line:</strong> {errorDetails.line}</p>
+                            </>
+                          )}
+                          <p className="mt-2"><strong>User Agent:</strong> {navigator.userAgent}</p>
+                        </div>
+                      </details>
+                      <p className="text-xs text-red-700 mt-3">
+                        Please share the technical details above with our support team if you need assistance.
+                      </p>
+                    </div>
+                  </div>
+                </AlertDescription>
+              </Alert>
+
+              <div className="mt-6 text-center">
+                <Link to="/gift-cards">
+                  <Button variant="outline" className="mr-3">
+                    Back to Gift Cards
+                  </Button>
+                </Link>
+                <Button
+                  onClick={() => window.location.reload()}
+                  className="bg-samsara-gold hover:bg-samsara-gold/90 text-samsara-black"
+                >
+                  Try Again
+                </Button>
               </div>
-            </AlertDescription>
-          </Alert>
+            </CardContent>
+          </Card>
         ) : (
           <Card>
             <CardContent className="text-center py-12">
@@ -327,8 +393,13 @@ const GiftCardDetail = () => {
                 {redeemError && (
                   <Alert className="mt-4 bg-red-50 border-red-200">
                     <AlertTriangle className="h-4 w-4 text-red-600" />
-                    <AlertDescription className="ml-2 text-red-900">
-                      {redeemError}
+                    <AlertDescription className="ml-2">
+                      <div className="text-red-900">
+                        <p className="font-medium whitespace-pre-wrap">{redeemError}</p>
+                        <p className="text-xs text-red-700 mt-2">
+                          If this problem persists, please contact support with the details above.
+                        </p>
+                      </div>
                     </AlertDescription>
                   </Alert>
                 )}
@@ -404,7 +475,7 @@ const GiftCardDetail = () => {
                           <TableCell>
                             <div className="flex flex-col gap-1">
                               {activity.note && <span className="text-sm text-stone-600">{activity.note}</span>}
-                              {activity.object_id && (
+                              {activity.object_id && activity.object_id > 0 && (
                                 <Link
                                   to={`/orders/${activity.object_id}`}
                                   className="text-emerald-600 hover:underline text-sm font-medium"

@@ -91,6 +91,7 @@ require get_stylesheet_directory() . '/inc/gift-card-balance-checker-shortcode.p
 require get_stylesheet_directory() . '/inc/gift-card-modal.php';
 require get_stylesheet_directory() . '/inc/gift-card-debug.php';
 require get_stylesheet_directory() . '/inc/fix-gift-card-option.php';
+require get_stylesheet_directory() . '/inc/gift-card-checkout-display.php';
 
 require_once get_stylesheet_directory() . '/inc/Mobile_Detect.php';
 global $detect;

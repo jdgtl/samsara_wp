@@ -77,7 +77,7 @@ const Orders = () => {
       const query = searchQuery.toLowerCase();
       filtered = filtered.filter(order =>
         order.id.toString().toLowerCase().includes(query) ||
-        (order.items && order.items.some(item => item.toLowerCase().includes(query)))
+        (order.items && order.items.some(item => item.name.toLowerCase().includes(query)))
       );
     }
 
@@ -275,7 +275,7 @@ const Orders = () => {
                         <TableCell>{getStatusBadge(order.status)}</TableCell>
                         <TableCell>
                           <div className="max-w-lg whitespace-nowrap">
-                            {order.items.slice(0, 2).join(', ')}
+                            {order.items.slice(0, 2).map(item => item.name).join(', ')}
                             {order.items.length > 2 && (
                               <span className="text-stone-500"> +{order.items.length - 2} more</span>
                             )}
