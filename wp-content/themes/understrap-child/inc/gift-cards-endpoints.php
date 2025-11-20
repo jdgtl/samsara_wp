@@ -143,6 +143,9 @@ function samsara_get_gift_card($request) {
 
         $gift_card_data = samsara_format_gift_card($gc, true);
 
+        // Add flag to indicate if current user is the recipient (vs. purchaser)
+        $gift_card_data['is_current_user_recipient'] = ($recipient === $user_email);
+
         return new WP_REST_Response($gift_card_data, 200);
 
     } catch (Exception $e) {
@@ -203,13 +206,37 @@ function samsara_check_gift_card_balance($request) {
 
         $gift_card_obj = new WC_GC_Gift_Card($gcs[0]->get_id());
 
+        // Format expire date with timezone (same as other endpoints)
+        $expire_date = null;
+        $expire_timestamp = $gift_card_obj->get_expire_date();
+        if ($expire_timestamp) {
+            try {
+                if (function_exists('wp_timezone')) {
+                    $wp_timezone = wp_timezone();
+                } else {
+                    $timezone_string = get_option('timezone_string');
+                    if (empty($timezone_string)) {
+                        $timezone_string = 'UTC';
+                    }
+                    $wp_timezone = new DateTimeZone($timezone_string);
+                }
+                $date = new DateTime('@' . $expire_timestamp);
+                $date->setTimezone($wp_timezone);
+                $expire_date = $date->format('c'); // ISO 8601 with timezone
+            } catch (Exception $e) {
+                error_log('Date formatting error in balance check: ' . $e->getMessage());
+                $expire_date = date('Y-m-d', $expire_timestamp);
+            }
+        }
+
         // Return basic balance info (don't expose full details for privacy)
         $response = array(
             'code' => $gift_card_obj->get_code(),
             'balance' => (float) $gift_card_obj->get_initial_balance(),
             'remaining' => (float) $gift_card_obj->get_balance(),
             'is_active' => $gift_card_obj->is_active(),
-            'expire_date' => $gift_card_obj->get_expire_date() ? $gift_card_obj->get_expire_date('Y-m-d') : null,
+            'expire_date' => $expire_date,
+            'status' => samsara_get_gift_card_status($gift_card_obj),
         );
 
         return new WP_REST_Response($response, 200);

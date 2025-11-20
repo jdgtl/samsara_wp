@@ -370,7 +370,7 @@ const GiftCardDetail = () => {
                     {redeemLoading ? (
                       <>
                         <Loader2 className="h-4 w-4 animate-spin mr-2" />
-                        Redeeming...
+                        Adding...
                       </>
                     ) : redeemSuccess ? (
                       <>
@@ -475,7 +475,13 @@ const GiftCardDetail = () => {
                           <TableCell>
                             <div className="flex flex-col gap-1">
                               {activity.note && <span className="text-sm text-stone-600">{activity.note}</span>}
-                              {activity.object_id && activity.object_id > 0 && (
+                              {/* Only show order link if:
+                                  1. Activity is not 'redeemed' (recipient adding to account)
+                                  2. Current user is NOT the recipient (hide purchaser's order from recipient)
+                              */}
+                              {activity.object_id && activity.object_id > 0 &&
+                               activity.type !== 'redeemed' &&
+                               !giftCard.is_current_user_recipient && (
                                 <Link
                                   to={`/orders/${activity.object_id}`}
                                   className="text-emerald-600 hover:underline text-sm font-medium"
