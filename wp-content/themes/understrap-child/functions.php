@@ -93,6 +93,7 @@ require get_stylesheet_directory() . '/inc/gift-card-debug.php';
 require get_stylesheet_directory() . '/inc/fix-gift-card-option.php';
 require get_stylesheet_directory() . '/inc/gift-card-checkout-display.php';
 require get_stylesheet_directory() . '/inc/clear-thank-you-notices.php';
+require get_stylesheet_directory() . '/inc/subscription-promo-pricing.php';
 
 require_once get_stylesheet_directory() . '/inc/Mobile_Detect.php';
 global $detect;
